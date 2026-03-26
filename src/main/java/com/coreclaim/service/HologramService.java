@@ -2,7 +2,9 @@ package com.coreclaim.service;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
@@ -18,7 +20,7 @@ public final class HologramService {
 
     private final CoreClaimPlugin plugin;
     private final Map<Integer, UUID> claimHolograms = new HashMap<>();
-    private final Map<UUID, UUID> pendingHolograms = new HashMap<>();
+    private final Map<UUID, List<UUID>> pendingHolograms = new HashMap<>();
 
     public HologramService(CoreClaimPlugin plugin) {
         this.plugin = plugin;
@@ -51,19 +53,21 @@ public final class HologramService {
         claimHolograms.put(claim.id(), armorStand.getUniqueId());
     }
 
-    public void spawnPendingHologram(UUID playerId, Location location) {
+    public void spawnPendingHologram(UUID playerId, String playerName, Location location) {
         removePendingHologram(playerId);
-        ArmorStand armorStand = createHologram(
-            location.clone().add(0.5D, 1.8D, 0.5D),
-            plugin.color("&e请在聊天栏输入领地名字")
-        );
-        armorStand.addScoreboardTag(PENDING_TAG);
-        pendingHolograms.put(playerId, armorStand.getUniqueId());
+        List<UUID> entityIds = new ArrayList<>();
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.message("pending-hologram-title")));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.85D, 0.5D), plugin.message("pending-hologram-player", "{player}", playerName)));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.message("pending-hologram-cancel")));
+        pendingHolograms.put(playerId, entityIds);
     }
 
     public void removePendingHologram(UUID playerId) {
-        UUID entityId = pendingHolograms.remove(playerId);
-        if (entityId != null) {
+        List<UUID> entityIds = pendingHolograms.remove(playerId);
+        if (entityIds == null) {
+            return;
+        }
+        for (UUID entityId : entityIds) {
             removeEntity(entityId);
         }
     }
@@ -83,6 +87,12 @@ public final class HologramService {
                 }
             }
         }
+    }
+
+    private UUID createPendingLine(Location location, String name) {
+        ArmorStand armorStand = createHologram(location, name);
+        armorStand.addScoreboardTag(PENDING_TAG);
+        return armorStand.getUniqueId();
     }
 
     private ArmorStand createHologram(Location location, String name) {

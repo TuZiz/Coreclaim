@@ -3,10 +3,12 @@ package com.coreclaim.listener;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.service.PendingClaimService;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 public final class ClaimCoreListener implements Listener {
@@ -31,16 +33,40 @@ public final class ClaimCoreListener implements Listener {
         if (!claimCoreFactory.isClaimCore(item)) {
             return;
         }
+        event.setCancelled(true);
 
         Player player = event.getPlayer();
         if (pendingClaimService.hasPendingClaim(player.getUniqueId())) {
-            event.setCancelled(true);
             player.sendMessage(plugin.message("claim-name-prompt"));
             return;
         }
 
         if (!pendingClaimService.beginClaimCreation(player, event.getBlockPlaced().getLocation())) {
-            event.setCancelled(true);
+            return;
+        }
+        consumeCore(player, event.getHand());
+    }
+
+    private void consumeCore(Player player, EquipmentSlot hand) {
+        ItemStack stack = hand == EquipmentSlot.OFF_HAND
+            ? player.getInventory().getItemInOffHand()
+            : player.getInventory().getItemInMainHand();
+        if (!claimCoreFactory.isClaimCore(stack)) {
+            return;
+        }
+        if (stack.getAmount() <= 1) {
+            if (hand == EquipmentSlot.OFF_HAND) {
+                player.getInventory().setItemInOffHand(new ItemStack(Material.AIR));
+            } else {
+                player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+            }
+            return;
+        }
+        stack.setAmount(stack.getAmount() - 1);
+        if (hand == EquipmentSlot.OFF_HAND) {
+            player.getInventory().setItemInOffHand(stack);
+        } else {
+            player.getInventory().setItemInMainHand(stack);
         }
     }
 }

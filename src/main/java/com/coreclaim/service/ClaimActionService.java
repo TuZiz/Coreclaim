@@ -19,17 +19,20 @@ public final class ClaimActionService {
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
     private final HologramService hologramService;
+    private final ClaimVisualService claimVisualService;
     private final EconomyHook economyHook;
 
     public ClaimActionService(
         CoreClaimPlugin plugin,
         ClaimService claimService,
         HologramService hologramService,
+        ClaimVisualService claimVisualService,
         EconomyHook economyHook
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.hologramService = hologramService;
+        this.claimVisualService = claimVisualService;
         this.economyHook = economyHook;
     }
 
@@ -211,6 +214,7 @@ public final class ClaimActionService {
         }
         Location destination = new Location(world, claim.centerX() + 0.5D, claim.centerY() + 1D, claim.centerZ() + 0.5D);
         player.teleport(destination);
+        claimVisualService.showClaim(player, claim);
         player.sendMessage(plugin.message("claim-teleported", "{name}", claim.name()));
         return true;
     }

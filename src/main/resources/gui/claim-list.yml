@@ -1,13 +1,21 @@
 title: '&8✦ 我的领地列表 ✦'
-size: 54
+GuiPlain:
+  - "EEEEEEEEE"
+  - "EEEEEEEEE"
+  - "EEEEEEEEE"
+  - "EEEEEEEEE"
+  - "EEEEEEEEE"
+  - "PFFFBFFFN"
 
 items:
   filler:
+    char: "F"
     material: CYAN_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1200
 
   entry:
+    char: "E"
     material: GRASS_BLOCK
     custom-model-data: 1201
     glow: true
@@ -22,21 +30,21 @@ items:
     sound: BLOCK_NOTE_BLOCK_HARP
 
   prev-page:
-    slot: 45
+    char: "P"
     material: ARROW
     custom-model-data: 1202
     name: '&e上一页'
     sound: UI_BUTTON_CLICK
 
   back:
-    slot: 49
+    char: "B"
     material: BARRIER
     custom-model-data: 1203
     name: '&c返回总览'
     sound: UI_BUTTON_CLICK
 
   next-page:
-    slot: 53
+    char: "N"
     material: ARROW
     custom-model-data: 1204
     name: '&e下一页'

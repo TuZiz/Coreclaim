@@ -1,14 +1,20 @@
 title: '&8✦ 领地管理 - {name} ✦'
-size: 45
+GuiPlain:
+  - "FFFFNFFFF"
+  - "FFFFFFFFF"
+  - "FFWIPEFFF"
+  - "FFFFSFFFF"
+  - "BFTFDFFFF"
 
 items:
   filler:
+    char: "F"
     material: WHITE_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1300
 
   info:
-    slot: 22
+    char: "I"
     material: WRITABLE_BOOK
     custom-model-data: 1301
     name: '&6&l领地信息'
@@ -22,7 +28,7 @@ items:
       - '&7信任成员: &e{trusted}'
 
   expand-north:
-    slot: 13
+    char: "N"
     material: SPECTRAL_ARROW
     custom-model-data: 1302
     glow: true
@@ -34,7 +40,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-west:
-    slot: 21
+    char: "W"
     material: SPECTRAL_ARROW
     custom-model-data: 1303
     glow: true
@@ -46,7 +52,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-east:
-    slot: 23
+    char: "E"
     material: SPECTRAL_ARROW
     custom-model-data: 1304
     glow: true
@@ -58,7 +64,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-south:
-    slot: 31
+    char: "S"
     material: SPECTRAL_ARROW
     custom-model-data: 1305
     glow: true
@@ -70,7 +76,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   trust:
-    slot: 39
+    char: "T"
     material: NAME_TAG
     custom-model-data: 1306
     name: '&d成员权限'
@@ -79,7 +85,7 @@ items:
     sound: BLOCK_NOTE_BLOCK_PLING
 
   teleport:
-    slot: 40
+    char: "P"
     material: ENDER_PEARL
     custom-model-data: 1307
     glow: true
@@ -87,14 +93,14 @@ items:
     sound: ENTITY_ENDERMAN_TELEPORT
 
   back:
-    slot: 36
+    char: "B"
     material: ARROW
     custom-model-data: 1308
     name: '&e返回领地列表'
     sound: UI_BUTTON_CLICK
 
   delete:
-    slot: 44
+    char: "D"
     material: LAVA_BUCKET
     custom-model-data: 1309
     name: '&c删除领地'

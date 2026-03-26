@@ -33,13 +33,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 
 public final class MenuService {
 
-    private static final int[] TRUSTED_SLOTS = {
-        0, 1, 2, 3, 4, 5, 6,
-        9, 10, 11, 12, 13, 14, 15,
-        18, 19, 20, 21, 22, 23, 24,
-        27, 28, 29, 30, 31, 32, 33
-    };
-
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
     private final ProfileService profileService;
@@ -106,11 +99,12 @@ public final class MenuService {
         fill(inventory, "claim-list", "filler");
 
         List<Claim> claims = claimService.claimsOf(player.getUniqueId());
-        int start = Math.max(0, page) * 45;
-        int end = Math.min(claims.size(), start + 45);
-        for (int slot = 0; slot < end - start; slot++) {
-            Claim claim = claims.get(start + slot);
-            inventory.setItem(slot, configuredItem("claim-list", "entry",
+        List<Integer> entrySlots = slots("claim-list", "entry");
+        int start = Math.max(0, page) * entrySlots.size();
+        int end = Math.min(claims.size(), start + entrySlots.size());
+        for (int index = start; index < end; index++) {
+            Claim claim = claims.get(index);
+            inventory.setItem(entrySlots.get(index - start), configuredItem("claim-list", "entry",
                 "{name}", claim.name(),
                 "{world}", claim.world(),
                 "{x}", String.valueOf(claim.centerX()),
@@ -217,12 +211,13 @@ public final class MenuService {
         fill(inventory, "trust", "filler");
 
         List<UUID> trustedPlayers = new ArrayList<>(claim.trustedMembers());
-        int start = Math.max(0, page) * 28;
-        int end = Math.min(trustedPlayers.size(), start + 28);
+        List<Integer> trustedSlots = slots("trust", "trusted-entry");
+        int start = Math.max(0, page) * trustedSlots.size();
+        int end = Math.min(trustedPlayers.size(), start + trustedSlots.size());
 
         for (int index = start; index < end; index++) {
             UUID trustedId = trustedPlayers.get(index);
-            inventory.setItem(TRUSTED_SLOTS[index - start], playerHead(trustedId,
+            inventory.setItem(trustedSlots.get(index - start), playerHead(trustedId,
                 itemName("trust", "trusted-entry", "{player}", playerName(trustedId)),
                 itemLore("trust", "trusted-entry", "{player}", playerName(trustedId), "{name}", claim.name())
             ));
@@ -231,14 +226,15 @@ public final class MenuService {
             inventory.setItem(slot("trust", "empty"), configuredItem("trust", "empty"));
         }
 
+        List<Integer> candidateSlots = slots("trust", "candidate-entry");
         List<Player> candidates = Bukkit.getOnlinePlayers().stream()
             .filter(online -> !online.getUniqueId().equals(claim.owner()))
             .filter(online -> !claim.isTrusted(online.getUniqueId()))
             .map(online -> (Player) online)
             .toList();
-        for (int index = 0; index < Math.min(9, candidates.size()); index++) {
+        for (int index = 0; index < Math.min(candidateSlots.size(), candidates.size()); index++) {
             Player candidate = candidates.get(index);
-            inventory.setItem(slot("trust", "candidate-start") + index, playerHead(candidate.getUniqueId(),
+            inventory.setItem(candidateSlots.get(index), playerHead(candidate.getUniqueId(),
                 itemName("trust", "candidate-entry", "{player}", candidate.getName()),
                 itemLore("trust", "candidate-entry", "{player}", candidate.getName(), "{name}", claim.name())
             ));
@@ -297,8 +293,10 @@ public final class MenuService {
 
     private void handleClaimListMenu(Player player, ClaimListHolder holder, int slot, boolean rightClick) {
         List<Claim> claims = claimService.claimsOf(player.getUniqueId());
-        int index = holder.page * 45 + slot;
-        if (slot >= 0 && slot < 45 && index < claims.size()) {
+        List<Integer> entrySlots = slots("claim-list", "entry");
+        int slotIndex = entrySlots.indexOf(slot);
+        int index = holder.page * entrySlots.size() + slotIndex;
+        if (slotIndex >= 0 && index < claims.size()) {
             Claim claim = claims.get(index);
             if (rightClick) {
                 playConfiguredSound(player, "claim-list", "entry");
@@ -315,7 +313,7 @@ public final class MenuService {
         } else if (slot == slot("claim-list", "back")) {
             playConfiguredSound(player, "claim-list", "back");
             openMainMenu(player);
-        } else if (slot == slot("claim-list", "next-page") && (holder.page + 1) * 45 < claims.size()) {
+        } else if (slot == slot("claim-list", "next-page") && (holder.page + 1) * entrySlots.size() < claims.size()) {
             playConfiguredSound(player, "claim-list", "next-page");
             openClaimListMenu(player, holder.page + 1);
         }
@@ -375,10 +373,11 @@ public final class MenuService {
         }
 
         List<UUID> trustedPlayers = new ArrayList<>(claim.trustedMembers());
-        int start = holder.page * 28;
-        int end = Math.min(trustedPlayers.size(), start + 28);
+        List<Integer> trustedSlots = slots("trust", "trusted-entry");
+        int start = holder.page * trustedSlots.size();
+        int end = Math.min(trustedPlayers.size(), start + trustedSlots.size());
         for (int index = start; index < end; index++) {
-            if (TRUSTED_SLOTS[index - start] == slot) {
+            if (trustedSlots.get(index - start) == slot) {
                 playConfiguredSound(player, "trust", "trusted-entry");
                 OfflinePlayer target = Bukkit.getOfflinePlayer(trustedPlayers.get(index));
                 if (claimActionService.untrustPlayer(player, claim, target)) {
@@ -388,14 +387,15 @@ public final class MenuService {
             }
         }
 
+        List<Integer> candidateSlots = slots("trust", "candidate-entry");
         List<Player> candidates = Bukkit.getOnlinePlayers().stream()
             .filter(online -> !online.getUniqueId().equals(claim.owner()))
             .filter(online -> !claim.isTrusted(online.getUniqueId()))
             .map(online -> (Player) online)
-            .limit(9)
+            .limit(candidateSlots.size())
             .toList();
         for (int index = 0; index < candidates.size(); index++) {
-            if (slot("trust", "candidate-start") + index == slot) {
+            if (candidateSlots.get(index) == slot) {
                 playConfiguredSound(player, "trust", "candidate-entry");
                 if (claimActionService.trustPlayer(player, claim, candidates.get(index))) {
                     openTrustMenu(player, claim, holder.page);
@@ -410,7 +410,7 @@ public final class MenuService {
         } else if (slot == slot("trust", "back")) {
             playConfiguredSound(player, "trust", "back");
             openClaimManageMenu(player, claim);
-        } else if (slot == slot("trust", "next-page") && (holder.page + 1) * 28 < trustedPlayers.size()) {
+        } else if (slot == slot("trust", "next-page") && (holder.page + 1) * trustedSlots.size() < trustedPlayers.size()) {
             playConfiguredSound(player, "trust", "next-page");
             openTrustMenu(player, claim, holder.page + 1);
         }
@@ -442,7 +442,14 @@ public final class MenuService {
 
     private void fill(Inventory inventory, String menuKey, String itemKey) {
         ItemStack filler = configuredItem(menuKey, itemKey);
-        for (int slot = 0; slot < inventory.getSize(); slot++) {
+        List<Integer> fillerSlots = slots(menuKey, itemKey);
+        if (fillerSlots.isEmpty()) {
+            for (int slot = 0; slot < inventory.getSize(); slot++) {
+                inventory.setItem(slot, filler.clone());
+            }
+            return;
+        }
+        for (int slot : fillerSlots) {
             inventory.setItem(slot, filler.clone());
         }
     }
@@ -452,6 +459,10 @@ public final class MenuService {
     }
 
     private int menuSize(String menuKey) {
+        List<String> layout = menu(menuKey).getStringList("GuiPlain");
+        if (!layout.isEmpty()) {
+            return layout.size() * 9;
+        }
         return menu(menuKey).getInt("size", 27);
     }
 
@@ -460,7 +471,42 @@ public final class MenuService {
     }
 
     private int slot(String menuKey, String itemKey) {
-        return menu(menuKey).getInt("items." + itemKey + ".slot", 0);
+        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
+        if (section == null) {
+            return 0;
+        }
+        if (section.contains("slot")) {
+            return section.getInt("slot", 0);
+        }
+        List<Integer> slots = slots(menuKey, itemKey);
+        return slots.isEmpty() ? 0 : slots.get(0);
+    }
+
+    private List<Integer> slots(String menuKey, String itemKey) {
+        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
+        List<Integer> result = new ArrayList<>();
+        if (section == null) {
+            return result;
+        }
+        if (section.contains("slot")) {
+            result.add(section.getInt("slot", 0));
+            return result;
+        }
+        String rawChar = section.getString("char", "");
+        if (rawChar.isBlank()) {
+            return result;
+        }
+        char symbol = rawChar.charAt(0);
+        List<String> layout = menu(menuKey).getStringList("GuiPlain");
+        for (int row = 0; row < layout.size(); row++) {
+            String line = padLayout(layout.get(row));
+            for (int column = 0; column < 9; column++) {
+                if (line.charAt(column) == symbol) {
+                    result.add(row * 9 + column);
+                }
+            }
+        }
+        return result;
     }
 
     private String itemName(String menuKey, String itemKey, String... replacements) {
@@ -568,6 +614,14 @@ public final class MenuService {
             return Base64.getEncoder().encodeToString(payload.getBytes());
         }
         return texture;
+    }
+
+    private String padLayout(String line) {
+        String value = line == null ? "" : line;
+        if (value.length() >= 9) {
+            return value.substring(0, 9);
+        }
+        return String.format("%-9s", value);
     }
 
     private String apply(String text, String... replacements) {

@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 public final class PendingClaimService {
@@ -19,6 +18,7 @@ public final class PendingClaimService {
     private final ProfileService profileService;
     private final ClaimCoreFactory claimCoreFactory;
     private final HologramService hologramService;
+    private final ClaimVisualService claimVisualService;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
 
     public PendingClaimService(
@@ -26,13 +26,15 @@ public final class PendingClaimService {
         ClaimService claimService,
         ProfileService profileService,
         ClaimCoreFactory claimCoreFactory,
-        HologramService hologramService
+        HologramService hologramService,
+        ClaimVisualService claimVisualService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.profileService = profileService;
         this.claimCoreFactory = claimCoreFactory;
         this.hologramService = hologramService;
+        this.claimVisualService = claimVisualService;
     }
 
     public boolean beginClaimCreation(Player player, Location coreLocation) {
@@ -84,19 +86,28 @@ public final class PendingClaimService {
 
         String name = inputName == null ? "" : inputName.trim();
         if (name.isEmpty()) {
-            restoreCore(pending);
+            refundCore(pending);
             player.sendMessage(plugin.message("claim-name-empty"));
             return null;
         }
         if (name.length() > plugin.settings().claimNameMaxLength()) {
-            restoreCore(pending);
+            refundCore(pending);
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return null;
         }
 
+        Location coreLocation = pending.coreLocation();
+        if (!coreLocation.getBlock().getType().isAir()) {
+            refundCore(pending);
+            player.sendMessage(plugin.message("claim-core-blocked"));
+            return null;
+        }
+        coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
+
         ClaimGroup group = plugin.groups().resolve(player);
-        Claim claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, pending.coreLocation(), group.initialDistance());
+        Claim claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
         hologramService.spawnClaimHologram(claim);
+        claimVisualService.showClaim(player, claim);
         player.sendMessage(plugin.message(
             "claim-name-created",
             "{name}", claim.name(),
@@ -112,7 +123,7 @@ public final class PendingClaimService {
             return;
         }
         hologramService.removePendingHologram(player.getUniqueId());
-        restoreCore(pending);
+        refundCore(pending);
         if (notify) {
             player.sendMessage(plugin.message("claim-name-cancelled"));
         }
@@ -124,18 +135,15 @@ public final class PendingClaimService {
             return;
         }
         hologramService.removePendingHologram(playerId);
-        restoreCore(pending);
+        refundCore(pending);
         Player player = plugin.getServer().getPlayer(playerId);
         if (player != null) {
             player.sendMessage(plugin.message("claim-name-timeout"));
         }
     }
 
-    private void restoreCore(PendingClaim pending) {
+    private void refundCore(PendingClaim pending) {
         Location location = pending.coreLocation();
-        if (location.getBlock().getType() == plugin.settings().coreMaterial()) {
-            location.getBlock().setType(Material.AIR, false);
-        }
         Player player = plugin.getServer().getPlayer(pending.ownerId());
         if (player != null) {
             claimCoreFactory.giveClaimCore(player, 1);

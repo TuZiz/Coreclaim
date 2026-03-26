@@ -1,13 +1,21 @@
 title: '&8✦ 成员权限 - {name} ✦'
-size: 54
+GuiPlain:
+  - "TTTTMTTTT"
+  - "TTTTTTTTT"
+  - "TTTTTTTTT"
+  - "TTTTTTTTT"
+  - "CCCCCCCCC"
+  - "PFFFBFFFN"
 
 items:
   filler:
+    char: "F"
     material: LIGHT_GRAY_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1400
 
   trusted-entry:
+    char: "T"
     material: PLAYER_HEAD
     custom-model-data: 1401
     name: '&a已授权: &f{player}'
@@ -17,6 +25,7 @@ items:
     sound: BLOCK_NOTE_BLOCK_BASS
 
   candidate-entry:
+    char: "C"
     material: PLAYER_HEAD
     custom-model-data: 1402
     glow: true
@@ -27,35 +36,29 @@ items:
     sound: BLOCK_NOTE_BLOCK_PLING
 
   empty:
-    slot: 13
+    char: "M"
     material: PAPER
     custom-model-data: 1403
     name: '&7暂无授权成员'
     lore:
       - '&7可以从下方选择在线玩家进行授权'
 
-  candidate-start:
-    slot: 36
-    material: PAPER
-    custom-model-data: 1404
-    name: '&7候选起始位'
-
   prev-page:
-    slot: 45
+    char: "P"
     material: ARROW
     custom-model-data: 1405
     name: '&e上一页'
     sound: UI_BUTTON_CLICK
 
   back:
-    slot: 49
+    char: "B"
     material: BARRIER
     custom-model-data: 1406
     name: '&c返回领地管理'
     sound: UI_BUTTON_CLICK
 
   next-page:
-    slot: 53
+    char: "N"
     material: ARROW
     custom-model-data: 1407
     name: '&e下一页'

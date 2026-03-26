@@ -18,6 +18,7 @@ import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.HologramService;
 import com.coreclaim.service.OnlineRewardService;
 import com.coreclaim.service.PendingClaimService;
@@ -46,6 +47,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private HologramService hologramService;
     private PendingClaimService pendingClaimService;
     private ClaimActionService claimActionService;
+    private ClaimVisualService claimVisualService;
     private MenuService menuService;
     private OnlineRewardService onlineRewardService;
     private RemovalConfirmationService removalConfirmationService;
@@ -66,8 +68,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.claimService = new ClaimService(this, databaseManager, profileService);
         this.economyHook = new EconomyHook(this);
         this.hologramService = new HologramService(this);
-        this.pendingClaimService = new PendingClaimService(this, claimService, profileService, claimCoreFactory, hologramService);
-        this.claimActionService = new ClaimActionService(this, claimService, hologramService, economyHook);
+        this.claimVisualService = new ClaimVisualService(this);
+        this.pendingClaimService = new PendingClaimService(this, claimService, profileService, claimCoreFactory, hologramService, claimVisualService);
+        this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook);
         this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
         this.menuService = new MenuService(this, claimService, profileService, claimActionService, removalConfirmationService);
         this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimCoreFactory);

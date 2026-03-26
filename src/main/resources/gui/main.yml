@@ -1,14 +1,20 @@
 title: '&8✦ 领地总览 ✦'
-size: 45
+GuiPlain:
+  - "FFFFFFFFF"
+  - "FFIFGFFFF"
+  - "FFFCFFFFF"
+  - "FFFLFFFFF"
+  - "FFFFXFFFF"
 
 items:
   filler:
+    char: "F"
     material: LIGHT_BLUE_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1000
 
   info:
-    slot: 11
+    char: "I"
     material: KNOWLEDGE_BOOK
     custom-model-data: 1101
     name: '&b&l玩家信息'
@@ -19,7 +25,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   group-info:
-    slot: 13
+    char: "G"
     material: NAME_TAG
     custom-model-data: 1102
     name: '&6&l组别配置'
@@ -31,7 +37,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   current-claim:
-    slot: 22
+    char: "C"
     material: GRASS_BLOCK
     custom-model-data: 1103
     glow: true
@@ -44,7 +50,7 @@ items:
     sound: BLOCK_NOTE_BLOCK_CHIME
 
   current-claim-empty:
-    slot: 22
+    char: "C"
     material: BARRIER
     custom-model-data: 1104
     name: '&c&l当前没有可管理领地'
@@ -53,7 +59,7 @@ items:
       - '&7这里会变成快捷管理入口'
 
   claim-list:
-    slot: 31
+    char: "L"
     material: MAP
     custom-model-data: 1105
     glow: true
@@ -64,7 +70,7 @@ items:
     sound: ITEM_BOOK_PAGE_TURN
 
   close:
-    slot: 40
+    char: "X"
     material: BARRIER
     custom-model-data: 1106
     name: '&c关闭菜单'

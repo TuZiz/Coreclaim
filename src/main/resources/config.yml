@@ -1,8 +1,52 @@
+# 固定可创建领地的世界
+world: "world"
+
+# 玩家在线多少分钟后获得首个领地核心
 starter-reward-minutes: 30
+
+# 指令 / GUI 每次向单个方向扩建的固定格数
 direction-expand-amount: 10
-minimum-core-spacing: 100
+
+# 领地核心之间的最小间隔
+# 当前版本会保证 100x100 内只能存在一个领地核心
+minimum-gap: 100
+
+# 领地名称最大长度
 claim-name-max-length: 16
+
+# 是否显示进入/离开领地提示
 show-enter-leave-messages: true
+
+# 领地扩建冷却，单位秒
+expand-cooldown-seconds: 300
+
+# 创建第二块领地时是否提醒玩家确认位置
+warn-on-second-claim: true
+
+# 使用领地核心所需的最低活跃度
+core-use-min-activity: 20
+
+database:
+  file: coreclaim.db
+
+# 领地核心物品
+# 当前项目仍沿用 claim-core 作为主配置节点，同时兼容读取 core-tool.name / core-tool.lore
+claim-core:
+  material: "AMETHYST_CLUSTER"
+  name: "&d&l领地核心"
+  lore:
+    - ""
+    - " &f▶ &7用途: &e创建新的领地"
+    - " &f▶ &7要求: &b活跃度 ≥ %core-use-min-activity%"
+    - ""
+    - " &8▪ &7对着地面右键后开始命名"
+    - " &8▪ &7聊天输入领地名字后才会真正放下核心"
+    - " &8▪ &7首个核心由在线奖励自动发放"
+
+center-core:
+  material: "AMETHYST_CLUSTER"
+  hologram-text: "&6&l领地核心 &8(&f%claim_name%&8)"
+  hologram-height: 1.8
 
 claim-visual:
   duration-seconds: 10
@@ -16,14 +60,16 @@ claim-visual:
     green: 255
     blue: 140
 
-database:
-  file: coreclaim.db
+allow-interact:
+  - "CHEST"
+  - "TRAPPED_CHEST"
+  - "BARREL"
+  - "ENDER_CHEST"
+  - "SHULKER_BOX"
+  - "ENCHANTING_TABLE"
+  - "ANVIL"
+  - "CHIPPED_ANVIL"
+  - "DAMAGED_ANVIL"
+  - "CRAFTING_TABLE"
 
-claim-core:
-  material: AMETHYST_CLUSTER
-  name: '&d&l领地核心'
-  lore:
-    - '&8CoreClaim'
-    - '&7放置到地面后开始创建领地'
-    - '&7首个核心由在线奖励自动发放'
-    - '&7更多核心请通过你的其他玩法渠道获得'
+# 组别相关的初始大小 / 最大扩建 / 单价 / 数量上限请到 groups.yml 配置

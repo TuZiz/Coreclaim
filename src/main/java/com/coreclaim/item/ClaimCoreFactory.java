@@ -27,8 +27,14 @@ public final class ClaimCoreFactory {
         if (meta == null) {
             return stack;
         }
-        meta.setDisplayName(plugin.color(config.getString("claim-core.name", "&6领地核心")));
+        meta.setDisplayName(plugin.color(config.getString(
+            "claim-core.name",
+            config.getString("core-tool.name", "&6领地核心")
+        )));
         List<String> lore = config.getStringList("claim-core.lore");
+        if (lore.isEmpty()) {
+            lore = config.getStringList("core-tool.lore");
+        }
         if (!lore.isEmpty()) {
             List<String> coloredLore = new ArrayList<>();
             for (String line : lore) {

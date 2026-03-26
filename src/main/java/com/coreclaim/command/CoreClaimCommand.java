@@ -61,6 +61,7 @@ public final class CoreClaimCommand implements TabExecutor {
             case "info" -> handleInfo(sender);
             case "list" -> handleList(sender);
             case "menu", "gui" -> handleMenu(sender);
+            case "tp", "teleport" -> handleTeleport(sender, args);
             case "expand" -> handleExpand(sender, args);
             case "remove", "delete" -> handleRemove(sender, args);
             case "confirm" -> handleConfirm(sender);
@@ -150,6 +151,28 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         claimActionService.expandCurrentClaim(player, direction);
+        return true;
+    }
+
+    private boolean handleTeleport(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (args.length < 2) {
+            player.sendMessage(plugin.message("teleport-usage"));
+            return true;
+        }
+
+        Claim claim = claimService.allClaims().stream()
+            .filter(found -> found.name().equalsIgnoreCase(args[1]))
+            .findFirst()
+            .orElse(null);
+        if (claim == null) {
+            player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
+            return true;
+        }
+        claimActionService.teleportToClaim(player, claim);
         return true;
     }
 
@@ -420,6 +443,7 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&e/claim info &7查看组别、活跃度和当前领地"));
         sender.sendMessage(plugin.color("&e/claim list &7查看你的所有领地"));
         sender.sendMessage(plugin.color("&e/claim menu &7打开图形菜单"));
+        sender.sendMessage(plugin.color("&e/claim tp <领地名字> &7传送到你有权限进入的领地"));
         sender.sendMessage(plugin.color("&e/claim expand <east|south|west|north> &7向单个方向扩建 10 格"));
         sender.sendMessage(plugin.color("&e/claim remove <领地名字> &7删除指定领地，随后在聊天输入 confirm"));
         sender.sendMessage(plugin.color("&e/claim confirm &7直接确认待删除领地"));
@@ -441,6 +465,8 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("list");
             options.add("menu");
             options.add("gui");
+            options.add("tp");
+            options.add("teleport");
             options.add("expand");
             options.add("remove");
             options.add("delete");
@@ -481,6 +507,12 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("delete")) && sender instanceof Player player) {
             for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
+                options.add(claim.name());
+            }
+            return filter(options, args[1]);
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("teleport"))) {
+            for (Claim claim : claimService.allClaims()) {
                 options.add(claim.name());
             }
             return filter(options, args[1]);

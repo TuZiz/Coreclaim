@@ -8,6 +8,7 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.listener.ClaimEnterLeaveListener;
+import com.coreclaim.listener.ClaimInputListener;
 import com.coreclaim.listener.ClaimCoreListener;
 import com.coreclaim.listener.ClaimCoreInteractionListener;
 import com.coreclaim.listener.ClaimNamingListener;
@@ -18,6 +19,7 @@ import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.HologramService;
 import com.coreclaim.service.OnlineRewardService;
@@ -48,6 +50,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private PendingClaimService pendingClaimService;
     private ClaimActionService claimActionService;
     private ClaimVisualService claimVisualService;
+    private ClaimInputService claimInputService;
     private MenuService menuService;
     private OnlineRewardService onlineRewardService;
     private RemovalConfirmationService removalConfirmationService;
@@ -71,8 +74,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.claimVisualService = new ClaimVisualService(this);
         this.pendingClaimService = new PendingClaimService(this, claimService, profileService, claimCoreFactory, hologramService, claimVisualService);
         this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook);
+        this.claimInputService = new ClaimInputService(this, claimService);
         this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
-        this.menuService = new MenuService(this, claimService, profileService, claimActionService, removalConfirmationService);
+        this.menuService = new MenuService(this, claimService, profileService, claimActionService, removalConfirmationService, claimInputService);
         this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimCoreFactory);
 
         getServer().getPluginManager().registerEvents(
@@ -88,6 +92,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
             this
         );
         getServer().getPluginManager().registerEvents(new ClaimNamingListener(this, pendingClaimService), this);
+        getServer().getPluginManager().registerEvents(new ClaimInputListener(this, claimInputService), this);
         getServer().getPluginManager().registerEvents(new MenuListener(menuService), this);
         getServer().getPluginManager().registerEvents(new ClaimEnterLeaveListener(this, claimService), this);
         getServer().getPluginManager().registerEvents(new RemovalConfirmListener(this, removalConfirmationService), this);
@@ -198,6 +203,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
         menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
         menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
         menuResources.put("trust", new ResourceConfig(this, "gui/trust.yml"));
+        menuResources.put("trust-online", new ResourceConfig(this, "gui/trust-online.yml"));
+        menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
     }
 }

@@ -27,7 +27,7 @@ public final class ClaimNamingListener implements Listener {
         event.setCancelled(true);
         String message = event.getMessage().trim();
         plugin.platformScheduler().runPlayerTask(player, () -> {
-            if ("cancel".equalsIgnoreCase(message)) {
+            if (isCancel(message)) {
                 pendingClaimService.cancelPendingClaim(player, true);
             } else {
                 pendingClaimService.completeClaim(player, message);
@@ -38,6 +38,10 @@ public final class ClaimNamingListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         pendingClaimService.cancelPendingClaim(event.getPlayer(), false);
+    }
+
+    private boolean isCancel(String message) {
+        return "取消".equals(message) || "cancel".equalsIgnoreCase(message);
     }
 }
 

@@ -39,11 +39,26 @@ public final class PendingClaimService {
 
     public boolean beginClaimCreation(Player player, Location coreLocation) {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        if (profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
+            player.sendMessage(plugin.message(
+                "claim-core-activity-low",
+                "{value}",
+                String.valueOf(plugin.settings().coreUseMinActivity())
+            ));
+            return false;
+        }
+        if (coreLocation.getWorld() == null || !plugin.settings().claimWorld().equalsIgnoreCase(coreLocation.getWorld().getName())) {
+            player.sendMessage(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorld()));
+            return false;
+        }
         ClaimGroup group = plugin.groups().resolve(player);
         int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
         if (claimService.countClaims(player.getUniqueId()) >= maxClaims) {
             player.sendMessage(plugin.message("claim-no-slot"));
             return false;
+        }
+        if (plugin.settings().warnOnSecondClaim() && claimService.countClaims(player.getUniqueId()) == 1) {
+            player.sendMessage(plugin.message("second-claim-warning"));
         }
 
         int initialDistance = group.initialDistance();
@@ -59,7 +74,7 @@ public final class PendingClaimService {
             coreLocation.getWorld().getName(),
             coreLocation.getBlockX(),
             coreLocation.getBlockZ(),
-            plugin.settings().minimumCoreSpacing(),
+            plugin.settings().minimumGap(),
             null
         )) {
             player.sendMessage(plugin.message("claim-core-too-close"));

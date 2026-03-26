@@ -1,15 +1,15 @@
-title: '&8✦ 领地管理 - {name} ✦'
+title: '&8» &b&l方向扩建 - {name}'
 GuiPlain:
   - "FFFFNFFFF"
-  - "FFFFFFFFF"
-  - "FFWIPEFFF"
+  - "FFFFIFFFF"
+  - "FFWFTFEFF"
   - "FFFFSFFFF"
-  - "BFTFDFFFF"
+  - "FFBFDFFFF"
 
 items:
   filler:
     char: "F"
-    material: WHITE_STAINED_GLASS_PANE
+    material: LIGHT_BLUE_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1300
 
@@ -17,15 +17,13 @@ items:
     char: "I"
     material: WRITABLE_BOOK
     custom-model-data: 1301
-    name: '&6&l领地信息'
+    name: '&e&l扩建信息'
     lore:
-      - '&7名称: &f{name}'
+      - '&7领地名称: &f{name}'
       - '&7世界: &f{world}'
-      - '&7核心: &f{x}, {z}'
-      - '&7大小: &e{width}x{depth}'
-      - '&7面积: &e{area}'
-      - '&7东/南/西/北: &e{east}&7/&e{south}&7/&e{west}&7/&e{north}'
-      - '&7信任成员: &e{trusted}'
+      - '&7核心坐标: &f{x}, {z}'
+      - '&7当前大小: &e{width}x{depth}'
+      - '&7当前面积: &e{area}'
 
   expand-north:
     char: "N"
@@ -75,36 +73,30 @@ items:
       - '&7价格: &6{price}'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
-  trust:
-    char: "T"
-    material: NAME_TAG
-    custom-model-data: 1306
-    name: '&d成员权限'
-    lore:
-      - '&7管理这个领地的单独授权'
-    sound: BLOCK_NOTE_BLOCK_PLING
-
   teleport:
-    char: "P"
+    char: "T"
     material: ENDER_PEARL
-    custom-model-data: 1307
+    custom-model-data: 1306
     glow: true
-    name: '&a传送到核心'
+    name: '&d&l传送到核心'
+    lore:
+      - ''
+      - ' &6&l» &e点击传送到当前领地'
     sound: ENTITY_ENDERMAN_TELEPORT
 
   back:
     char: "B"
-    material: ARROW
-    custom-model-data: 1308
-    name: '&e返回领地列表'
+    material: BARRIER
+    custom-model-data: 1307
+    name: '&c&l返回核心菜单'
     sound: UI_BUTTON_CLICK
 
   delete:
     char: "D"
     material: LAVA_BUCKET
-    custom-model-data: 1309
-    name: '&c删除领地'
+    custom-model-data: 1308
+    name: '&c&l删除领地'
     lore:
-      - '&7点击后需要在聊天输入'
-      - '&aconfirm &7才能真正删除'
+      - '&7点击后需要在聊天栏输入'
+      - '&aconfirm &7确认删除'
     sound: BLOCK_ANVIL_PLACE

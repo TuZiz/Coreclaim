@@ -2,14 +2,25 @@ package com.coreclaim.config;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class PluginConfig {
 
+    private final String claimWorld;
     private final int starterRewardMinutes;
     private final int directionExpandAmount;
     private final int minimumCoreSpacing;
+    private final int minimumGap;
     private final int claimNameMaxLength;
     private final Material coreMaterial;
+    private final String centerCoreHologramText;
+    private final double centerCoreHologramHeight;
+    private final int expandCooldownSeconds;
+    private final boolean warnOnSecondClaim;
+    private final int coreUseMinActivity;
+    private final Set<Material> allowInteract;
     private final int claimVisualDurationSeconds;
     private final int claimVisualIntervalTicks;
     private final float claimVisualSize;
@@ -21,11 +32,21 @@ public final class PluginConfig {
     private final int claimVisualBlue;
 
     public PluginConfig(FileConfiguration config) {
+        this.claimWorld = config.getString("world", "world");
         this.starterRewardMinutes = Math.max(1, config.getInt("starter-reward-minutes", 30));
         this.directionExpandAmount = Math.max(1, config.getInt("direction-expand-amount", 10));
-        this.minimumCoreSpacing = Math.max(1, config.getInt("minimum-core-spacing", 100));
+        this.minimumGap = Math.max(5, config.getInt("minimum-gap", config.getInt("minimum-core-spacing", 100)));
+        this.minimumCoreSpacing = minimumGap;
         this.claimNameMaxLength = Math.max(3, config.getInt("claim-name-max-length", 16));
-        this.coreMaterial = resolveMaterial(config.getString("claim-core.material", "AMETHYST_CLUSTER"));
+        this.coreMaterial = resolveMaterial(config.getString("center-core.material",
+            config.getString("claim-core.material",
+                config.getString("core-tool.material", "AMETHYST_CLUSTER"))));
+        this.centerCoreHologramText = config.getString("center-core.hologram-text", "&6%claim_name%");
+        this.centerCoreHologramHeight = config.getDouble("center-core.hologram-height", 1.8D);
+        this.expandCooldownSeconds = Math.max(0, config.getInt("expand-cooldown-seconds", 0));
+        this.warnOnSecondClaim = config.getBoolean("warn-on-second-claim", false);
+        this.coreUseMinActivity = Math.max(0, config.getInt("core-use-min-activity", 0));
+        this.allowInteract = resolveMaterials(config.getStringList("allow-interact"));
         this.claimVisualDurationSeconds = Math.max(1, config.getInt("claim-visual.duration-seconds", 10));
         this.claimVisualIntervalTicks = Math.max(1, config.getInt("claim-visual.interval-ticks", 10));
         this.claimVisualSize = (float) Math.max(0.1D, config.getDouble("claim-visual.size", 1.2D));
@@ -46,6 +67,21 @@ public final class PluginConfig {
         return Math.max(0, Math.min(255, value));
     }
 
+    private Set<Material> resolveMaterials(List<String> names) {
+        Set<Material> materials = new HashSet<>();
+        for (String name : names) {
+            Material material = Material.matchMaterial(name == null ? "" : name);
+            if (material != null) {
+                materials.add(material);
+            }
+        }
+        return materials;
+    }
+
+    public String claimWorld() {
+        return claimWorld;
+    }
+
     public int starterRewardMinutes() {
         return starterRewardMinutes;
     }
@@ -58,12 +94,40 @@ public final class PluginConfig {
         return minimumCoreSpacing;
     }
 
+    public int minimumGap() {
+        return minimumGap;
+    }
+
     public int claimNameMaxLength() {
         return claimNameMaxLength;
     }
 
     public Material coreMaterial() {
         return coreMaterial;
+    }
+
+    public String centerCoreHologramText() {
+        return centerCoreHologramText;
+    }
+
+    public double centerCoreHologramHeight() {
+        return centerCoreHologramHeight;
+    }
+
+    public int expandCooldownSeconds() {
+        return expandCooldownSeconds;
+    }
+
+    public boolean warnOnSecondClaim() {
+        return warnOnSecondClaim;
+    }
+
+    public int coreUseMinActivity() {
+        return coreUseMinActivity;
+    }
+
+    public boolean isAllowedInteract(Material material) {
+        return allowInteract.contains(material);
     }
 
     public int claimVisualDurationSeconds() {

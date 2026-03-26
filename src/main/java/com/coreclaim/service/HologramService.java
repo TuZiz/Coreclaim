@@ -44,9 +44,15 @@ public final class HologramService {
         if (world == null) {
             return;
         }
+        String hologramText = plugin.settings().centerCoreHologramText().replace("%claim_name%", claim.name());
         ArmorStand armorStand = createHologram(
-            new Location(world, claim.centerX() + 0.5D, claim.centerY() + 1.8D, claim.centerZ() + 0.5D),
-            plugin.color("&6" + claim.name())
+            new Location(
+                world,
+                claim.centerX() + 0.5D,
+                claim.centerY() + plugin.settings().centerCoreHologramHeight(),
+                claim.centerZ() + 0.5D
+            ),
+            plugin.color(hologramText)
         );
         armorStand.addScoreboardTag(TAG);
         armorStand.addScoreboardTag("claim:" + claim.id());
@@ -58,7 +64,7 @@ public final class HologramService {
         List<UUID> entityIds = new ArrayList<>();
         entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.color("&6&l等待命名")));
         entityIds.add(createPendingLine(location.clone().add(0.5D, 1.85D, 0.5D), plugin.color("&f创建者: &e" + playerName)));
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.color("&7聊天输入 &ccancel &7取消")));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.color("&7聊天输入 &c取消 &7取消")));
         pendingHolograms.put(playerId, entityIds);
     }
 

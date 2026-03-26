@@ -4,26 +4,28 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
+import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
@@ -38,19 +40,22 @@ public final class MenuService {
     private final ProfileService profileService;
     private final ClaimActionService claimActionService;
     private final RemovalConfirmationService removalConfirmationService;
+    private final ClaimInputService claimInputService;
 
     public MenuService(
         CoreClaimPlugin plugin,
         ClaimService claimService,
         ProfileService profileService,
         ClaimActionService claimActionService,
-        RemovalConfirmationService removalConfirmationService
+        RemovalConfirmationService removalConfirmationService,
+        ClaimInputService claimInputService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.profileService = profileService;
         this.claimActionService = claimActionService;
         this.removalConfirmationService = removalConfirmationService;
+        this.claimInputService = claimInputService;
     }
 
     public void openMainMenu(Player player) {
@@ -77,8 +82,7 @@ public final class MenuService {
             "{max_distance}", String.valueOf(group.maxDistance()),
             "{expand_amount}", String.valueOf(plugin.settings().directionExpandAmount())
         ));
-        inventory.setItem(
-            slot("main", "current-claim"),
+        inventory.setItem(slot("main", "current-claim"),
             currentClaim == null
                 ? configuredItem("main", "current-claim-empty")
                 : configuredItem("main", "current-claim",
@@ -116,6 +120,7 @@ public final class MenuService {
             ));
         }
 
+        inventory.setItem(slot("claim-list", "refresh"), configuredItem("claim-list", "refresh", "{total}", String.valueOf(claims.size())));
         inventory.setItem(slot("claim-list", "prev-page"), configuredItem("claim-list", "prev-page"));
         inventory.setItem(slot("claim-list", "back"), configuredItem("claim-list", "back"));
         inventory.setItem(slot("claim-list", "next-page"), configuredItem("claim-list", "next-page"));
@@ -124,8 +129,7 @@ public final class MenuService {
 
     public void openClaimManageMenu(Player player, Claim claim) {
         ClaimManageHolder holder = new ClaimManageHolder(claim.id());
-        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-manage"),
-            menuTitle("claim-manage", "{name}", claim.name()));
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-manage"), menuTitle("claim-manage", "{name}", claim.name()));
         holder.inventory = inventory;
         fill(inventory, "claim-manage", "filler");
 
@@ -142,38 +146,16 @@ public final class MenuService {
             "{z}", String.valueOf(claim.centerZ()),
             "{width}", String.valueOf(claim.width()),
             "{depth}", String.valueOf(claim.depth()),
-            "{area}", String.valueOf(claim.area()),
-            "{east}", String.valueOf(claim.east()),
-            "{south}", String.valueOf(claim.south()),
-            "{west}", String.valueOf(claim.west()),
-            "{north}", String.valueOf(claim.north()),
-            "{trusted}", String.valueOf(claim.trustedCount())
+            "{area}", String.valueOf(claim.area())
         ));
         inventory.setItem(slot("claim-manage", "expand-north"), configuredItem("claim-manage", "expand-north",
-            "{amount}", String.valueOf(amount),
-            "{price}", north.costText(),
-            "{current}", String.valueOf(claim.north()),
-            "{target}", String.valueOf(north.targetDistance())
-        ));
+            "{amount}", String.valueOf(amount), "{price}", north.costText(), "{current}", String.valueOf(claim.north()), "{target}", String.valueOf(north.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-south"), configuredItem("claim-manage", "expand-south",
-            "{amount}", String.valueOf(amount),
-            "{price}", south.costText(),
-            "{current}", String.valueOf(claim.south()),
-            "{target}", String.valueOf(south.targetDistance())
-        ));
+            "{amount}", String.valueOf(amount), "{price}", south.costText(), "{current}", String.valueOf(claim.south()), "{target}", String.valueOf(south.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-west"), configuredItem("claim-manage", "expand-west",
-            "{amount}", String.valueOf(amount),
-            "{price}", west.costText(),
-            "{current}", String.valueOf(claim.west()),
-            "{target}", String.valueOf(west.targetDistance())
-        ));
+            "{amount}", String.valueOf(amount), "{price}", west.costText(), "{current}", String.valueOf(claim.west()), "{target}", String.valueOf(west.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-east"), configuredItem("claim-manage", "expand-east",
-            "{amount}", String.valueOf(amount),
-            "{price}", east.costText(),
-            "{current}", String.valueOf(claim.east()),
-            "{target}", String.valueOf(east.targetDistance())
-        ));
-        inventory.setItem(slot("claim-manage", "trust"), configuredItem("claim-manage", "trust"));
+            "{amount}", String.valueOf(amount), "{price}", east.costText(), "{current}", String.valueOf(claim.east()), "{target}", String.valueOf(east.targetDistance())));
         inventory.setItem(slot("claim-manage", "teleport"), configuredItem("claim-manage", "teleport"));
         inventory.setItem(slot("claim-manage", "delete"), configuredItem("claim-manage", "delete"));
         inventory.setItem(slot("claim-manage", "back"), configuredItem("claim-manage", "back"));
@@ -182,67 +164,118 @@ public final class MenuService {
 
     public void openCoreMenu(Player player, Claim claim) {
         CoreMenuHolder holder = new CoreMenuHolder(claim.id());
-        Inventory inventory = Bukkit.createInventory(holder, menuSize("core"),
-            menuTitle("core", "{name}", claim.name()));
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("core"), menuTitle("core", "{name}", claim.name()));
         holder.inventory = inventory;
         fill(inventory, "core", "filler");
 
+        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        ClaimGroup group = plugin.groups().resolve(player);
+        int claimCount = claimService.countClaims(player.getUniqueId());
+        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
+
         inventory.setItem(slot("core", "info"), configuredItem("core", "info",
             "{name}", claim.name(),
-            "{owner}", claim.ownerName(),
-            "{x}", String.valueOf(claim.centerX()),
-            "{z}", String.valueOf(claim.centerZ()),
+            "{claims}", String.valueOf(claimCount),
+            "{max_claims}", String.valueOf(maxClaims),
+            "{center_x}", String.valueOf(claim.centerX()),
+            "{center_z}", String.valueOf(claim.centerZ()),
             "{width}", String.valueOf(claim.width()),
             "{depth}", String.valueOf(claim.depth()),
-            "{trusted}", String.valueOf(claim.trustedCount())
+            "{area}", String.valueOf(claim.area()),
+            "{activity}", String.valueOf(profile.activityPoints()),
+            "{trusted_count}", String.valueOf(claim.trustedCount()),
+            "{enter_message}", displayMessage(claim.enterMessage(), "默认进入提示"),
+            "{leave_message}", displayMessage(claim.leaveMessage(), "默认离开提示")
         ));
-        inventory.setItem(slot("core", "teleport"), configuredItem("core", "teleport"));
-        inventory.setItem(slot("core", "settings"), configuredItem("core", "settings"));
+        inventory.setItem(slot("core", "expand"), configuredItem("core", "expand"));
+        inventory.setItem(slot("core", "claim-list"), configuredItem("core", "claim-list", "{total}", String.valueOf(claimCount)));
+        inventory.setItem(slot("core", "trust"), configuredItem("core", "trust", "{name}", claim.name(), "{trusted_count}", String.valueOf(claim.trustedCount())));
+        inventory.setItem(slot("core", "permissions"), configuredItem("core", "permissions"));
+        inventory.setItem(slot("core", "rename"), configuredItem("core", "rename", "{name}", claim.name()));
+        inventory.setItem(slot("core", "notify-enter"), configuredItem("core", "notify-enter", "{name}", claim.name(), "{current}", displayMessage(claim.enterMessage(), "默认进入提示")));
+        inventory.setItem(slot("core", "notify-leave"), configuredItem("core", "notify-leave", "{name}", claim.name(), "{current}", displayMessage(claim.leaveMessage(), "默认离开提示")));
         inventory.setItem(slot("core", "hide"), configuredItem("core", "hide"));
+        inventory.setItem(slot("core", "teleport"), configuredItem("core", "teleport"));
         inventory.setItem(slot("core", "close"), configuredItem("core", "close"));
         player.openInventory(inventory);
     }
 
     public void openTrustMenu(Player player, Claim claim, int page) {
         TrustMenuHolder holder = new TrustMenuHolder(claim.id(), page);
-        Inventory inventory = Bukkit.createInventory(holder, menuSize("trust"),
-            menuTitle("trust", "{name}", claim.name()));
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("trust"), menuTitle("trust", "{name}", claim.name()));
         holder.inventory = inventory;
         fill(inventory, "trust", "filler");
 
         List<UUID> trustedPlayers = new ArrayList<>(claim.trustedMembers());
-        List<Integer> trustedSlots = slots("trust", "trusted-entry");
-        int start = Math.max(0, page) * trustedSlots.size();
-        int end = Math.min(trustedPlayers.size(), start + trustedSlots.size());
-
+        List<Integer> entrySlots = slots("trust", "trusted-entry");
+        int start = Math.max(0, page) * entrySlots.size();
+        int end = Math.min(trustedPlayers.size(), start + entrySlots.size());
         for (int index = start; index < end; index++) {
             UUID trustedId = trustedPlayers.get(index);
-            inventory.setItem(trustedSlots.get(index - start), playerHead(trustedId,
-                itemName("trust", "trusted-entry", "{player}", playerName(trustedId)),
-                itemLore("trust", "trusted-entry", "{player}", playerName(trustedId), "{name}", claim.name())
+            inventory.setItem(entrySlots.get(index - start), playerHead("trust", "trusted-entry", trustedId,
+                "{player}", playerName(trustedId), "{name}", claim.name()
             ));
         }
         if (trustedPlayers.isEmpty()) {
-            inventory.setItem(slot("trust", "empty"), configuredItem("trust", "empty"));
+            inventory.setItem(slot("trust", "empty"), configuredItem("trust", "empty", "{name}", claim.name()));
         }
 
-        List<Integer> candidateSlots = slots("trust", "candidate-entry");
-        List<Player> candidates = Bukkit.getOnlinePlayers().stream()
-            .filter(online -> !online.getUniqueId().equals(claim.owner()))
-            .filter(online -> !claim.isTrusted(online.getUniqueId()))
-            .map(online -> (Player) online)
-            .toList();
-        for (int index = 0; index < Math.min(candidateSlots.size(), candidates.size()); index++) {
-            Player candidate = candidates.get(index);
-            inventory.setItem(candidateSlots.get(index), playerHead(candidate.getUniqueId(),
-                itemName("trust", "candidate-entry", "{player}", candidate.getName()),
-                itemLore("trust", "candidate-entry", "{player}", candidate.getName(), "{name}", claim.name())
-            ));
-        }
-
+        inventory.setItem(slot("trust", "refresh"), configuredItem("trust", "refresh"));
+        inventory.setItem(slot("trust", "add-player"), configuredItem("trust", "add-player", "{name}", claim.name(), "{trusted_count}", String.valueOf(claim.trustedCount())));
         inventory.setItem(slot("trust", "prev-page"), configuredItem("trust", "prev-page"));
         inventory.setItem(slot("trust", "back"), configuredItem("trust", "back"));
         inventory.setItem(slot("trust", "next-page"), configuredItem("trust", "next-page"));
+        player.openInventory(inventory);
+    }
+
+    public void openTrustOnlineMenu(Player player, Claim claim, int page) {
+        TrustOnlineHolder holder = new TrustOnlineHolder(claim.id(), page);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("trust-online"), menuTitle("trust-online", "{name}", claim.name()));
+        holder.inventory = inventory;
+        fill(inventory, "trust-online", "filler");
+
+        List<Player> candidates = onlineCandidates(claim);
+        List<Integer> entrySlots = slots("trust-online", "entry");
+        int start = Math.max(0, page) * entrySlots.size();
+        int end = Math.min(candidates.size(), start + entrySlots.size());
+        for (int index = start; index < end; index++) {
+            Player candidate = candidates.get(index);
+            inventory.setItem(entrySlots.get(index - start), playerHead("trust-online", "entry", candidate.getUniqueId(),
+                "{player}", candidate.getName(), "{name}", claim.name()
+            ));
+        }
+        if (candidates.isEmpty() && hasItem("trust-online", "empty")) {
+            inventory.setItem(slot("trust-online", "empty"), configuredItem("trust-online", "empty"));
+        }
+
+        inventory.setItem(slot("trust-online", "refresh"), configuredItem("trust-online", "refresh"));
+        inventory.setItem(slot("trust-online", "prev-page"), configuredItem("trust-online", "prev-page"));
+        inventory.setItem(slot("trust-online", "back"), configuredItem("trust-online", "back"));
+        inventory.setItem(slot("trust-online", "next-page"), configuredItem("trust-online", "next-page"));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimPermissionsMenu(Player player, Claim claim) {
+        ClaimPermissionHolder holder = new ClaimPermissionHolder(claim.id());
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-permissions"), menuTitle("claim-permissions", "{name}", claim.name()));
+        holder.inventory = inventory;
+        fill(inventory, "claim-permissions", "filler");
+
+        inventory.setItem(slot("claim-permissions", "info"), configuredItem("claim-permissions", "info",
+            "{name}", claim.name(),
+            "{trusted_count}", String.valueOf(claim.trustedCount()),
+            "{perm_place}", stateText(claim.permission(ClaimPermission.PLACE)),
+            "{perm_break}", stateText(claim.permission(ClaimPermission.BREAK)),
+            "{perm_interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
+            "{perm_bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
+            "{perm_teleport}", stateText(claim.permission(ClaimPermission.TELEPORT))
+        ));
+        inventory.setItem(slot("claim-permissions", "perm-place"), configuredItem("claim-permissions", "perm-place", "{state}", stateText(claim.permission(ClaimPermission.PLACE))));
+        inventory.setItem(slot("claim-permissions", "perm-break"), configuredItem("claim-permissions", "perm-break", "{state}", stateText(claim.permission(ClaimPermission.BREAK))));
+        inventory.setItem(slot("claim-permissions", "perm-interact"), configuredItem("claim-permissions", "perm-interact", "{state}", stateText(claim.permission(ClaimPermission.INTERACT))));
+        inventory.setItem(slot("claim-permissions", "perm-bucket"), configuredItem("claim-permissions", "perm-bucket", "{state}", stateText(claim.permission(ClaimPermission.BUCKET))));
+        inventory.setItem(slot("claim-permissions", "perm-teleport"), configuredItem("claim-permissions", "perm-teleport", "{state}", stateText(claim.permission(ClaimPermission.TELEPORT))));
+        inventory.setItem(slot("claim-permissions", "back"), configuredItem("claim-permissions", "back"));
         player.openInventory(inventory);
     }
 
@@ -253,7 +286,6 @@ public final class MenuService {
         if (!(event.getInventory().getHolder() instanceof BaseHolder holder)) {
             return;
         }
-
         event.setCancelled(true);
         int slot = event.getRawSlot();
         if (slot < 0 || slot >= event.getInventory().getSize()) {
@@ -266,10 +298,14 @@ public final class MenuService {
             handleClaimListMenu(player, claimListHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimManageHolder claimManageHolder) {
             handleClaimManageMenu(player, claimManageHolder, slot);
-        } else if (holder instanceof TrustMenuHolder trustMenuHolder) {
-            handleTrustMenu(player, trustMenuHolder, slot);
         } else if (holder instanceof CoreMenuHolder coreMenuHolder) {
             handleCoreMenu(player, coreMenuHolder, slot);
+        } else if (holder instanceof TrustMenuHolder trustMenuHolder) {
+            handleTrustMenu(player, trustMenuHolder, slot);
+        } else if (holder instanceof TrustOnlineHolder trustOnlineHolder) {
+            handleTrustOnlineMenu(player, trustOnlineHolder, slot);
+        } else if (holder instanceof ClaimPermissionHolder permissionHolder) {
+            handlePermissionMenu(player, permissionHolder, slot);
         }
     }
 
@@ -281,11 +317,15 @@ public final class MenuService {
                 player.sendMessage(plugin.message("menu-no-current-claim"));
                 return;
             }
-            openClaimManageMenu(player, claim);
-        } else if (slot == slot("main", "claim-list")) {
+            openCoreMenu(player, claim);
+            return;
+        }
+        if (slot == slot("main", "claim-list")) {
             playConfiguredSound(player, "main", "claim-list");
             openClaimListMenu(player, 0);
-        } else if (slot == slot("main", "close")) {
+            return;
+        }
+        if (slot == slot("main", "close")) {
             playConfiguredSound(player, "main", "close");
             player.closeInventory();
         }
@@ -298,22 +338,30 @@ public final class MenuService {
         int index = holder.page * entrySlots.size() + slotIndex;
         if (slotIndex >= 0 && index < claims.size()) {
             Claim claim = claims.get(index);
+            playConfiguredSound(player, "claim-list", "entry");
             if (rightClick) {
-                playConfiguredSound(player, "claim-list", "entry");
                 claimActionService.teleportToClaim(player, claim);
             } else {
-                playConfiguredSound(player, "claim-list", "entry");
-                openClaimManageMenu(player, claim);
+                openCoreMenu(player, claim);
             }
+            return;
+        }
+        if (slot == slot("claim-list", "refresh")) {
+            playConfiguredSound(player, "claim-list", "refresh");
+            openClaimListMenu(player, holder.page);
             return;
         }
         if (slot == slot("claim-list", "prev-page") && holder.page > 0) {
             playConfiguredSound(player, "claim-list", "prev-page");
             openClaimListMenu(player, holder.page - 1);
-        } else if (slot == slot("claim-list", "back")) {
+            return;
+        }
+        if (slot == slot("claim-list", "back")) {
             playConfiguredSound(player, "claim-list", "back");
             openMainMenu(player);
-        } else if (slot == slot("claim-list", "next-page") && (holder.page + 1) * entrySlots.size() < claims.size()) {
+            return;
+        }
+        if (slot == slot("claim-list", "next-page") && (holder.page + 1) * entrySlots.size() < claims.size()) {
             playConfiguredSound(player, "claim-list", "next-page");
             openClaimListMenu(player, holder.page + 1);
         }
@@ -332,35 +380,105 @@ public final class MenuService {
             if (claimActionService.expandClaim(player, claim, ClaimDirection.NORTH, plugin.settings().directionExpandAmount())) {
                 openClaimManageMenu(player, claim);
             }
-        } else if (slot == slot("claim-manage", "expand-south")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "expand-south")) {
             playConfiguredSound(player, "claim-manage", "expand-south");
             if (claimActionService.expandClaim(player, claim, ClaimDirection.SOUTH, plugin.settings().directionExpandAmount())) {
                 openClaimManageMenu(player, claim);
             }
-        } else if (slot == slot("claim-manage", "expand-west")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "expand-west")) {
             playConfiguredSound(player, "claim-manage", "expand-west");
             if (claimActionService.expandClaim(player, claim, ClaimDirection.WEST, plugin.settings().directionExpandAmount())) {
                 openClaimManageMenu(player, claim);
             }
-        } else if (slot == slot("claim-manage", "expand-east")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "expand-east")) {
             playConfiguredSound(player, "claim-manage", "expand-east");
             if (claimActionService.expandClaim(player, claim, ClaimDirection.EAST, plugin.settings().directionExpandAmount())) {
                 openClaimManageMenu(player, claim);
             }
-        } else if (slot == slot("claim-manage", "trust")) {
-            playConfiguredSound(player, "claim-manage", "trust");
-            openTrustMenu(player, claim, 0);
-        } else if (slot == slot("claim-manage", "teleport")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "teleport")) {
             playConfiguredSound(player, "claim-manage", "teleport");
             claimActionService.teleportToClaim(player, claim);
-        } else if (slot == slot("claim-manage", "delete")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "delete")) {
             playConfiguredSound(player, "claim-manage", "delete");
             if (removalConfirmationService.request(player, claim)) {
                 player.closeInventory();
             }
-        } else if (slot == slot("claim-manage", "back")) {
+            return;
+        }
+        if (slot == slot("claim-manage", "back")) {
             playConfiguredSound(player, "claim-manage", "back");
+            openCoreMenu(player, claim);
+        }
+    }
+
+    private void handleCoreMenu(Player player, CoreMenuHolder holder, int slot) {
+        Claim claim = claimService.findClaimById(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+
+        if (slot == slot("core", "expand")) {
+            playConfiguredSound(player, "core", "expand");
+            openClaimManageMenu(player, claim);
+            return;
+        }
+        if (slot == slot("core", "claim-list")) {
+            playConfiguredSound(player, "core", "claim-list");
             openClaimListMenu(player, 0);
+            return;
+        }
+        if (slot == slot("core", "trust")) {
+            playConfiguredSound(player, "core", "trust");
+            openTrustMenu(player, claim, 0);
+            return;
+        }
+        if (slot == slot("core", "permissions")) {
+            playConfiguredSound(player, "core", "permissions");
+            openClaimPermissionsMenu(player, claim);
+            return;
+        }
+        if (slot == slot("core", "rename")) {
+            playConfiguredSound(player, "core", "rename");
+            claimInputService.requestRename(player, claim);
+            return;
+        }
+        if (slot == slot("core", "notify-enter")) {
+            playConfiguredSound(player, "core", "notify-enter");
+            claimInputService.requestEnterMessage(player, claim);
+            return;
+        }
+        if (slot == slot("core", "notify-leave")) {
+            playConfiguredSound(player, "core", "notify-leave");
+            claimInputService.requestLeaveMessage(player, claim);
+            return;
+        }
+        if (slot == slot("core", "hide")) {
+            playConfiguredSound(player, "core", "hide");
+            if (claimActionService.hideClaimCore(player, claim)) {
+                player.closeInventory();
+            }
+            return;
+        }
+        if (slot == slot("core", "teleport")) {
+            playConfiguredSound(player, "core", "teleport");
+            claimActionService.teleportToClaim(player, claim);
+            return;
+        }
+        if (slot == slot("core", "close")) {
+            playConfiguredSound(player, "core", "close");
+            player.closeInventory();
         }
     }
 
@@ -373,11 +491,11 @@ public final class MenuService {
         }
 
         List<UUID> trustedPlayers = new ArrayList<>(claim.trustedMembers());
-        List<Integer> trustedSlots = slots("trust", "trusted-entry");
-        int start = holder.page * trustedSlots.size();
-        int end = Math.min(trustedPlayers.size(), start + trustedSlots.size());
+        List<Integer> entrySlots = slots("trust", "trusted-entry");
+        int start = holder.page * entrySlots.size();
+        int end = Math.min(trustedPlayers.size(), start + entrySlots.size());
         for (int index = start; index < end; index++) {
-            if (trustedSlots.get(index - start) == slot) {
+            if (entrySlots.get(index - start) == slot) {
                 playConfiguredSound(player, "trust", "trusted-entry");
                 OfflinePlayer target = Bukkit.getOfflinePlayer(trustedPlayers.get(index));
                 if (claimActionService.untrustPlayer(player, claim, target)) {
@@ -387,57 +505,122 @@ public final class MenuService {
             }
         }
 
-        List<Integer> candidateSlots = slots("trust", "candidate-entry");
-        List<Player> candidates = Bukkit.getOnlinePlayers().stream()
-            .filter(online -> !online.getUniqueId().equals(claim.owner()))
-            .filter(online -> !claim.isTrusted(online.getUniqueId()))
-            .map(online -> (Player) online)
-            .limit(candidateSlots.size())
-            .toList();
-        for (int index = 0; index < candidates.size(); index++) {
-            if (candidateSlots.get(index) == slot) {
-                playConfiguredSound(player, "trust", "candidate-entry");
-                if (claimActionService.trustPlayer(player, claim, candidates.get(index))) {
-                    openTrustMenu(player, claim, holder.page);
-                }
-                return;
-            }
+        if (slot == slot("trust", "refresh")) {
+            playConfiguredSound(player, "trust", "refresh");
+            openTrustMenu(player, claim, holder.page);
+            return;
         }
-
+        if (slot == slot("trust", "add-player")) {
+            playConfiguredSound(player, "trust", "add-player");
+            openTrustOnlineMenu(player, claim, 0);
+            return;
+        }
         if (slot == slot("trust", "prev-page") && holder.page > 0) {
             playConfiguredSound(player, "trust", "prev-page");
             openTrustMenu(player, claim, holder.page - 1);
-        } else if (slot == slot("trust", "back")) {
+            return;
+        }
+        if (slot == slot("trust", "back")) {
             playConfiguredSound(player, "trust", "back");
-            openClaimManageMenu(player, claim);
-        } else if (slot == slot("trust", "next-page") && (holder.page + 1) * trustedSlots.size() < trustedPlayers.size()) {
+            openCoreMenu(player, claim);
+            return;
+        }
+        if (slot == slot("trust", "next-page") && (holder.page + 1) * entrySlots.size() < trustedPlayers.size()) {
             playConfiguredSound(player, "trust", "next-page");
             openTrustMenu(player, claim, holder.page + 1);
         }
     }
 
-    private void handleCoreMenu(Player player, CoreMenuHolder holder, int slot) {
+    private void handleTrustOnlineMenu(Player player, TrustOnlineHolder holder, int slot) {
         Claim claim = claimService.findClaimById(holder.claimId).orElse(null);
         if (claim == null) {
             player.closeInventory();
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (slot == slot("core", "teleport")) {
-            playConfiguredSound(player, "core", "teleport");
-            claimActionService.teleportToClaim(player, claim);
-        } else if (slot == slot("core", "settings")) {
-            playConfiguredSound(player, "core", "settings");
-            openClaimManageMenu(player, claim);
-        } else if (slot == slot("core", "hide")) {
-            playConfiguredSound(player, "core", "hide");
-            if (claimActionService.hideClaimCore(player, claim)) {
-                player.closeInventory();
+
+        List<Player> candidates = onlineCandidates(claim);
+        List<Integer> entrySlots = slots("trust-online", "entry");
+        int start = holder.page * entrySlots.size();
+        int end = Math.min(candidates.size(), start + entrySlots.size());
+        for (int index = start; index < end; index++) {
+            if (entrySlots.get(index - start) == slot) {
+                playConfiguredSound(player, "trust-online", "entry");
+                if (claimActionService.trustPlayer(player, claim, candidates.get(index))) {
+                    openTrustOnlineMenu(player, claim, holder.page);
+                }
+                return;
             }
-        } else if (slot == slot("core", "close")) {
-            playConfiguredSound(player, "core", "close");
-            player.closeInventory();
         }
+
+        if (slot == slot("trust-online", "refresh")) {
+            playConfiguredSound(player, "trust-online", "refresh");
+            openTrustOnlineMenu(player, claim, holder.page);
+            return;
+        }
+        if (slot == slot("trust-online", "prev-page") && holder.page > 0) {
+            playConfiguredSound(player, "trust-online", "prev-page");
+            openTrustOnlineMenu(player, claim, holder.page - 1);
+            return;
+        }
+        if (slot == slot("trust-online", "back")) {
+            playConfiguredSound(player, "trust-online", "back");
+            openTrustMenu(player, claim, 0);
+            return;
+        }
+        if (slot == slot("trust-online", "next-page") && (holder.page + 1) * entrySlots.size() < candidates.size()) {
+            playConfiguredSound(player, "trust-online", "next-page");
+            openTrustOnlineMenu(player, claim, holder.page + 1);
+        }
+    }
+
+    private void handlePermissionMenu(Player player, ClaimPermissionHolder holder, int slot) {
+        Claim claim = claimService.findClaimById(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+
+        if (slot == slot("claim-permissions", "perm-place")) {
+            togglePermission(player, claim, ClaimPermission.PLACE, "perm-place");
+            return;
+        }
+        if (slot == slot("claim-permissions", "perm-break")) {
+            togglePermission(player, claim, ClaimPermission.BREAK, "perm-break");
+            return;
+        }
+        if (slot == slot("claim-permissions", "perm-interact")) {
+            togglePermission(player, claim, ClaimPermission.INTERACT, "perm-interact");
+            return;
+        }
+        if (slot == slot("claim-permissions", "perm-bucket")) {
+            togglePermission(player, claim, ClaimPermission.BUCKET, "perm-bucket");
+            return;
+        }
+        if (slot == slot("claim-permissions", "perm-teleport")) {
+            togglePermission(player, claim, ClaimPermission.TELEPORT, "perm-teleport");
+            return;
+        }
+        if (slot == slot("claim-permissions", "back")) {
+            playConfiguredSound(player, "claim-permissions", "back");
+            openCoreMenu(player, claim);
+        }
+    }
+
+    private void togglePermission(Player player, Claim claim, ClaimPermission permission, String itemKey) {
+        playConfiguredSound(player, "claim-permissions", itemKey);
+        claimService.updatePermission(claim, permission, !claim.permission(permission));
+        openClaimPermissionsMenu(player, claim);
+    }
+
+    private List<Player> onlineCandidates(Claim claim) {
+        return Bukkit.getOnlinePlayers().stream()
+            .filter(online -> !online.getUniqueId().equals(claim.owner()))
+            .filter(online -> !claim.isTrusted(online.getUniqueId()))
+            .map(online -> (Player) online)
+            .sorted((left, right) -> left.getName().compareToIgnoreCase(right.getName()))
+            .toList();
     }
 
     private void fill(Inventory inventory, String menuKey, String itemKey) {
@@ -456,6 +639,10 @@ public final class MenuService {
 
     private FileConfiguration menu(String menuKey) {
         return plugin.menuConfig(menuKey);
+    }
+
+    private boolean hasItem(String menuKey, String itemKey) {
+        return menu(menuKey).isConfigurationSection("items." + itemKey);
     }
 
     private int menuSize(String menuKey) {
@@ -509,19 +696,6 @@ public final class MenuService {
         return result;
     }
 
-    private String itemName(String menuKey, String itemKey, String... replacements) {
-        return plugin.color(apply(menu(menuKey).getString("items." + itemKey + ".name", itemKey), replacements));
-    }
-
-    private List<String> itemLore(String menuKey, String itemKey, String... replacements) {
-        List<String> source = menu(menuKey).getStringList("items." + itemKey + ".lore");
-        List<String> result = new ArrayList<>();
-        for (String line : source) {
-            result.add(plugin.color(apply(line, replacements)));
-        }
-        return result;
-    }
-
     private ItemStack configuredItem(String menuKey, String itemKey, String... replacements) {
         ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
         if (section == null) {
@@ -568,6 +742,19 @@ public final class MenuService {
         return item;
     }
 
+    private ItemStack playerHead(String menuKey, String itemKey, UUID playerId, String... replacements) {
+        ItemStack item = configuredItem(menuKey, itemKey, replacements);
+        if (!(item.getItemMeta() instanceof SkullMeta meta)) {
+            return item;
+        }
+        Player online = Bukkit.getPlayer(playerId);
+        if (online != null) {
+            meta.setOwningPlayer(online);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
     private void playConfiguredSound(Player player, String menuKey, String itemKey) {
         ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
         if (section == null) {
@@ -590,17 +777,12 @@ public final class MenuService {
         try {
             Class<?> gameProfileClass = Class.forName("com.mojang.authlib.GameProfile");
             Class<?> propertyClass = Class.forName("com.mojang.authlib.properties.Property");
-            Object gameProfile = gameProfileClass
-                .getConstructor(UUID.class, String.class)
+            Object gameProfile = gameProfileClass.getConstructor(UUID.class, String.class)
                 .newInstance(UUID.nameUUIDFromBytes(texture.getBytes()), "coreclaim_head");
-            Object property = propertyClass
-                .getConstructor(String.class, String.class)
+            Object property = propertyClass.getConstructor(String.class, String.class)
                 .newInstance("textures", normalizeTexture(texture));
-            Method getProperties = gameProfileClass.getMethod("getProperties");
-            Object propertyMap = getProperties.invoke(gameProfile);
-            Method put = propertyMap.getClass().getMethod("put", Object.class, Object.class);
-            put.invoke(propertyMap, "textures", property);
-
+            Object propertyMap = gameProfileClass.getMethod("getProperties").invoke(gameProfile);
+            propertyMap.getClass().getMethod("put", Object.class, Object.class).invoke(propertyMap, "textures", property);
             Field profileField = meta.getClass().getDeclaredField("profile");
             profileField.setAccessible(true);
             profileField.set(meta, gameProfile);
@@ -614,6 +796,19 @@ public final class MenuService {
             return Base64.getEncoder().encodeToString(payload.getBytes());
         }
         return texture;
+    }
+
+    private String displayMessage(String raw, String fallback) {
+        return raw == null || raw.isBlank() ? fallback : raw;
+    }
+
+    private String stateText(boolean enabled) {
+        return enabled ? "&a允许" : "&c禁止";
+    }
+
+    private String playerName(UUID playerId) {
+        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
+        return player.getName() == null ? playerId.toString() : player.getName();
     }
 
     private String padLayout(String line) {
@@ -651,27 +846,6 @@ public final class MenuService {
         return item;
     }
 
-    private ItemStack playerHead(UUID playerId, String name, List<String> lore) {
-        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-        if (meta == null) {
-            return item(Material.PAPER, name, lore.toArray(String[]::new));
-        }
-        Player online = Bukkit.getPlayer(playerId);
-        if (online != null) {
-            meta.setOwningPlayer(online);
-        }
-        meta.setDisplayName(plugin.color(name));
-        meta.setLore(lore);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private String playerName(UUID playerId) {
-        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
-        return player.getName() == null ? playerId.toString() : player.getName();
-    }
-
     private abstract static class BaseHolder implements InventoryHolder {
         protected Inventory inventory;
 
@@ -686,35 +860,33 @@ public final class MenuService {
 
     private static final class ClaimListHolder extends BaseHolder {
         private final int page;
-
-        private ClaimListHolder(int page) {
-            this.page = page;
-        }
+        private ClaimListHolder(int page) { this.page = page; }
     }
 
     private static final class ClaimManageHolder extends BaseHolder {
         private final int claimId;
+        private ClaimManageHolder(int claimId) { this.claimId = claimId; }
+    }
 
-        private ClaimManageHolder(int claimId) {
-            this.claimId = claimId;
-        }
+    private static final class CoreMenuHolder extends BaseHolder {
+        private final int claimId;
+        private CoreMenuHolder(int claimId) { this.claimId = claimId; }
     }
 
     private static final class TrustMenuHolder extends BaseHolder {
         private final int claimId;
         private final int page;
-
-        private TrustMenuHolder(int claimId, int page) {
-            this.claimId = claimId;
-            this.page = page;
-        }
+        private TrustMenuHolder(int claimId, int page) { this.claimId = claimId; this.page = page; }
     }
 
-    private static final class CoreMenuHolder extends BaseHolder {
+    private static final class TrustOnlineHolder extends BaseHolder {
         private final int claimId;
+        private final int page;
+        private TrustOnlineHolder(int claimId, int page) { this.claimId = claimId; this.page = page; }
+    }
 
-        private CoreMenuHolder(int claimId) {
-            this.claimId = claimId;
-        }
+    private static final class ClaimPermissionHolder extends BaseHolder {
+        private final int claimId;
+        private ClaimPermissionHolder(int claimId) { this.claimId = claimId; }
     }
 }

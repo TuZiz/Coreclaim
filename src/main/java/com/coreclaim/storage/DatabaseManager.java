@@ -132,6 +132,14 @@ public final class DatabaseManager {
                 south INTEGER NOT NULL DEFAULT 0,
                 west INTEGER NOT NULL DEFAULT 0,
                 north INTEGER NOT NULL DEFAULT 0,
+                enter_message TEXT NOT NULL DEFAULT '',
+                leave_message TEXT NOT NULL DEFAULT '',
+                allow_place INTEGER NOT NULL DEFAULT 1,
+                allow_break INTEGER NOT NULL DEFAULT 1,
+                allow_interact INTEGER NOT NULL DEFAULT 1,
+                allow_bucket INTEGER NOT NULL DEFAULT 1,
+                allow_teleport INTEGER NOT NULL DEFAULT 1,
+                last_expanded_at INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL
             )
             """,
@@ -144,6 +152,14 @@ public final class DatabaseManager {
         ensureColumn("claims", "south", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claims", "west", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claims", "north", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("claims", "enter_message", "TEXT NOT NULL DEFAULT ''");
+        ensureColumn("claims", "leave_message", "TEXT NOT NULL DEFAULT ''");
+        ensureColumn("claims", "allow_place", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_break", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_interact", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_bucket", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_teleport", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "last_expanded_at", "INTEGER NOT NULL DEFAULT 0");
         update(
             """
             UPDATE claims

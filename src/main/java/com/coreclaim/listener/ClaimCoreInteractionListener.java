@@ -52,6 +52,10 @@ public final class ClaimCoreInteractionListener implements Listener {
             .orElse(null);
         if (claim != null) {
             event.setCancelled(true);
+            if (!claim.owner().equals(player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
+                player.sendMessage(plugin.message("trust-no-permission"));
+                return;
+            }
             menuService.openCoreMenu(player, claim);
             player.sendMessage(plugin.message("claim-core-info-opened"));
             return;

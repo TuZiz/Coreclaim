@@ -23,6 +23,14 @@ public final class Claim {
     private int south;
     private int west;
     private int north;
+    private String enterMessage;
+    private String leaveMessage;
+    private boolean allowPlace;
+    private boolean allowBreak;
+    private boolean allowInteract;
+    private boolean allowBucket;
+    private boolean allowTeleport;
+    private long lastExpandedAt;
 
     public Claim(
         int id,
@@ -38,7 +46,15 @@ public final class Claim {
         int west,
         int north,
         long createdAt,
-        boolean coreVisible
+        boolean coreVisible,
+        String enterMessage,
+        String leaveMessage,
+        boolean allowPlace,
+        boolean allowBreak,
+        boolean allowInteract,
+        boolean allowBucket,
+        boolean allowTeleport,
+        long lastExpandedAt
     ) {
         this.id = id;
         this.owner = owner;
@@ -54,6 +70,14 @@ public final class Claim {
         this.north = north;
         this.createdAt = createdAt;
         this.coreVisible = coreVisible;
+        this.enterMessage = enterMessage == null ? "" : enterMessage;
+        this.leaveMessage = leaveMessage == null ? "" : leaveMessage;
+        this.allowPlace = allowPlace;
+        this.allowBreak = allowBreak;
+        this.allowInteract = allowInteract;
+        this.allowBucket = allowBucket;
+        this.allowTeleport = allowTeleport;
+        this.lastExpandedAt = Math.max(0L, lastExpandedAt);
     }
 
     public int id() {
@@ -156,6 +180,50 @@ public final class Claim {
 
     public synchronized int trustedCount() {
         return trustedMembers.size();
+    }
+
+    public synchronized String enterMessage() {
+        return enterMessage;
+    }
+
+    public synchronized void setEnterMessage(String enterMessage) {
+        this.enterMessage = enterMessage == null ? "" : enterMessage;
+    }
+
+    public synchronized String leaveMessage() {
+        return leaveMessage;
+    }
+
+    public synchronized void setLeaveMessage(String leaveMessage) {
+        this.leaveMessage = leaveMessage == null ? "" : leaveMessage;
+    }
+
+    public synchronized boolean permission(ClaimPermission permission) {
+        return switch (permission) {
+            case PLACE -> allowPlace;
+            case BREAK -> allowBreak;
+            case INTERACT -> allowInteract;
+            case BUCKET -> allowBucket;
+            case TELEPORT -> allowTeleport;
+        };
+    }
+
+    public synchronized void setPermission(ClaimPermission permission, boolean allowed) {
+        switch (permission) {
+            case PLACE -> allowPlace = allowed;
+            case BREAK -> allowBreak = allowed;
+            case INTERACT -> allowInteract = allowed;
+            case BUCKET -> allowBucket = allowed;
+            case TELEPORT -> allowTeleport = allowed;
+        }
+    }
+
+    public synchronized long lastExpandedAt() {
+        return lastExpandedAt;
+    }
+
+    public synchronized void setLastExpandedAt(long lastExpandedAt) {
+        this.lastExpandedAt = Math.max(0L, lastExpandedAt);
     }
 
     public synchronized int minX() {

@@ -25,17 +25,25 @@ public final class RemovalConfirmListener implements Listener {
         }
 
         String message = event.getMessage().trim();
-        if (!message.equalsIgnoreCase("confirm") && !message.equalsIgnoreCase("cancel")) {
+        if (!isConfirmDelete(message) && !isCancel(message)) {
             return;
         }
 
         event.setCancelled(true);
         plugin.platformScheduler().runPlayerTask(player, () -> {
-            if (message.equalsIgnoreCase("confirm")) {
+            if (isConfirmDelete(message)) {
                 removalConfirmationService.confirm(player);
             } else if (removalConfirmationService.cancel(player)) {
                 player.sendMessage(plugin.message("claim-remove-cancelled"));
             }
         });
+    }
+
+    private boolean isConfirmDelete(String message) {
+        return "确认删除".equals(message) || "confirm".equalsIgnoreCase(message);
+    }
+
+    private boolean isCancel(String message) {
+        return "取消".equals(message) || "cancel".equalsIgnoreCase(message);
     }
 }

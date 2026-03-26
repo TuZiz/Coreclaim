@@ -1,16 +1,16 @@
-title: '&8✦ 成员权限 - {name} ✦'
+title: '&8» &d&l授权玩家列表 - {name}'
 GuiPlain:
-  - "TTTTMTTTT"
-  - "TTTTTTTTT"
-  - "TTTTTTTTT"
-  - "TTTTTTTTT"
-  - "CCCCCCCCC"
-  - "PFFFBFFFN"
+  - "FFFFRFFFF"
+  - "FTTTTTTTF"
+  - "FTTTMTTTF"
+  - "FTTTTTTTF"
+  - "FTTTTTTTF"
+  - "LFAFBFFFN"
 
 items:
   filler:
     char: "F"
-    material: LIGHT_GRAY_STAINED_GLASS_PANE
+    material: GRAY_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1400
 
@@ -18,48 +18,60 @@ items:
     char: "T"
     material: PLAYER_HEAD
     custom-model-data: 1401
-    name: '&a已授权: &f{player}'
+    name: '&a&l已授权: &f{player}'
     lore:
       - '&7领地: &f{name}'
-      - '&8点击移出权限列表'
+      - '&8点击移出授权列表'
     sound: BLOCK_NOTE_BLOCK_BASS
-
-  candidate-entry:
-    char: "C"
-    material: PLAYER_HEAD
-    custom-model-data: 1402
-    glow: true
-    name: '&b在线玩家: &f{player}'
-    lore:
-      - '&7领地: &f{name}'
-      - '&8点击加入权限列表'
-    sound: BLOCK_NOTE_BLOCK_PLING
 
   empty:
     char: "M"
     material: PAPER
-    custom-model-data: 1403
+    custom-model-data: 1402
     name: '&7暂无授权成员'
     lore:
-      - '&7可以从下方选择在线玩家进行授权'
+      - '&7可以点击下方按钮授权在线玩家'
+
+  refresh:
+    char: "R"
+    material: CLOCK
+    custom-model-data: 1403
+    name: '&e&l刷新列表'
+    lore:
+      - ''
+      - ' &6&l» &e点击立即刷新'
+    sound: UI_BUTTON_CLICK
+
+  add-player:
+    char: "A"
+    material: PLAYER_HEAD
+    custom-model-data: 1404
+    name: '&a&l添加授权玩家'
+    lore:
+      - ''
+      - ' &f▶ &7当前领地: &b{name}'
+      - ' &f▶ &7已授权数: &e{trusted_count} &7人'
+      - ''
+      - ' &6&l» &e点击打开在线玩家列表'
+    sound: BLOCK_NOTE_BLOCK_PLING
 
   prev-page:
-    char: "P"
+    char: "L"
     material: ARROW
     custom-model-data: 1405
-    name: '&e上一页'
+    name: '&a&l« &f上一页'
     sound: UI_BUTTON_CLICK
 
   back:
     char: "B"
     material: BARRIER
     custom-model-data: 1406
-    name: '&c返回领地管理'
+    name: '&c&l返回核心菜单'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: "N"
     material: ARROW
     custom-model-data: 1407
-    name: '&e下一页'
+    name: '&f下一页 &a&l»'
     sound: UI_BUTTON_CLICK

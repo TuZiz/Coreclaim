@@ -5,7 +5,9 @@ import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
+import com.coreclaim.model.ClaimPermission;
 import java.text.DecimalFormat;
+import java.time.Instant;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -58,6 +60,11 @@ public final class ClaimActionService {
     public boolean expandClaim(Player player, Claim claim, ClaimDirection direction, int amount) {
         if (!claim.owner().equals(player.getUniqueId())) {
             player.sendMessage(plugin.message("trust-no-permission"));
+            return false;
+        }
+        long cooldownLeft = cooldownRemainingSeconds(claim);
+        if (cooldownLeft > 0) {
+            player.sendMessage(plugin.message("claim-expand-cooldown", "{seconds}", String.valueOf(cooldownLeft)));
             return false;
         }
 
@@ -203,7 +210,7 @@ public final class ClaimActionService {
     }
 
     public boolean teleportToClaim(Player player, Claim claim) {
-        if (!claimService.canAccess(claim, player.getUniqueId())) {
+        if (!claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -263,6 +270,15 @@ public final class ClaimActionService {
 
     public static String formatMoney(double value) {
         return MONEY.format(value);
+    }
+
+    public long cooldownRemainingSeconds(Claim claim) {
+        if (plugin.settings().expandCooldownSeconds() <= 0) {
+            return 0L;
+        }
+        long now = Instant.now().getEpochSecond();
+        long endsAt = claim.lastExpandedAt() + plugin.settings().expandCooldownSeconds();
+        return Math.max(0L, endsAt - now);
     }
 
     public record ExpansionPreview(

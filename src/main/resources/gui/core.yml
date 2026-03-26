@@ -1,59 +1,157 @@
-title: '&8✦ 领地核心 - {name} ✦'
+title: '&8» &6&l领地核心管理'
 GuiPlain:
+  - "FFFFFFFFF"
   - "FFFFIFFFF"
-  - "FTFIPTFFF"
-  - "FFFFFCFFF"
-  - "FFFFHFFFF"
-  - "FFFFCFFFF"
+  - "FEFLFTFPF"
+  - "FFRFMFNFF"
+  - "FFFHQXFFF"
+
 items:
   filler:
     char: "F"
-    material: PURPLE_STAINED_GLASS_PANE
+    material: GRAY_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1500
 
   info:
     char: "I"
-    material: AMETHYST_CLUSTER
+    material: BOOK
     custom-model-data: 1501
-    glow: true
-    name: '&d&l核心信息'
+    name: '&e&l领地详细信息'
     lore:
-      - '&7领地名: &f{name}'
-      - '&7主人: &f{owner}'
-      - '&7核心坐标: &f{x}, {z}'
-      - '&7大小: &e{width}x{depth}'
-      - '&7信任成员: &e{trusted}'
+      - ''
+      - ' &f▶ &7领地名称: &b{name}'
+      - ' &f▶ &7领地数量: &e{claims}&7/&a{max_claims}'
+      - ' &f▶ &7中心坐标: &7(&f{center_x}&7, &f{center_z}&7)'
+      - ''
+      - ' &f▶ &7当前规模: &e{width}x{depth}'
+      - ' &f▶ &7当前面积: &e{area}'
+      - ' &f▶ &7当前活跃: &a{activity}'
+      - ''
+      - ' &f▶ &7授权人数: &f{trusted_count} &7人'
+      - ' &f▶ &7进入提示: &b{enter_message}'
+      - ' &f▶ &7离开提示: &e{leave_message}'
 
-  teleport:
-    char: "P"
-    material: ENDER_PEARL
+  expand:
+    char: "E"
+    material: NETHERITE_PICKAXE
     custom-model-data: 1502
-    glow: true
-    name: '&a传送到领地'
-    sound: ENTITY_ENDERMAN_TELEPORT
+    name: '&b&l扩建领地规模'
+    lore:
+      - ''
+      - ' &8▪ &7打开东南西北四个方向的扩建菜单'
+      - ''
+      - ' &6&l» &e点击打开扩建界面'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
-  settings:
-    char: "T"
-    material: COMPARATOR
+  claim-list:
+    char: "L"
+    material: FILLED_MAP
     custom-model-data: 1503
-    name: '&b打开领地管理'
+    name: '&6&l我的领地列表'
+    lore:
+      - ''
+      - ' &f▶ &7当前拥有总数: &e{total}'
+      - ''
+      - ' &6&l» &e点击查看所有领地'
+    sound: ITEM_BOOK_PAGE_TURN
+
+  trust:
+    char: "T"
+    material: NAME_TAG
+    custom-model-data: 1504
+    name: '&d&l授权玩家管理'
+    lore:
+      - ''
+      - ' &f▶ &7当前领地: &b{name}'
+      - ' &f▶ &7已授权数: &e{trusted_count} &7人'
+      - ''
+      - ' &6&l» &e点击管理授权名单'
+    sound: BLOCK_NOTE_BLOCK_PLING
+
+  permissions:
+    char: "P"
+    material: COMPARATOR
+    custom-model-data: 1505
+    name: '&5&l默认权限设置'
+    lore:
+      - ''
+      - ' &8▪ &7统一设置授权玩家的基础权限'
+      - ''
+      - ' &6&l» &e点击打开权限菜单'
     sound: UI_BUTTON_CLICK
+
+  rename:
+    char: "R"
+    material: ANVIL
+    custom-model-data: 1506
+    name: '&a&l修改领地名称'
+    lore:
+      - ''
+      - ' &f▶ &7当前领地: &b{name}'
+      - ' &8▪ &7点击后在聊天栏输入新名称'
+      - ' &8▪ &7名称长度最多 16 字符'
+      - ''
+      - ' &6&l» &e点击开始重命名'
+    sound: BLOCK_ANVIL_USE
+
+  notify-leave:
+    char: "M"
+    material: NOTE_BLOCK
+    custom-model-data: 1507
+    name: '&e&l设置离开通知'
+    lore:
+      - ''
+      - ' &f▶ &7当前领地: &b{name}'
+      - ' &f▶ &7当前内容: &e{current}'
+      - ' &8▪ &7点击后在聊天栏输入离开提示'
+      - ' &8▪ &7支持变量: &f%claim_name%'
+      - ''
+      - ' &6&l» &e点击进行设置'
+    sound: BLOCK_NOTE_BLOCK_BIT
+
+  notify-enter:
+    char: "N"
+    material: BELL
+    custom-model-data: 1508
+    name: '&b&l设置进入通知'
+    lore:
+      - ''
+      - ' &f▶ &7当前领地: &b{name}'
+      - ' &f▶ &7当前内容: &b{current}'
+      - ' &8▪ &7点击后在聊天栏输入进入提示'
+      - ' &8▪ &7支持变量: &f%claim_name%'
+      - ''
+      - ' &6&l» &e点击进行设置'
+    sound: BLOCK_BELL_USE
 
   hide:
     char: "H"
-    material: BARRIER
-    custom-model-data: 1504
-    name: '&c移除核心展示'
+    material: BLAZE_POWDER
+    custom-model-data: 1509
+    name: '&c&l隐藏核心显示'
     lore:
-      - '&7只移除核心方块与全息字'
-      - '&7不会删除领地'
-      - '&7不会返还核心'
+      - ''
+      - ' &8▪ &7隐藏中心的方块与全息文字'
+      - ' &c⚠ 隐藏后无法再通过核心方块打开'
+      - ''
+      - ' &6&l» &e点击确认隐藏'
     sound: BLOCK_ANVIL_PLACE
 
+  teleport:
+    char: "Q"
+    material: ENDER_PEARL
+    custom-model-data: 1510
+    glow: true
+    name: '&d&l传送到领地'
+    lore:
+      - ''
+      - ' &6&l» &e点击传送到核心位置'
+    sound: ENTITY_ENDERMAN_TELEPORT
+
   close:
-    char: "C"
-    material: ARROW
-    custom-model-data: 1505
-    name: '&e关闭菜单'
+    char: "X"
+    material: BARRIER
+    custom-model-data: 1511
+    name: '&c&l关闭菜单'
     sound: UI_BUTTON_CLICK

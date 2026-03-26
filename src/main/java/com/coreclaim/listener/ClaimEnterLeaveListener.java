@@ -52,18 +52,10 @@ public final class ClaimEnterLeaveListener implements Listener {
 
         Player player = event.getPlayer();
         if (fromClaim != null) {
-            sendActionBar(player, plugin.message("leave-claim", "{name}", fromClaim.name()));
+            sendActionBar(player, leaveMessage(fromClaim));
         }
         if (toClaim != null) {
-            if (toClaim.owner().equals(player.getUniqueId())) {
-                sendActionBar(player, plugin.message("enter-own-claim", "{name}", toClaim.name()));
-            } else {
-                sendActionBar(player, plugin.message(
-                    "enter-trusted-claim",
-                    "{owner}", toClaim.ownerName(),
-                    "{name}", toClaim.name()
-                ));
-            }
+            sendActionBar(player, enterMessage(player, toClaim));
         }
     }
 
@@ -74,5 +66,28 @@ public final class ClaimEnterLeaveListener implements Listener {
 
     private void sendActionBar(Player player, String message) {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+    }
+
+    private String enterMessage(Player player, Claim claim) {
+        String custom = claim.enterMessage();
+        if (custom != null && !custom.isBlank()) {
+            return plugin.color(custom
+                .replace("%claim_name%", claim.name())
+                .replace("%owner%", claim.ownerName()));
+        }
+        if (claim.owner().equals(player.getUniqueId())) {
+            return plugin.message("enter-own-claim", "{name}", claim.name());
+        }
+        return plugin.message("enter-trusted-claim", "{owner}", claim.ownerName(), "{name}", claim.name());
+    }
+
+    private String leaveMessage(Claim claim) {
+        String custom = claim.leaveMessage();
+        if (custom != null && !custom.isBlank()) {
+            return plugin.color(custom
+                .replace("%claim_name%", claim.name())
+                .replace("%owner%", claim.ownerName()));
+        }
+        return plugin.message("leave-claim", "{name}", claim.name());
     }
 }

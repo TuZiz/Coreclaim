@@ -3,6 +3,7 @@ package com.coreclaim.listener;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
 import java.util.Iterator;
 import java.util.Optional;
@@ -48,7 +49,12 @@ public final class ClaimProtectionListener implements Listener {
         if (isBypassing(player)) {
             return;
         }
-        if (!claimService.canAccess(claim.get(), player.getUniqueId())) {
+        if (isCoreBlock(event.getBlock(), claim.get()) && !claim.get().owner().equals(player.getUniqueId())) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
+        if (!claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.BREAK)) {
             event.setCancelled(true);
             player.sendMessage(plugin.message("protection-deny"));
             return;
@@ -67,7 +73,7 @@ public final class ClaimProtectionListener implements Listener {
         }
 
         Optional<Claim> claim = claimService.findClaim(event.getBlockPlaced().getLocation());
-        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.canAccess(claim.get(), event.getPlayer().getUniqueId())) {
+        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.PLACE)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(plugin.message("protection-deny"));
         }
@@ -86,7 +92,10 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && isCoreBlock(event.getClickedBlock(), claim.get())) {
             return;
         }
-        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.canAccess(claim.get(), event.getPlayer().getUniqueId())) {
+        if (claim.isPresent() && plugin.settings().isAllowedInteract(event.getClickedBlock().getType())) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(plugin.message("protection-deny"));
         }
@@ -96,7 +105,7 @@ public final class ClaimProtectionListener implements Listener {
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
         Location target = event.getBlockClicked().getRelative(event.getBlockFace()).getLocation();
         Optional<Claim> claim = claimService.findClaim(target);
-        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.canAccess(claim.get(), event.getPlayer().getUniqueId())) {
+        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(plugin.message("protection-deny"));
         }
@@ -105,7 +114,7 @@ public final class ClaimProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBucketFill(PlayerBucketFillEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getBlockClicked().getLocation());
-        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.canAccess(claim.get(), event.getPlayer().getUniqueId())) {
+        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(plugin.message("protection-deny"));
         }
@@ -114,7 +123,7 @@ public final class ClaimProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntityInteract(PlayerInteractEntityEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
-        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.canAccess(claim.get(), event.getPlayer().getUniqueId())) {
+        if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(plugin.message("protection-deny"));
         }
@@ -128,7 +137,7 @@ public final class ClaimProtectionListener implements Listener {
         }
 
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
-        if (claim.isPresent() && !claimService.canAccess(claim.get(), attacker.getUniqueId())) {
+        if (claim.isPresent() && !claimService.hasPermission(claim.get(), attacker.getUniqueId(), ClaimPermission.BREAK)) {
             event.setCancelled(true);
             attacker.sendMessage(plugin.message("protection-deny"));
         }

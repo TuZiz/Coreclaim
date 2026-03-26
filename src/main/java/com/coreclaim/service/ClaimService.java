@@ -2,6 +2,7 @@ package com.coreclaim.service;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.storage.DatabaseManager;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -87,6 +88,16 @@ public final class ClaimService {
         return claim.canAccess(playerId) || profileService.isGloballyTrusted(claim.owner(), playerId);
     }
 
+    public boolean hasPermission(Claim claim, UUID playerId, ClaimPermission permission) {
+        if (claim.owner().equals(playerId)) {
+            return true;
+        }
+        if (!canAccess(claim, playerId)) {
+            return false;
+        }
+        return claim.permission(permission);
+    }
+
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
         synchronized (mutationLock) {
             long createdAt = Instant.now().getEpochSecond();
@@ -94,8 +105,9 @@ public final class ClaimService {
                 """
                 INSERT INTO claims (
                     owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                    radius, east, south, west, north, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    radius, east, south, west, north, enter_message, leave_message,
+                    allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 statement -> {
                     statement.setString(1, owner.toString());
@@ -111,7 +123,15 @@ public final class ClaimService {
                     statement.setInt(11, initialDistance);
                     statement.setInt(12, initialDistance);
                     statement.setInt(13, initialDistance);
-                    statement.setLong(14, createdAt);
+                    statement.setString(14, "");
+                    statement.setString(15, "");
+                    statement.setInt(16, 1);
+                    statement.setInt(17, 1);
+                    statement.setInt(18, 1);
+                    statement.setInt(19, 1);
+                    statement.setInt(20, 1);
+                    statement.setLong(21, 0L);
+                    statement.setLong(22, createdAt);
                 }
             );
 
@@ -129,7 +149,15 @@ public final class ClaimService {
                 initialDistance,
                 initialDistance,
                 createdAt,
-                true
+                true,
+                "",
+                "",
+                true,
+                true,
+                true,
+                true,
+                true,
+                0L
             );
             claims.put(claim.id(), claim);
             return claim;
@@ -139,15 +167,17 @@ public final class ClaimService {
     public void updateBounds(Claim claim, int east, int south, int west, int north) {
         synchronized (mutationLock) {
             claim.setBounds(east, south, west, north);
+            claim.setLastExpandedAt(Instant.now().getEpochSecond());
             databaseManager.update(
-                "UPDATE claims SET radius = ?, east = ?, south = ?, west = ?, north = ? WHERE id = ?",
+                "UPDATE claims SET radius = ?, east = ?, south = ?, west = ?, north = ?, last_expanded_at = ? WHERE id = ?",
                 statement -> {
                     statement.setInt(1, claim.displayRadius());
                     statement.setInt(2, east);
                     statement.setInt(3, south);
                     statement.setInt(4, west);
                     statement.setInt(5, north);
-                    statement.setInt(6, claim.id());
+                    statement.setLong(6, claim.lastExpandedAt());
+                    statement.setInt(7, claim.id());
                 }
             );
         }
@@ -160,6 +190,65 @@ public final class ClaimService {
                 "UPDATE claims SET core_visible = ? WHERE id = ?",
                 statement -> {
                     statement.setInt(1, coreVisible ? 1 : 0);
+                    statement.setInt(2, claim.id());
+                }
+            );
+        }
+    }
+
+    public void renameClaim(Claim claim, String name) {
+        synchronized (mutationLock) {
+            claim.setName(name);
+            databaseManager.update(
+                "UPDATE claims SET name = ? WHERE id = ?",
+                statement -> {
+                    statement.setString(1, name);
+                    statement.setInt(2, claim.id());
+                }
+            );
+        }
+    }
+
+    public void updateEnterMessage(Claim claim, String message) {
+        synchronized (mutationLock) {
+            claim.setEnterMessage(message);
+            databaseManager.update(
+                "UPDATE claims SET enter_message = ? WHERE id = ?",
+                statement -> {
+                    statement.setString(1, claim.enterMessage());
+                    statement.setInt(2, claim.id());
+                }
+            );
+        }
+    }
+
+    public void updateLeaveMessage(Claim claim, String message) {
+        synchronized (mutationLock) {
+            claim.setLeaveMessage(message);
+            databaseManager.update(
+                "UPDATE claims SET leave_message = ? WHERE id = ?",
+                statement -> {
+                    statement.setString(1, claim.leaveMessage());
+                    statement.setInt(2, claim.id());
+                }
+            );
+        }
+    }
+
+    public void updatePermission(Claim claim, ClaimPermission permission, boolean allowed) {
+        synchronized (mutationLock) {
+            claim.setPermission(permission, allowed);
+            String column = switch (permission) {
+                case PLACE -> "allow_place";
+                case BREAK -> "allow_break";
+                case INTERACT -> "allow_interact";
+                case BUCKET -> "allow_bucket";
+                case TELEPORT -> "allow_teleport";
+            };
+            databaseManager.update(
+                "UPDATE claims SET " + column + " = ? WHERE id = ?",
+                statement -> {
+                    statement.setInt(1, allowed ? 1 : 0);
                     statement.setInt(2, claim.id());
                 }
             );
@@ -223,8 +312,9 @@ public final class ClaimService {
                     """
                     INSERT INTO claims (
                         id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                        radius, east, south, west, north, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        radius, east, south, west, north, enter_message, leave_message,
+                        allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         owner_uuid = excluded.owner_uuid,
                         owner_name = excluded.owner_name,
@@ -239,6 +329,14 @@ public final class ClaimService {
                         south = excluded.south,
                         west = excluded.west,
                         north = excluded.north,
+                        enter_message = excluded.enter_message,
+                        leave_message = excluded.leave_message,
+                        allow_place = excluded.allow_place,
+                        allow_break = excluded.allow_break,
+                        allow_interact = excluded.allow_interact,
+                        allow_bucket = excluded.allow_bucket,
+                        allow_teleport = excluded.allow_teleport,
+                        last_expanded_at = excluded.last_expanded_at,
                         created_at = excluded.created_at
                     """,
                     statement -> {
@@ -256,7 +354,15 @@ public final class ClaimService {
                         statement.setInt(12, claim.south());
                         statement.setInt(13, claim.west());
                         statement.setInt(14, claim.north());
-                        statement.setLong(15, claim.createdAt());
+                        statement.setString(15, claim.enterMessage());
+                        statement.setString(16, claim.leaveMessage());
+                        statement.setInt(17, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
+                        statement.setInt(18, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
+                        statement.setInt(19, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                        statement.setInt(20, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                        statement.setInt(21, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                        statement.setLong(22, claim.lastExpandedAt());
+                        statement.setLong(23, claim.createdAt());
                     }
                 );
             }
@@ -267,7 +373,8 @@ public final class ClaimService {
         databaseManager.query(
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                   radius, east, south, west, north, created_at
+                   radius, east, south, west, north, enter_message, leave_message,
+                   allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
             FROM claims
             """,
             statement -> {
@@ -293,7 +400,15 @@ public final class ClaimService {
                         west <= 0 ? fallbackDistance : west,
                         north <= 0 ? fallbackDistance : north,
                         resultSet.getLong("created_at"),
-                        resultSet.getInt("core_visible") == 1
+                        resultSet.getInt("core_visible") == 1,
+                        resultSet.getString("enter_message"),
+                        resultSet.getString("leave_message"),
+                        resultSet.getInt("allow_place") != 0,
+                        resultSet.getInt("allow_break") != 0,
+                        resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_bucket") != 0,
+                        resultSet.getInt("allow_teleport") != 0,
+                        resultSet.getLong("last_expanded_at")
                     );
                     claims.put(claim.id(), claim);
                 }

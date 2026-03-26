@@ -21,7 +21,7 @@ items:
     name: '&a&l已授权: &f{player}'
     lore:
       - '&7领地: &f{name}'
-      - '&8点击移出授权列表'
+      - '&8左键成员权限 | 右键移出授权'
     sound: BLOCK_NOTE_BLOCK_BASS
 
   empty:

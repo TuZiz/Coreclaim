@@ -52,10 +52,10 @@ items:
     char: "B"
     material: BARRIER
     custom-model-data: 1204
-    name: '&c&l返回主菜单'
+    name: '&c&l关闭菜单'
     lore:
       - ''
-      - ' &6&l» &e点击回到管理界面'
+      - ' &6&l» &e点击关闭当前界面'
     sound: UI_BUTTON_CLICK
 
   next-page:

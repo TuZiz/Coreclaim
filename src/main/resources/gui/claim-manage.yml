@@ -1,88 +1,92 @@
-title: '&8» &b&l方向扩建 - {name}'
+title: '&8» &3&l扩建控制盘 - {name}'
 GuiPlain:
   - "FFFFNFFFF"
-  - "FFFFIFFFF"
-  - "FFWFTFEFF"
+  - "FFFFFFFFF"
+  - "FFWFIFEFF"
   - "FFFFSFFFF"
-  - "FFBFDFFFF"
+  - "FFFBFDFFF"
 
 items:
   filler:
     char: "F"
-    material: LIGHT_BLUE_STAINED_GLASS_PANE
+    material: GRAY_STAINED_GLASS_PANE
     name: ' '
     custom-model-data: 1300
 
   info:
     char: "I"
-    material: WRITABLE_BOOK
+    material: COMPASS
     custom-model-data: 1301
-    name: '&e&l扩建信息'
+    name: '&e&l扩建控制盘'
     lore:
+      - ''
       - '&7领地名称: &f{name}'
       - '&7世界: &f{world}'
       - '&7核心坐标: &f{x}, {z}'
       - '&7当前大小: &e{width}x{depth}'
       - '&7当前面积: &e{area}'
+      - ''
+      - '&8▪ &7点击四个方向按钮扩建领地'
 
   expand-north:
     char: "N"
-    material: SPECTRAL_ARROW
+    material: ARROW
     custom-model-data: 1302
     glow: true
-    name: '&b向北扩建 +{amount}'
+    name: '&3&l北向扩建 +{amount}'
     lore:
+      - ''
       - '&7当前北侧: &e{current}'
       - '&7扩建后: &e{target}'
       - '&7价格: &6{price}'
+      - ''
+      - '&6&l» &e点击向北扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-west:
     char: "W"
-    material: SPECTRAL_ARROW
+    material: ARROW
     custom-model-data: 1303
     glow: true
-    name: '&b向西扩建 +{amount}'
+    name: '&3&l西向扩建 +{amount}'
     lore:
+      - ''
       - '&7当前西侧: &e{current}'
       - '&7扩建后: &e{target}'
       - '&7价格: &6{price}'
+      - ''
+      - '&6&l» &e点击向西扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-east:
     char: "E"
-    material: SPECTRAL_ARROW
+    material: ARROW
     custom-model-data: 1304
     glow: true
-    name: '&b向东扩建 +{amount}'
+    name: '&3&l东向扩建 +{amount}'
     lore:
+      - ''
       - '&7当前东侧: &e{current}'
       - '&7扩建后: &e{target}'
       - '&7价格: &6{price}'
+      - ''
+      - '&6&l» &e点击向东扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-south:
     char: "S"
-    material: SPECTRAL_ARROW
+    material: ARROW
     custom-model-data: 1305
     glow: true
-    name: '&b向南扩建 +{amount}'
+    name: '&3&l南向扩建 +{amount}'
     lore:
+      - ''
       - '&7当前南侧: &e{current}'
       - '&7扩建后: &e{target}'
       - '&7价格: &6{price}'
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
-
-  teleport:
-    char: "T"
-    material: ENDER_PEARL
-    custom-model-data: 1306
-    glow: true
-    name: '&d&l传送到核心'
-    lore:
       - ''
-      - ' &6&l» &e点击传送到当前领地'
-    sound: ENTITY_ENDERMAN_TELEPORT
+      - '&6&l» &e点击向南扩建'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   back:
     char: "B"
@@ -98,5 +102,5 @@ items:
     name: '&c&l删除领地'
     lore:
       - '&7点击后需要在聊天栏输入'
-      - '&aconfirm &7确认删除'
+      - '&a确认删除 &7才会真的删除'
     sound: BLOCK_ANVIL_PLACE

@@ -8,6 +8,7 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.listener.ClaimEnterLeaveListener;
+import com.coreclaim.listener.ClaimEnvironmentProtectionListener;
 import com.coreclaim.listener.ClaimInputListener;
 import com.coreclaim.listener.ClaimCoreListener;
 import com.coreclaim.listener.ClaimCoreInteractionListener;
@@ -88,6 +89,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
             this
         );
         getServer().getPluginManager().registerEvents(
+            new ClaimEnvironmentProtectionListener(claimService),
+            this
+        );
+        getServer().getPluginManager().registerEvents(
             new ClaimCoreInteractionListener(this, claimService, pendingClaimService, claimActionService, menuService),
             this
         );
@@ -104,6 +109,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
                 claimService,
                 profileService,
                 claimActionService,
+                claimVisualService,
                 menuService,
                 removalConfirmationService
             );
@@ -112,7 +118,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new CoreClaimPlaceholderExpansion(profileService, claimService, pluginConfig, groupConfig).register();
+            new CoreClaimPlaceholderExpansion(this, profileService, claimService).register();
         }
 
         hologramService.refreshAll(claimService);
@@ -198,13 +204,25 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return message;
     }
 
+    public void reloadPluginResources() {
+        reloadConfig();
+        messageResource.reload();
+        groupsResource.reload();
+        menuResources.values().forEach(ResourceConfig::reload);
+        this.pluginConfig = new PluginConfig(getConfig());
+        this.groupConfig = new GroupConfig(groupsResource.config());
+        if (hologramService != null && claimService != null) {
+            hologramService.refreshAll(claimService);
+        }
+    }
+
     private void loadMenuResources() {
-        menuResources.put("main", new ResourceConfig(this, "gui/main.yml"));
         menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
         menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
         menuResources.put("trust", new ResourceConfig(this, "gui/trust.yml"));
         menuResources.put("trust-online", new ResourceConfig(this, "gui/trust-online.yml"));
         menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
+        menuResources.put("trust-member-permissions", new ResourceConfig(this, "gui/trust-member-permissions.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
     }
 }

@@ -51,6 +51,34 @@ public final class PlatformScheduler {
         }
     }
 
+    public TaskHandle runLater(Runnable runnable, long delayTicks) {
+        if (!folia) {
+            BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delayTicks);
+            return task::cancel;
+        }
+
+        try {
+            Object scheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+            Method method = scheduler.getClass().getMethod(
+                "runDelayed",
+                org.bukkit.plugin.Plugin.class,
+                Consumer.class,
+                long.class
+            );
+            Object scheduledTask = method.invoke(
+                scheduler,
+                plugin,
+                (Consumer<Object>) ignored -> runnable.run(),
+                delayTicks
+            );
+            return () -> cancelReflectively(scheduledTask);
+        } catch (ReflectiveOperationException exception) {
+            plugin.getLogger().warning("Folia 延迟调度器适配失败，退回 Bukkit 调度器: " + exception.getMessage());
+            BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delayTicks);
+            return task::cancel;
+        }
+    }
+
     public void runPlayerTask(Player player, Runnable runnable) {
         if (!folia) {
             Bukkit.getScheduler().runTask(plugin, runnable);

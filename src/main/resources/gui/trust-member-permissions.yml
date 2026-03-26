@@ -1,0 +1,100 @@
+title: '&8» &d&l成员权限 - {player}'
+GuiPlain:
+  - "FFFFFFFFF"
+  - "FFFFIFFFF"
+  - "FPFBFRFKT"
+  - "FFFFFFFFF"
+  - "FFFFXFFFF"
+
+items:
+  filler:
+    char: "F"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1650
+
+  info:
+    char: "I"
+    material: BOOK
+    custom-model-data: 1651
+    name: '&e&l成员权限概览'
+    lore:
+      - ''
+      - ' &f▶ &7领地: &b{name}'
+      - ' &f▶ &7成员: &e{player}'
+      - ''
+      - ' &8▪ &7放置权限: {perm_place}'
+      - ' &8▪ &7破坏权限: {perm_break}'
+      - ' &8▪ &7交互权限: {perm_interact}'
+      - ' &8▪ &7桶使用权: {perm_bucket}'
+      - ' &8▪ &7传送权限: {perm_teleport}'
+
+  perm-place:
+    char: "P"
+    material: GRASS_BLOCK
+    custom-model-data: 1652
+    name: '&a&l放置权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-break:
+    char: "B"
+    material: NETHERITE_PICKAXE
+    custom-model-data: 1653
+    name: '&c&l破坏权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-interact:
+    char: "R"
+    material: CHEST
+    custom-model-data: 1654
+    name: '&b&l交互权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-bucket:
+    char: "K"
+    material: WATER_BUCKET
+    custom-model-data: 1655
+    name: '&9&l桶使用权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-teleport:
+    char: "T"
+    material: ENDER_PEARL
+    custom-model-data: 1656
+    name: '&d&l传送权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  back:
+    char: "X"
+    material: BARRIER
+    custom-model-data: 1657
+    name: '&c&l返回授权列表'
+    lore:
+      - ''
+      - ' &6&l» &e点击返回'
+    sound: UI_BUTTON_CLICK

@@ -1,7 +1,6 @@
 package com.coreclaim.papi;
 
-import com.coreclaim.config.GroupConfig;
-import com.coreclaim.config.PluginConfig;
+import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimService;
@@ -11,21 +10,18 @@ import org.bukkit.entity.Player;
 
 public final class CoreClaimPlaceholderExpansion extends PlaceholderExpansion {
 
+    private final CoreClaimPlugin plugin;
     private final ProfileService profileService;
     private final ClaimService claimService;
-    private final PluginConfig pluginConfig;
-    private final GroupConfig groupConfig;
 
     public CoreClaimPlaceholderExpansion(
+        CoreClaimPlugin plugin,
         ProfileService profileService,
-        ClaimService claimService,
-        PluginConfig pluginConfig,
-        GroupConfig groupConfig
+        ClaimService claimService
     ) {
+        this.plugin = plugin;
         this.profileService = profileService;
         this.claimService = claimService;
-        this.pluginConfig = pluginConfig;
-        this.groupConfig = groupConfig;
     }
 
     @Override
@@ -60,9 +56,9 @@ public final class CoreClaimPlaceholderExpansion extends PlaceholderExpansion {
             case "activity" -> String.valueOf(profile.activityPoints());
             case "online_minutes" -> String.valueOf(profile.onlineMinutes());
             case "claim_count" -> String.valueOf(claimService.countClaims(player.getUniqueId()));
-            case "claim_limit" -> String.valueOf(groupConfig.resolve(player).claimSlotsForActivity(profile.activityPoints()));
+            case "claim_limit" -> String.valueOf(plugin.groups().resolve(player).claimSlotsForActivity(profile.activityPoints()));
             case "starter_core_granted" -> String.valueOf(profile.starterCoreGranted());
-            case "next_reward_minutes" -> String.valueOf(Math.max(0, pluginConfig.starterRewardMinutes() - profile.onlineMinutes()));
+            case "next_reward_minutes" -> String.valueOf(Math.max(0, plugin.settings().starterRewardMinutes() - profile.onlineMinutes()));
             case "current_claim_id" -> claim == null ? "" : String.valueOf(claim.id());
             case "current_claim_name" -> claim == null ? "" : claim.name();
             case "current_claim_owner" -> claim == null ? "" : claim.ownerName();

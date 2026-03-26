@@ -7,6 +7,7 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
@@ -25,6 +26,7 @@ public final class CoreClaimCommand implements TabExecutor {
     private final ClaimService claimService;
     private final ProfileService profileService;
     private final ClaimActionService claimActionService;
+    private final ClaimVisualService claimVisualService;
     private final MenuService menuService;
     private final RemovalConfirmationService removalConfirmationService;
 
@@ -33,6 +35,7 @@ public final class CoreClaimCommand implements TabExecutor {
         ClaimService claimService,
         ProfileService profileService,
         ClaimActionService claimActionService,
+        ClaimVisualService claimVisualService,
         MenuService menuService,
         RemovalConfirmationService removalConfirmationService
     ) {
@@ -40,6 +43,7 @@ public final class CoreClaimCommand implements TabExecutor {
         this.claimService = claimService;
         this.profileService = profileService;
         this.claimActionService = claimActionService;
+        this.claimVisualService = claimVisualService;
         this.menuService = menuService;
         this.removalConfirmationService = removalConfirmationService;
     }
@@ -51,7 +55,11 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+        if (args.length == 0) {
+            return handleMenu(sender);
+        }
+
+        if (args[0].equalsIgnoreCase("help")) {
             sendHelp(sender);
             return true;
         }
@@ -61,6 +69,7 @@ public final class CoreClaimCommand implements TabExecutor {
             case "info" -> handleInfo(sender);
             case "list" -> handleList(sender);
             case "menu", "gui" -> handleMenu(sender);
+            case "show" -> handleShow(sender, args);
             case "tp", "teleport" -> handleTeleport(sender, args);
             case "expand" -> handleExpand(sender, args);
             case "remove", "delete" -> handleRemove(sender, args);
@@ -70,6 +79,7 @@ public final class CoreClaimCommand implements TabExecutor {
             case "add", "globaladd" -> handleGlobalAdd(sender, args);
             case "unadd", "globalremove" -> handleGlobalRemove(sender, args);
             case "activity" -> handleActivity(sender, args);
+            case "reload" -> handleReload(sender);
             case "givecore" -> handleGiveCore(sender, args);
             default -> {
                 sendHelp(sender);
@@ -130,7 +140,6 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         menuService.openMainMenu(player);
-        player.sendMessage(plugin.message("menu-opened"));
         return true;
     }
 
@@ -151,6 +160,41 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         claimActionService.expandCurrentClaim(player, direction);
+        return true;
+    }
+
+    private boolean handleShow(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+
+        Claim claim;
+        if (args.length >= 2) {
+            claim = claimService.allClaims().stream()
+                .filter(found -> found.name().equalsIgnoreCase(args[1]))
+                .findFirst()
+                .orElse(null);
+            if (claim == null) {
+                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
+                return true;
+            }
+            if (!claim.owner().equals(player.getUniqueId()) && !claimService.canAccess(claim, player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
+                player.sendMessage(plugin.message("trust-no-permission"));
+                return true;
+            }
+        } else {
+            claim = claimService.findClaim(player.getLocation())
+                .filter(found -> found.owner().equals(player.getUniqueId()) || claimService.canAccess(found, player.getUniqueId()) || player.hasPermission("coreclaim.admin"))
+                .orElse(null);
+            if (claim == null) {
+                player.sendMessage(plugin.message("show-usage"));
+                return true;
+            }
+        }
+
+        claimVisualService.showClaim(player, claim);
+        player.sendMessage(plugin.message("claim-show-success", "{name}", claim.name()));
         return true;
     }
 
@@ -388,6 +432,20 @@ public final class CoreClaimCommand implements TabExecutor {
         return true;
     }
 
+    private boolean handleReload(CommandSender sender) {
+        if (!sender.hasPermission("coreclaim.admin")) {
+            sender.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+        try {
+            plugin.reloadPluginResources();
+            sender.sendMessage(plugin.message("reload-success"));
+        } catch (Exception exception) {
+            sender.sendMessage(plugin.message("reload-failed", "{error}", exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage()));
+        }
+        return true;
+    }
+
     private boolean handleGiveCore(CommandSender sender, String[] args) {
         if (!sender.hasPermission("coreclaim.admin")) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -443,6 +501,7 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&e/claim info &7查看组别、活跃度和当前领地"));
         sender.sendMessage(plugin.color("&e/claim list &7查看你的所有领地"));
         sender.sendMessage(plugin.color("&e/claim menu &7打开图形菜单"));
+        sender.sendMessage(plugin.color("&e/claim show [领地名字] &7显示当前或指定领地边界"));
         sender.sendMessage(plugin.color("&e/claim tp <领地名字> &7传送到你有权限进入的领地"));
         sender.sendMessage(plugin.color("&e/claim expand <east|south|west|north> &7向单个方向扩建 10 格"));
         sender.sendMessage(plugin.color("&e/claim remove <领地名字> &7删除指定领地，随后在聊天输入 confirm"));
@@ -452,6 +511,7 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&e/claim unadd <玩家> &7移除全部领地全局权限"));
         if (sender.hasPermission("coreclaim.admin")) {
             sender.sendMessage(plugin.color("&e/claim activity <get|set|add|take> <玩家> [值] &7管理活跃度"));
+            sender.sendMessage(plugin.color("&e/claim reload &7重载配置与菜单"));
             sender.sendMessage(plugin.color("&e/claim givecore <玩家> [数量] &7手动发放领地核心"));
         }
     }
@@ -465,6 +525,7 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("list");
             options.add("menu");
             options.add("gui");
+            options.add("show");
             options.add("tp");
             options.add("teleport");
             options.add("expand");
@@ -477,6 +538,7 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("unadd");
             if (sender.hasPermission("coreclaim.admin")) {
                 options.add("activity");
+                options.add("reload");
                 options.add("givecore");
             }
             return filter(options, args[0]);
@@ -507,6 +569,12 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("delete")) && sender instanceof Player player) {
             for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
+                options.add(claim.name());
+            }
+            return filter(options, args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("show")) {
+            for (Claim claim : claimService.allClaims()) {
                 options.add(claim.name());
             }
             return filter(options, args[1]);

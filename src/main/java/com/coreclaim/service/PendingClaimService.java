@@ -20,6 +20,7 @@ public final class PendingClaimService {
     private final HologramService hologramService;
     private final ClaimVisualService claimVisualService;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
+    private final Map<UUID, com.coreclaim.platform.PlatformScheduler.TaskHandle> timeoutTasks = new ConcurrentHashMap<>();
 
     public PendingClaimService(
         CoreClaimPlugin plugin,
@@ -83,9 +84,10 @@ public final class PendingClaimService {
 
         cancelPendingClaim(player, false);
         pendingClaims.put(player.getUniqueId(), new PendingClaim(player.getUniqueId(), coreLocation));
+        scheduleTimeout(player.getUniqueId());
         hologramService.spawnPendingHologram(player.getUniqueId(), player.getName(), coreLocation);
         claimVisualService.showPendingLocation(player, coreLocation);
-        player.sendMessage(plugin.message("claim-name-prompt"));
+        player.sendMessage(plugin.message("claim-name-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
         return true;
     }
 
@@ -95,6 +97,7 @@ public final class PendingClaimService {
 
     public Claim completeClaim(Player player, String inputName) {
         PendingClaim pending = pendingClaims.remove(player.getUniqueId());
+        cancelTimeout(player.getUniqueId());
         if (pending == null) {
             return null;
         }
@@ -135,6 +138,7 @@ public final class PendingClaimService {
 
     public void cancelPendingClaim(Player player, boolean notify) {
         PendingClaim pending = pendingClaims.remove(player.getUniqueId());
+        cancelTimeout(player.getUniqueId());
         if (pending == null) {
             return;
         }
@@ -147,6 +151,7 @@ public final class PendingClaimService {
 
     public void timeoutPendingClaim(UUID playerId) {
         PendingClaim pending = pendingClaims.remove(playerId);
+        cancelTimeout(playerId);
         if (pending == null) {
             return;
         }
@@ -155,6 +160,21 @@ public final class PendingClaimService {
         Player player = plugin.getServer().getPlayer(playerId);
         if (player != null) {
             player.sendMessage(plugin.message("claim-name-timeout"));
+        }
+    }
+
+    private void scheduleTimeout(UUID playerId) {
+        cancelTimeout(playerId);
+        long delayTicks = plugin.settings().chatInputTimeoutSeconds() * 20L;
+        com.coreclaim.platform.PlatformScheduler.TaskHandle handle =
+            plugin.platformScheduler().runLater(() -> timeoutPendingClaim(playerId), delayTicks);
+        timeoutTasks.put(playerId, handle);
+    }
+
+    private void cancelTimeout(UUID playerId) {
+        com.coreclaim.platform.PlatformScheduler.TaskHandle handle = timeoutTasks.remove(playerId);
+        if (handle != null) {
+            handle.cancel();
         }
     }
 

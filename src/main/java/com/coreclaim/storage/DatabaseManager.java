@@ -185,6 +185,23 @@ public final class DatabaseManager {
         );
         update(
             """
+            CREATE TABLE IF NOT EXISTS claim_member_permissions (
+                claim_id INTEGER NOT NULL,
+                player_uuid TEXT NOT NULL,
+                allow_place INTEGER NOT NULL DEFAULT 0,
+                allow_break INTEGER NOT NULL DEFAULT 0,
+                allow_interact INTEGER NOT NULL DEFAULT 0,
+                allow_bucket INTEGER NOT NULL DEFAULT 0,
+                allow_teleport INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (claim_id, player_uuid),
+                FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
+            )
+            """,
+            statement -> {
+            }
+        );
+        update(
+            """
             CREATE TABLE IF NOT EXISTS profile_global_members (
                 owner_uuid TEXT NOT NULL,
                 member_uuid TEXT NOT NULL,

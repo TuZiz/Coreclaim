@@ -2,6 +2,7 @@ package com.coreclaim.service;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.storage.DatabaseManager;
 import java.time.Instant;
@@ -92,10 +93,10 @@ public final class ClaimService {
         if (claim.owner().equals(playerId)) {
             return true;
         }
-        if (!canAccess(claim, playerId)) {
-            return false;
+        if (claim.isTrusted(playerId)) {
+            return claim.memberPermission(playerId, permission, claim.permission(permission));
         }
-        return claim.permission(permission);
+        return profileService.isGloballyTrusted(claim.owner(), playerId) && claim.permission(permission);
     }
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
@@ -125,11 +126,11 @@ public final class ClaimService {
                     statement.setInt(13, initialDistance);
                     statement.setString(14, "");
                     statement.setString(15, "");
-                    statement.setInt(16, 1);
-                    statement.setInt(17, 1);
-                    statement.setInt(18, 1);
-                    statement.setInt(19, 1);
-                    statement.setInt(20, 1);
+                    statement.setInt(16, 0);
+                    statement.setInt(17, 0);
+                    statement.setInt(18, 0);
+                    statement.setInt(19, 0);
+                    statement.setInt(20, 0);
                     statement.setLong(21, 0L);
                     statement.setLong(22, createdAt);
                 }
@@ -152,11 +153,11 @@ public final class ClaimService {
                 true,
                 "",
                 "",
-                true,
-                true,
-                true,
-                true,
-                true,
+                false,
+                false,
+                false,
+                false,
+                false,
                 0L
             );
             claims.put(claim.id(), claim);
@@ -260,6 +261,8 @@ public final class ClaimService {
             if (!claim.addTrustedMember(memberId)) {
                 return false;
             }
+            ClaimMemberSettings settings = createMemberSettings(claim);
+            claim.setMemberSettings(memberId, settings);
             databaseManager.update(
                 "INSERT OR IGNORE INTO claim_members (claim_id, player_uuid) VALUES (?, ?)",
                 statement -> {
@@ -267,6 +270,7 @@ public final class ClaimService {
                     statement.setString(2, memberId.toString());
                 }
             );
+            saveMemberSettings(claim.id(), memberId, settings);
             return true;
         }
     }
@@ -276,6 +280,7 @@ public final class ClaimService {
             if (!claim.removeTrustedMember(memberId)) {
                 return false;
             }
+            claim.removeMemberSettings(memberId);
             databaseManager.update(
                 "DELETE FROM claim_members WHERE claim_id = ? AND player_uuid = ?",
                 statement -> {
@@ -283,6 +288,34 @@ public final class ClaimService {
                     statement.setString(2, memberId.toString());
                 }
             );
+            databaseManager.update(
+                "DELETE FROM claim_member_permissions WHERE claim_id = ? AND player_uuid = ?",
+                statement -> {
+                    statement.setInt(1, claim.id());
+                    statement.setString(2, memberId.toString());
+                }
+            );
+            return true;
+        }
+    }
+
+    public ClaimMemberSettings memberSettings(Claim claim, UUID memberId) {
+        ClaimMemberSettings settings = claim.memberSettings(memberId);
+        return settings == null ? createMemberSettings(claim) : settings;
+    }
+
+    public boolean updateMemberPermission(Claim claim, UUID memberId, ClaimPermission permission, boolean allowed) {
+        synchronized (mutationLock) {
+            if (!claim.isTrusted(memberId)) {
+                return false;
+            }
+            ClaimMemberSettings settings = claim.memberSettings(memberId);
+            if (settings == null) {
+                settings = createMemberSettings(claim);
+                claim.setMemberSettings(memberId, settings);
+            }
+            settings.setPermission(permission, allowed);
+            saveMemberSettings(claim.id(), memberId, settings);
             return true;
         }
     }
@@ -365,6 +398,9 @@ public final class ClaimService {
                         statement.setLong(23, claim.createdAt());
                     }
                 );
+                for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
+                    saveMemberSettings(claim.id(), entry.getKey(), entry.getValue());
+                }
             }
         }
     }
@@ -428,6 +464,66 @@ public final class ClaimService {
                     }
                 }
                 return null;
+            }
+        );
+        databaseManager.query(
+            """
+            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_bucket, allow_teleport
+            FROM claim_member_permissions
+            """,
+            statement -> {
+            },
+            resultSet -> {
+                while (resultSet.next()) {
+                    Claim claim = claims.get(resultSet.getInt("claim_id"));
+                    if (claim == null) {
+                        continue;
+                    }
+                    UUID playerId = UUID.fromString(resultSet.getString("player_uuid"));
+                    claim.setMemberSettings(playerId, new ClaimMemberSettings(
+                        resultSet.getInt("allow_place") != 0,
+                        resultSet.getInt("allow_break") != 0,
+                        resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_bucket") != 0,
+                        resultSet.getInt("allow_teleport") != 0
+                    ));
+                }
+                return null;
+            }
+        );
+    }
+
+    private ClaimMemberSettings createMemberSettings(Claim claim) {
+        return new ClaimMemberSettings(
+            claim.permission(ClaimPermission.PLACE),
+            claim.permission(ClaimPermission.BREAK),
+            claim.permission(ClaimPermission.INTERACT),
+            claim.permission(ClaimPermission.BUCKET),
+            claim.permission(ClaimPermission.TELEPORT)
+        );
+    }
+
+    private void saveMemberSettings(int claimId, UUID memberId, ClaimMemberSettings settings) {
+        databaseManager.update(
+            """
+            INSERT INTO claim_member_permissions (
+                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_bucket, allow_teleport
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
+                allow_place = excluded.allow_place,
+                allow_break = excluded.allow_break,
+                allow_interact = excluded.allow_interact,
+                allow_bucket = excluded.allow_bucket,
+                allow_teleport = excluded.allow_teleport
+            """,
+            statement -> {
+                statement.setInt(1, claimId);
+                statement.setString(2, memberId.toString());
+                statement.setInt(3, settings.permission(ClaimPermission.PLACE) ? 1 : 0);
+                statement.setInt(4, settings.permission(ClaimPermission.BREAK) ? 1 : 0);
+                statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                statement.setInt(6, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                statement.setInt(7, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
             }
         );
     }

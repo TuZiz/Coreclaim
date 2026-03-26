@@ -14,6 +14,9 @@ minimum-gap: 100
 # 领地名称最大长度
 claim-name-max-length: 16
 
+# 聊天输入超时秒数
+chat-input-timeout-seconds: 30
+
 # 是否显示进入/离开领地提示
 show-enter-leave-messages: true
 

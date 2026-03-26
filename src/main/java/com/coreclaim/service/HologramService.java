@@ -52,7 +52,8 @@ public final class HologramService {
                 claim.centerY() + plugin.settings().centerCoreHologramHeight(),
                 claim.centerZ() + 0.5D
             ),
-            plugin.color(hologramText)
+            plugin.color(hologramText),
+            true
         );
         armorStand.addScoreboardTag(TAG);
         armorStand.addScoreboardTag("claim:" + claim.id());
@@ -62,9 +63,9 @@ public final class HologramService {
     public void spawnPendingHologram(UUID playerId, String playerName, Location location) {
         removePendingHologram(playerId);
         List<UUID> entityIds = new ArrayList<>();
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.color("&6&l等待命名")));
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.85D, 0.5D), plugin.color("&f创建者: &e" + playerName)));
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.color("&7聊天输入 &c取消 &7取消")));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.55D, 0.5D), plugin.color("&e&l输入领地名"), false));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.color("&f玩家: &6" + playerName), false));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.75D, 0.5D), plugin.color("&c输入: 取消"), false));
         pendingHolograms.put(playerId, entityIds);
     }
 
@@ -95,13 +96,13 @@ public final class HologramService {
         }
     }
 
-    private UUID createPendingLine(Location location, String name) {
-        ArmorStand armorStand = createHologram(location, name);
+    private UUID createPendingLine(Location location, String name, boolean small) {
+        ArmorStand armorStand = createHologram(location, name, small);
         armorStand.addScoreboardTag(PENDING_TAG);
         return armorStand.getUniqueId();
     }
 
-    private ArmorStand createHologram(Location location, String name) {
+    private ArmorStand createHologram(Location location, String name, boolean small) {
         World world = location.getWorld();
         if (world == null) {
             throw new IllegalStateException("Cannot create hologram without a world");
@@ -110,7 +111,7 @@ public final class HologramService {
             stand.setInvisible(true);
             stand.setGravity(false);
             stand.setMarker(true);
-            stand.setSmall(true);
+            stand.setSmall(small);
             stand.setCustomNameVisible(true);
             stand.setCustomName(name);
             stand.setPersistent(false);

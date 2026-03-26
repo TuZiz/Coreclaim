@@ -27,10 +27,10 @@ public final class ClaimCoreFactory {
         if (meta == null) {
             return stack;
         }
-        meta.setDisplayName(plugin.color(config.getString(
+        meta.setDisplayName(plugin.color(replacePlaceholders(config.getString(
             "claim-core.name",
             config.getString("core-tool.name", "&6领地核心")
-        )));
+        ))));
         List<String> lore = config.getStringList("claim-core.lore");
         if (lore.isEmpty()) {
             lore = config.getStringList("core-tool.lore");
@@ -38,7 +38,7 @@ public final class ClaimCoreFactory {
         if (!lore.isEmpty()) {
             List<String> coloredLore = new ArrayList<>();
             for (String line : lore) {
-                coloredLore.add(plugin.color(line));
+                coloredLore.add(plugin.color(replacePlaceholders(line)));
             }
             meta.setLore(coloredLore);
         }
@@ -64,6 +64,16 @@ public final class ClaimCoreFactory {
         player.getInventory().addItem(stack).values().forEach(leftover ->
             player.getWorld().dropItemNaturally(player.getLocation(), leftover)
         );
+    }
+
+    private String replacePlaceholders(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text
+            .replace("%core-use-min-activity%", String.valueOf(plugin.settings().coreUseMinActivity()))
+            .replace("%starter-reward-minutes%", String.valueOf(plugin.settings().starterRewardMinutes()))
+            .replace("%claim-world%", plugin.settings().claimWorld());
     }
 }
 

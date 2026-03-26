@@ -1,7 +1,9 @@
 package com.coreclaim.model;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Location;
@@ -17,6 +19,7 @@ public final class Claim {
     private final int centerZ;
     private final long createdAt;
     private final Set<UUID> trustedMembers = new LinkedHashSet<>();
+    private final Map<UUID, ClaimMemberSettings> memberSettings = new LinkedHashMap<>();
     private String name;
     private boolean coreVisible;
     private int east;
@@ -180,6 +183,30 @@ public final class Claim {
 
     public synchronized int trustedCount() {
         return trustedMembers.size();
+    }
+
+    public synchronized ClaimMemberSettings memberSettings(UUID playerId) {
+        return memberSettings.get(playerId);
+    }
+
+    public synchronized void setMemberSettings(UUID playerId, ClaimMemberSettings settings) {
+        if (playerId == null || settings == null) {
+            return;
+        }
+        memberSettings.put(playerId, settings);
+    }
+
+    public synchronized void removeMemberSettings(UUID playerId) {
+        memberSettings.remove(playerId);
+    }
+
+    public synchronized Map<UUID, ClaimMemberSettings> memberSettings() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(memberSettings));
+    }
+
+    public synchronized boolean memberPermission(UUID playerId, ClaimPermission permission, boolean fallback) {
+        ClaimMemberSettings settings = memberSettings.get(playerId);
+        return settings == null ? fallback : settings.permission(permission);
     }
 
     public synchronized String enterMessage() {

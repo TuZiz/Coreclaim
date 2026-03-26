@@ -14,6 +14,7 @@ public final class PluginConfig {
     private final int minimumCoreSpacing;
     private final int minimumGap;
     private final int claimNameMaxLength;
+    private final int chatInputTimeoutSeconds;
     private final Material coreMaterial;
     private final String centerCoreHologramText;
     private final double centerCoreHologramHeight;
@@ -38,6 +39,7 @@ public final class PluginConfig {
         this.minimumGap = Math.max(5, config.getInt("minimum-gap", config.getInt("minimum-core-spacing", 100)));
         this.minimumCoreSpacing = minimumGap;
         this.claimNameMaxLength = Math.max(3, config.getInt("claim-name-max-length", 16));
+        this.chatInputTimeoutSeconds = Math.max(5, config.getInt("chat-input-timeout-seconds", 30));
         this.coreMaterial = resolveMaterial(config.getString("center-core.material",
             config.getString("claim-core.material",
                 config.getString("core-tool.material", "AMETHYST_CLUSTER"))));
@@ -100,6 +102,10 @@ public final class PluginConfig {
 
     public int claimNameMaxLength() {
         return claimNameMaxLength;
+    }
+
+    public int chatInputTimeoutSeconds() {
+        return chatInputTimeoutSeconds;
     }
 
     public Material coreMaterial() {

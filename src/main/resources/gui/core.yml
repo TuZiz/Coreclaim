@@ -3,8 +3,8 @@ GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "FEFLFTFPF"
-  - "FFRFMFNFF"
-  - "FFFHQXFFF"
+  - "FFRFQFNFF"
+  - "FFFHFXFFF"
 
 items:
   filler:
@@ -95,34 +95,22 @@ items:
       - ' &6&l» &e点击开始重命名'
     sound: BLOCK_ANVIL_USE
 
-  notify-leave:
-    char: "M"
-    material: NOTE_BLOCK
-    custom-model-data: 1507
-    name: '&e&l设置离开通知'
-    lore:
-      - ''
-      - ' &f▶ &7当前领地: &b{name}'
-      - ' &f▶ &7当前内容: &e{current}'
-      - ' &8▪ &7点击后在聊天栏输入离开提示'
-      - ' &8▪ &7支持变量: &f%claim_name%'
-      - ''
-      - ' &6&l» &e点击进行设置'
-    sound: BLOCK_NOTE_BLOCK_BIT
-
-  notify-enter:
+  notify:
     char: "N"
     material: BELL
     custom-model-data: 1508
-    name: '&b&l设置进入通知'
+    name: '&b&l通知设置'
     lore:
       - ''
       - ' &f▶ &7当前领地: &b{name}'
-      - ' &f▶ &7当前内容: &b{current}'
-      - ' &8▪ &7点击后在聊天栏输入进入提示'
+      - ' &f▶ &7进入内容: &b{enter_current}'
+      - ' &f▶ &7离开内容: &e{leave_current}'
+      - ''
+      - ' &8▪ &7左键编辑进入提示'
+      - ' &8▪ &7右键编辑离开提示'
       - ' &8▪ &7支持变量: &f%claim_name%'
       - ''
-      - ' &6&l» &e点击进行设置'
+      - ' &6&l» &e左键/右键进行设置'
     sound: BLOCK_BELL_USE
 
   hide:

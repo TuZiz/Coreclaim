@@ -50,6 +50,28 @@ public final class ClaimVisualService {
         }, 0L, plugin.settings().claimVisualIntervalTicks());
     }
 
+    public void showPendingLocation(Player player, Location location) {
+        if (player == null || location == null || location.getWorld() == null) {
+            return;
+        }
+
+        Particle.DustOptions dust = new Particle.DustOptions(
+            Color.fromRGB(255, 214, 64),
+            Math.max(0.8F, plugin.settings().claimVisualSize() - 0.2F)
+        );
+        final int[] remaining = {12};
+        final PlatformScheduler.TaskHandle[] handle = new PlatformScheduler.TaskHandle[1];
+        handle[0] = plugin.platformScheduler().runRepeating(() -> {
+            if (!player.isOnline() || remaining[0]-- <= 0) {
+                if (handle[0] != null) {
+                    handle[0].cancel();
+                }
+                return;
+            }
+            renderPendingRing(player, location, dust);
+        }, 0L, 8L);
+    }
+
     private void render(Player player, Claim claim, World world, Particle.DustOptions dust) {
         double minX = claim.centerX() - claim.west() + 0.5D;
         double maxX = claim.centerX() + claim.east() + 0.5D;
@@ -104,6 +126,20 @@ public final class ClaimVisualService {
             double y = startY + (dy * progress);
             double z = startZ + (dz * progress);
             player.spawnParticle(Particle.REDSTONE, x, y, z, 1, 0D, 0D, 0D, 0D, dust);
+        }
+    }
+
+    private void renderPendingRing(Player player, Location location, Particle.DustOptions dust) {
+        double centerX = location.getBlockX() + 0.5D;
+        double centerY = location.getBlockY() + 0.1D;
+        double centerZ = location.getBlockZ() + 0.5D;
+        double radius = 0.95D;
+        int points = 24;
+        for (int index = 0; index < points; index++) {
+            double angle = (Math.PI * 2D * index) / points;
+            double x = centerX + (Math.cos(angle) * radius);
+            double z = centerZ + (Math.sin(angle) * radius);
+            player.spawnParticle(Particle.REDSTONE, x, centerY, z, 1, 0D, 0D, 0D, 0D, dust);
         }
     }
 }

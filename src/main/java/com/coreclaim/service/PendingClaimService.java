@@ -68,7 +68,8 @@ public final class PendingClaimService {
 
         cancelPendingClaim(player, false);
         pendingClaims.put(player.getUniqueId(), new PendingClaim(player.getUniqueId(), coreLocation));
-        hologramService.spawnPendingHologram(player.getUniqueId(), coreLocation);
+        hologramService.spawnPendingHologram(player.getUniqueId(), player.getName(), coreLocation);
+        claimVisualService.showPendingLocation(player, coreLocation);
         player.sendMessage(plugin.message("claim-name-prompt"));
         return true;
     }

@@ -1,0 +1,104 @@
+title: '&8✦ 领地管理 - {name} ✦'
+size: 45
+
+items:
+  filler:
+    material: WHITE_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1300
+
+  info:
+    slot: 22
+    material: WRITABLE_BOOK
+    custom-model-data: 1301
+    name: '&6&l领地信息'
+    lore:
+      - '&7名称: &f{name}'
+      - '&7世界: &f{world}'
+      - '&7核心: &f{x}, {z}'
+      - '&7大小: &e{width}x{depth}'
+      - '&7面积: &e{area}'
+      - '&7东/南/西/北: &e{east}&7/&e{south}&7/&e{west}&7/&e{north}'
+      - '&7信任成员: &e{trusted}'
+
+  expand-north:
+    slot: 13
+    material: SPECTRAL_ARROW
+    custom-model-data: 1302
+    glow: true
+    name: '&b向北扩建 +{amount}'
+    lore:
+      - '&7当前北侧: &e{current}'
+      - '&7扩建后: &e{target}'
+      - '&7价格: &6{price}'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+
+  expand-west:
+    slot: 21
+    material: SPECTRAL_ARROW
+    custom-model-data: 1303
+    glow: true
+    name: '&b向西扩建 +{amount}'
+    lore:
+      - '&7当前西侧: &e{current}'
+      - '&7扩建后: &e{target}'
+      - '&7价格: &6{price}'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+
+  expand-east:
+    slot: 23
+    material: SPECTRAL_ARROW
+    custom-model-data: 1304
+    glow: true
+    name: '&b向东扩建 +{amount}'
+    lore:
+      - '&7当前东侧: &e{current}'
+      - '&7扩建后: &e{target}'
+      - '&7价格: &6{price}'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+
+  expand-south:
+    slot: 31
+    material: SPECTRAL_ARROW
+    custom-model-data: 1305
+    glow: true
+    name: '&b向南扩建 +{amount}'
+    lore:
+      - '&7当前南侧: &e{current}'
+      - '&7扩建后: &e{target}'
+      - '&7价格: &6{price}'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+
+  trust:
+    slot: 39
+    material: NAME_TAG
+    custom-model-data: 1306
+    name: '&d成员权限'
+    lore:
+      - '&7管理这个领地的单独授权'
+    sound: BLOCK_NOTE_BLOCK_PLING
+
+  teleport:
+    slot: 40
+    material: ENDER_PEARL
+    custom-model-data: 1307
+    glow: true
+    name: '&a传送到核心'
+    sound: ENTITY_ENDERMAN_TELEPORT
+
+  back:
+    slot: 36
+    material: ARROW
+    custom-model-data: 1308
+    name: '&e返回领地列表'
+    sound: UI_BUTTON_CLICK
+
+  delete:
+    slot: 44
+    material: LAVA_BUCKET
+    custom-model-data: 1309
+    name: '&c删除领地'
+    lore:
+      - '&7点击后需要在聊天输入'
+      - '&aconfirm &7才能真正删除'
+    sound: BLOCK_ANVIL_PLACE

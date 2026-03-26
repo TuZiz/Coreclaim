@@ -1,0 +1,22 @@
+name: CoreClaim
+main: com.coreclaim.CoreClaimPlugin
+version: ${version}
+api-version: '1.20'
+folia-supported: true
+authors:
+  - Codex
+softdepend:
+  - Vault
+  - PlaceholderAPI
+commands:
+  claim:
+    description: Claim 主命令
+    usage: /claim
+    aliases: [lingdi, coreclaim, cc]
+permissions:
+  coreclaim.use:
+    description: 使用 Claim 基础命令
+    default: true
+  coreclaim.admin:
+    description: 管理 Claim
+    default: op

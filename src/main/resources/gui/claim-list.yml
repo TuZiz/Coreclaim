@@ -1,0 +1,43 @@
+title: '&8✦ 我的领地列表 ✦'
+size: 54
+
+items:
+  filler:
+    material: CYAN_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1200
+
+  entry:
+    material: GRASS_BLOCK
+    custom-model-data: 1201
+    glow: true
+    name: '&a&l{name}'
+    lore:
+      - '&7世界: &f{world}'
+      - '&7核心坐标: &f{x}, {z}'
+      - '&7大小: &e{width}x{depth}'
+      - '&7面积: &e{area}'
+      - '&7信任成员: &e{trusted}'
+      - '&8左键管理 | 右键传送'
+    sound: BLOCK_NOTE_BLOCK_HARP
+
+  prev-page:
+    slot: 45
+    material: ARROW
+    custom-model-data: 1202
+    name: '&e上一页'
+    sound: UI_BUTTON_CLICK
+
+  back:
+    slot: 49
+    material: BARRIER
+    custom-model-data: 1203
+    name: '&c返回总览'
+    sound: UI_BUTTON_CLICK
+
+  next-page:
+    slot: 53
+    material: ARROW
+    custom-model-data: 1204
+    name: '&e下一页'
+    sound: UI_BUTTON_CLICK

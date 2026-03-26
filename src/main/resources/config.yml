@@ -1,0 +1,17 @@
+starter-reward-minutes: 30
+direction-expand-amount: 10
+minimum-core-spacing: 100
+claim-name-max-length: 16
+show-enter-leave-messages: true
+
+database:
+  file: coreclaim.db
+
+claim-core:
+  material: AMETHYST_CLUSTER
+  name: '&d&l领地核心'
+  lore:
+    - '&8CoreClaim'
+    - '&7放置到地面后开始创建领地'
+    - '&7首个核心由在线奖励自动发放'
+    - '&7更多核心请通过你的其他玩法渠道获得'

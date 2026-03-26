@@ -1,0 +1,25 @@
+default:
+  display-name: '&f默认'
+  priority: 0
+  permission: ''
+  initial-distance: 8
+  max-distance: 50
+  expand-price-per-block: 50.0
+  claim-slots:
+    '0': 1
+    '100': 2
+    '300': 3
+    '600': 4
+
+vip:
+  display-name: '&6VIP'
+  priority: 100
+  permission: 'coreclaim.group.vip'
+  initial-distance: 12
+  max-distance: 80
+  expand-price-per-block: 35.0
+  claim-slots:
+    '0': 2
+    '100': 3
+    '300': 4
+    '600': 6

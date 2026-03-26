@@ -1,0 +1,62 @@
+title: '&8✦ 成员权限 - {name} ✦'
+size: 54
+
+items:
+  filler:
+    material: LIGHT_GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1400
+
+  trusted-entry:
+    material: PLAYER_HEAD
+    custom-model-data: 1401
+    name: '&a已授权: &f{player}'
+    lore:
+      - '&7领地: &f{name}'
+      - '&8点击移出权限列表'
+    sound: BLOCK_NOTE_BLOCK_BASS
+
+  candidate-entry:
+    material: PLAYER_HEAD
+    custom-model-data: 1402
+    glow: true
+    name: '&b在线玩家: &f{player}'
+    lore:
+      - '&7领地: &f{name}'
+      - '&8点击加入权限列表'
+    sound: BLOCK_NOTE_BLOCK_PLING
+
+  empty:
+    slot: 13
+    material: PAPER
+    custom-model-data: 1403
+    name: '&7暂无授权成员'
+    lore:
+      - '&7可以从下方选择在线玩家进行授权'
+
+  candidate-start:
+    slot: 36
+    material: PAPER
+    custom-model-data: 1404
+    name: '&7候选起始位'
+
+  prev-page:
+    slot: 45
+    material: ARROW
+    custom-model-data: 1405
+    name: '&e上一页'
+    sound: UI_BUTTON_CLICK
+
+  back:
+    slot: 49
+    material: BARRIER
+    custom-model-data: 1406
+    name: '&c返回领地管理'
+    sound: UI_BUTTON_CLICK
+
+  next-page:
+    slot: 53
+    material: ARROW
+    custom-model-data: 1407
+    name: '&e下一页'
+    sound: UI_BUTTON_CLICK

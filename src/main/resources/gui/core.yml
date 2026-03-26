@@ -1,0 +1,54 @@
+title: '&8✦ 领地核心 - {name} ✦'
+size: 27
+
+items:
+  filler:
+    material: PURPLE_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1500
+
+  info:
+    slot: 11
+    material: AMETHYST_CLUSTER
+    custom-model-data: 1501
+    glow: true
+    name: '&d&l核心信息'
+    lore:
+      - '&7领地名: &f{name}'
+      - '&7主人: &f{owner}'
+      - '&7核心坐标: &f{x}, {z}'
+      - '&7大小: &e{width}x{depth}'
+      - '&7信任成员: &e{trusted}'
+
+  teleport:
+    slot: 13
+    material: ENDER_PEARL
+    custom-model-data: 1502
+    glow: true
+    name: '&a传送到领地'
+    sound: ENTITY_ENDERMAN_TELEPORT
+
+  settings:
+    slot: 15
+    material: COMPARATOR
+    custom-model-data: 1503
+    name: '&b打开领地管理'
+    sound: UI_BUTTON_CLICK
+
+  hide:
+    slot: 22
+    material: BARRIER
+    custom-model-data: 1504
+    name: '&c移除核心展示'
+    lore:
+      - '&7只移除核心方块与全息字'
+      - '&7不会删除领地'
+      - '&7不会返还核心'
+    sound: BLOCK_ANVIL_PLACE
+
+  close:
+    slot: 26
+    material: ARROW
+    custom-model-data: 1505
+    name: '&e关闭菜单'
+    sound: UI_BUTTON_CLICK

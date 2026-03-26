@@ -56,9 +56,9 @@ public final class HologramService {
     public void spawnPendingHologram(UUID playerId, String playerName, Location location) {
         removePendingHologram(playerId);
         List<UUID> entityIds = new ArrayList<>();
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.message("pending-hologram-title")));
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.85D, 0.5D), plugin.message("pending-hologram-player", "{player}", playerName)));
-        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.message("pending-hologram-cancel")));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 2.15D, 0.5D), plugin.color("&6&l等待命名")));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.85D, 0.5D), plugin.color("&f创建者: &e" + playerName)));
+        entityIds.add(createPendingLine(location.clone().add(0.5D, 1.55D, 0.5D), plugin.color("&7聊天输入 &ccancel &7取消")));
         pendingHolograms.put(playerId, entityIds);
     }
 

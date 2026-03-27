@@ -55,10 +55,23 @@ public final class OnlineRewardService {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
         int before = profile.onlineMinutes();
         profile.addOnlineMinutes(1);
+        int current = profile.onlineMinutes();
+
+        if (!profile.starterCoreGranted()
+            && current < plugin.settings().starterRewardMinutes()
+            && current > 0
+            && current % 5 == 0) {
+            int remaining = plugin.settings().starterRewardMinutes() - current;
+            player.sendMessage(plugin.message(
+                "starter-core-reminder",
+                "{minutes}", String.valueOf(plugin.settings().starterRewardMinutes()),
+                "{remaining}", String.valueOf(remaining)
+            ));
+        }
 
         if (!profile.starterCoreGranted()
             && before < plugin.settings().starterRewardMinutes()
-            && profile.onlineMinutes() >= plugin.settings().starterRewardMinutes()) {
+            && current >= plugin.settings().starterRewardMinutes()) {
             profile.setStarterCoreGranted(true);
             claimCoreFactory.giveStarterCore(player, 1);
             player.sendMessage(

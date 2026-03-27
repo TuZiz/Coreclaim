@@ -38,9 +38,13 @@ public final class PendingClaimService {
         this.claimVisualService = claimVisualService;
     }
 
-    public boolean beginClaimCreation(Player player, Location coreLocation) {
+    public boolean beginClaimCreation(Player player, Location coreLocation, boolean starterCore) {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
-        if (profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
+        if (starterCore && claimService.countClaims(player.getUniqueId()) > 0) {
+            player.sendMessage(plugin.message("starter-core-first-only"));
+            return false;
+        }
+        if (!starterCore && profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
             player.sendMessage(plugin.message(
                 "claim-core-activity-low",
                 "{value}",
@@ -83,7 +87,7 @@ public final class PendingClaimService {
         }
 
         cancelPendingClaim(player, false);
-        pendingClaims.put(player.getUniqueId(), new PendingClaim(player.getUniqueId(), coreLocation));
+        pendingClaims.put(player.getUniqueId(), new PendingClaim(player.getUniqueId(), coreLocation, starterCore));
         scheduleTimeout(player.getUniqueId());
         hologramService.spawnPendingHologram(player.getUniqueId(), player.getName(), coreLocation);
         claimVisualService.showPendingLocation(player, coreLocation);
@@ -182,12 +186,19 @@ public final class PendingClaimService {
         Location location = pending.coreLocation();
         Player player = plugin.getServer().getPlayer(pending.ownerId());
         if (player != null) {
-            claimCoreFactory.giveClaimCore(player, 1);
+            if (pending.starterCore()) {
+                claimCoreFactory.giveStarterCore(player, 1);
+            } else {
+                claimCoreFactory.giveClaimCore(player, 1);
+            }
         } else if (location.getWorld() != null) {
-            location.getWorld().dropItemNaturally(location.clone().add(0.5D, 0.5D, 0.5D), claimCoreFactory.createClaimCore(1));
+            location.getWorld().dropItemNaturally(
+                location.clone().add(0.5D, 0.5D, 0.5D),
+                pending.starterCore() ? claimCoreFactory.createStarterCore(1) : claimCoreFactory.createClaimCore(1)
+            );
         }
     }
 
-    public record PendingClaim(UUID ownerId, Location coreLocation) {
+    public record PendingClaim(UUID ownerId, Location coreLocation, boolean starterCore) {
     }
 }

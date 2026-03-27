@@ -155,8 +155,8 @@ public final class MenuService {
             "{area}", String.valueOf(claim.area()),
             "{activity}", String.valueOf(profile.activityPoints()),
             "{trusted_count}", String.valueOf(claim.trustedCount()),
-            "{enter_message}", displayMessage(claim.enterMessage(), "默认进入提示"),
-            "{leave_message}", displayMessage(claim.leaveMessage(), "默认离开提示")
+            "{enter_message}", displayNotifyPreview(claim.enterMessage(), claim, "默认进入提示"),
+            "{leave_message}", displayNotifyPreview(claim.leaveMessage(), claim, "默认离开提示")
         ));
         inventory.setItem(slot("core", "expand"), configuredItem("core", "expand"));
         inventory.setItem(slot("core", "claim-list"), configuredItem("core", "claim-list", "{total}", String.valueOf(claimCount)));
@@ -165,8 +165,8 @@ public final class MenuService {
         inventory.setItem(slot("core", "rename"), configuredItem("core", "rename", "{name}", claim.name()));
         inventory.setItem(slot("core", "notify"), configuredItem("core", "notify",
             "{name}", claim.name(),
-            "{enter_current}", displayMessage(claim.enterMessage(), "默认进入提示"),
-            "{leave_current}", displayMessage(claim.leaveMessage(), "默认离开提示")
+            "{enter_current}", displayNotifyPreview(claim.enterMessage(), claim, "默认进入提示"),
+            "{leave_current}", displayNotifyPreview(claim.leaveMessage(), claim, "默认离开提示")
         ));
         inventory.setItem(slot("core", "hide"), configuredItem("core", "hide"));
         inventory.setItem(slot("core", "teleport"), configuredItem("core", "teleport"));
@@ -241,14 +241,19 @@ public final class MenuService {
             "{perm_place}", stateText(claim.permission(ClaimPermission.PLACE)),
             "{perm_break}", stateText(claim.permission(ClaimPermission.BREAK)),
             "{perm_interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
+            "{perm_container}", stateText(claim.permission(ClaimPermission.CONTAINER)),
+            "{perm_redstone}", stateText(claim.permission(ClaimPermission.REDSTONE)),
             "{perm_bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
             "{perm_teleport}", stateText(claim.permission(ClaimPermission.TELEPORT))
         ));
         inventory.setItem(slot("claim-permissions", "perm-place"), configuredItem("claim-permissions", "perm-place", "{state}", stateText(claim.permission(ClaimPermission.PLACE))));
         inventory.setItem(slot("claim-permissions", "perm-break"), configuredItem("claim-permissions", "perm-break", "{state}", stateText(claim.permission(ClaimPermission.BREAK))));
         inventory.setItem(slot("claim-permissions", "perm-interact"), configuredItem("claim-permissions", "perm-interact", "{state}", stateText(claim.permission(ClaimPermission.INTERACT))));
+        inventory.setItem(slot("claim-permissions", "perm-container"), configuredItem("claim-permissions", "perm-container", "{state}", stateText(claim.permission(ClaimPermission.CONTAINER))));
+        inventory.setItem(slot("claim-permissions", "perm-redstone"), configuredItem("claim-permissions", "perm-redstone", "{state}", stateText(claim.permission(ClaimPermission.REDSTONE))));
         inventory.setItem(slot("claim-permissions", "perm-bucket"), configuredItem("claim-permissions", "perm-bucket", "{state}", stateText(claim.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("claim-permissions", "perm-teleport"), configuredItem("claim-permissions", "perm-teleport", "{state}", stateText(claim.permission(ClaimPermission.TELEPORT))));
+        inventory.setItem(slot("claim-permissions", "disable-all"), configuredItem("claim-permissions", "disable-all"));
         inventory.setItem(slot("claim-permissions", "back"), configuredItem("claim-permissions", "back"));
         player.openInventory(inventory);
     }
@@ -270,12 +275,20 @@ public final class MenuService {
             "{perm_place}", stateText(settings.permission(ClaimPermission.PLACE)),
             "{perm_break}", stateText(settings.permission(ClaimPermission.BREAK)),
             "{perm_interact}", stateText(settings.permission(ClaimPermission.INTERACT)),
+            "{perm_container}", stateText(settings.permission(ClaimPermission.CONTAINER)),
+            "{perm_redstone}", stateText(settings.permission(ClaimPermission.REDSTONE)),
             "{perm_bucket}", stateText(settings.permission(ClaimPermission.BUCKET)),
             "{perm_teleport}", stateText(settings.permission(ClaimPermission.TELEPORT))
         ));
         inventory.setItem(slot("trust-member-permissions", "perm-place"), configuredItem("trust-member-permissions", "perm-place", "{state}", stateText(settings.permission(ClaimPermission.PLACE))));
         inventory.setItem(slot("trust-member-permissions", "perm-break"), configuredItem("trust-member-permissions", "perm-break", "{state}", stateText(settings.permission(ClaimPermission.BREAK))));
         inventory.setItem(slot("trust-member-permissions", "perm-interact"), configuredItem("trust-member-permissions", "perm-interact", "{state}", stateText(settings.permission(ClaimPermission.INTERACT))));
+        if (hasItem("trust-member-permissions", "perm-container")) {
+            inventory.setItem(slot("trust-member-permissions", "perm-container"), configuredItem("trust-member-permissions", "perm-container", "{state}", stateText(settings.permission(ClaimPermission.CONTAINER))));
+        }
+        if (hasItem("trust-member-permissions", "perm-redstone")) {
+            inventory.setItem(slot("trust-member-permissions", "perm-redstone"), configuredItem("trust-member-permissions", "perm-redstone", "{state}", stateText(settings.permission(ClaimPermission.REDSTONE))));
+        }
         inventory.setItem(slot("trust-member-permissions", "perm-bucket"), configuredItem("trust-member-permissions", "perm-bucket", "{state}", stateText(settings.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("trust-member-permissions", "perm-teleport"), configuredItem("trust-member-permissions", "perm-teleport", "{state}", stateText(settings.permission(ClaimPermission.TELEPORT))));
         inventory.setItem(slot("trust-member-permissions", "back"), configuredItem("trust-member-permissions", "back"));
@@ -574,12 +587,24 @@ public final class MenuService {
             togglePermission(player, claim, ClaimPermission.INTERACT, "perm-interact");
             return;
         }
+        if (slot == slot("claim-permissions", "perm-container")) {
+            togglePermission(player, claim, ClaimPermission.CONTAINER, "perm-container");
+            return;
+        }
+        if (slot == slot("claim-permissions", "perm-redstone")) {
+            togglePermission(player, claim, ClaimPermission.REDSTONE, "perm-redstone");
+            return;
+        }
         if (slot == slot("claim-permissions", "perm-bucket")) {
             togglePermission(player, claim, ClaimPermission.BUCKET, "perm-bucket");
             return;
         }
         if (slot == slot("claim-permissions", "perm-teleport")) {
             togglePermission(player, claim, ClaimPermission.TELEPORT, "perm-teleport");
+            return;
+        }
+        if (slot == slot("claim-permissions", "disable-all")) {
+            setAllPermissions(player, claim, false, "disable-all");
             return;
         }
         if (slot == slot("claim-permissions", "back")) {
@@ -608,6 +633,14 @@ public final class MenuService {
             toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.INTERACT, "perm-interact");
             return;
         }
+        if (hasItem("trust-member-permissions", "perm-container") && slot == slot("trust-member-permissions", "perm-container")) {
+            toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.CONTAINER, "perm-container");
+            return;
+        }
+        if (hasItem("trust-member-permissions", "perm-redstone") && slot == slot("trust-member-permissions", "perm-redstone")) {
+            toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.REDSTONE, "perm-redstone");
+            return;
+        }
         if (slot == slot("trust-member-permissions", "perm-bucket")) {
             toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.BUCKET, "perm-bucket");
             return;
@@ -625,6 +658,14 @@ public final class MenuService {
     private void togglePermission(Player player, Claim claim, ClaimPermission permission, String itemKey) {
         playConfiguredSound(player, "claim-permissions", itemKey);
         claimService.updatePermission(claim, permission, !claim.permission(permission));
+        openClaimPermissionsMenu(player, claim);
+    }
+
+    private void setAllPermissions(Player player, Claim claim, boolean allowed, String itemKey) {
+        playConfiguredSound(player, "claim-permissions", itemKey);
+        for (ClaimPermission permission : ClaimPermission.values()) {
+            claimService.updatePermission(claim, permission, allowed);
+        }
         openClaimPermissionsMenu(player, claim);
     }
 
@@ -819,8 +860,14 @@ public final class MenuService {
         return texture;
     }
 
-    private String displayMessage(String raw, String fallback) {
-        return raw == null || raw.isBlank() ? fallback : raw;
+    private String displayNotifyPreview(String raw, Claim claim, String fallback) {
+        String base = raw == null || raw.isBlank() ? fallback : raw;
+        return base
+            .replace("%claim_name%", claim.name())
+            .replace("{claim_name}", claim.name())
+            .replace("{name}", claim.name())
+            .replace("%owner%", claim.ownerName())
+            .replace("{owner}", claim.ownerName());
     }
 
     private String stateText(boolean enabled) {

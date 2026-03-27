@@ -155,7 +155,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = claimService.findClaim(location);
-        if (claim.isPresent() && !claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.INTERACT)) {
+        if (claim.isPresent() && !claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.CONTAINER)) {
             event.setCancelled(true);
         }
     }

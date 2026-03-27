@@ -30,7 +30,7 @@ public final class ClaimCoreListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         ItemStack item = event.getItemInHand();
-        if (!claimCoreFactory.isClaimCore(item)) {
+        if (!claimCoreFactory.isAnyClaimCore(item)) {
             return;
         }
         event.setCancelled(true);
@@ -41,7 +41,8 @@ public final class ClaimCoreListener implements Listener {
             return;
         }
 
-        if (!pendingClaimService.beginClaimCreation(player, event.getBlockPlaced().getLocation())) {
+        boolean starterCore = claimCoreFactory.isStarterCore(item);
+        if (!pendingClaimService.beginClaimCreation(player, event.getBlockPlaced().getLocation(), starterCore)) {
             return;
         }
         consumeCore(player, event.getHand());
@@ -51,7 +52,7 @@ public final class ClaimCoreListener implements Listener {
         ItemStack stack = hand == EquipmentSlot.OFF_HAND
             ? player.getInventory().getItemInOffHand()
             : player.getInventory().getItemInMainHand();
-        if (!claimCoreFactory.isClaimCore(stack)) {
+        if (!claimCoreFactory.isAnyClaimCore(stack)) {
             return;
         }
         if (stack.getAmount() <= 1) {

@@ -86,12 +86,21 @@ public final class ClaimService {
     }
 
     public boolean canAccess(Claim claim, UUID playerId) {
+        if (claim.owner().equals(playerId)) {
+            return true;
+        }
+        if (claim.isBlacklisted(playerId)) {
+            return false;
+        }
         return claim.canAccess(playerId) || profileService.isGloballyTrusted(claim.owner(), playerId);
     }
 
     public boolean hasPermission(Claim claim, UUID playerId, ClaimPermission permission) {
         if (claim.owner().equals(playerId)) {
             return true;
+        }
+        if (claim.isBlacklisted(playerId)) {
+            return false;
         }
         if (claim.isTrusted(playerId)) {
             return claim.memberPermission(playerId, permission, claim.permission(permission));
@@ -107,8 +116,8 @@ public final class ClaimService {
                 INSERT INTO claims (
                     owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                     radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 statement -> {
                     statement.setString(1, owner.toString());
@@ -131,8 +140,10 @@ public final class ClaimService {
                     statement.setInt(18, 0);
                     statement.setInt(19, 0);
                     statement.setInt(20, 0);
-                    statement.setLong(21, 0L);
-                    statement.setLong(22, createdAt);
+                    statement.setInt(21, 0);
+                    statement.setInt(22, 0);
+                    statement.setLong(23, 0L);
+                    statement.setLong(24, createdAt);
                 }
             );
 
@@ -153,6 +164,8 @@ public final class ClaimService {
                 true,
                 "",
                 "",
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -243,6 +256,8 @@ public final class ClaimService {
                 case PLACE -> "allow_place";
                 case BREAK -> "allow_break";
                 case INTERACT -> "allow_interact";
+                case CONTAINER -> "allow_container";
+                case REDSTONE -> "allow_redstone";
                 case BUCKET -> "allow_bucket";
                 case TELEPORT -> "allow_teleport";
             };
@@ -299,6 +314,54 @@ public final class ClaimService {
         }
     }
 
+    public boolean addBlacklistedMember(Claim claim, UUID memberId) {
+        synchronized (mutationLock) {
+            if (!claim.addBlacklistedMember(memberId)) {
+                return false;
+            }
+            claim.removeTrustedMember(memberId);
+            claim.removeMemberSettings(memberId);
+            databaseManager.update(
+                "DELETE FROM claim_members WHERE claim_id = ? AND player_uuid = ?",
+                statement -> {
+                    statement.setInt(1, claim.id());
+                    statement.setString(2, memberId.toString());
+                }
+            );
+            databaseManager.update(
+                "DELETE FROM claim_member_permissions WHERE claim_id = ? AND player_uuid = ?",
+                statement -> {
+                    statement.setInt(1, claim.id());
+                    statement.setString(2, memberId.toString());
+                }
+            );
+            databaseManager.update(
+                "INSERT OR IGNORE INTO claim_blacklist (claim_id, player_uuid) VALUES (?, ?)",
+                statement -> {
+                    statement.setInt(1, claim.id());
+                    statement.setString(2, memberId.toString());
+                }
+            );
+            return true;
+        }
+    }
+
+    public boolean removeBlacklistedMember(Claim claim, UUID memberId) {
+        synchronized (mutationLock) {
+            if (!claim.removeBlacklistedMember(memberId)) {
+                return false;
+            }
+            databaseManager.update(
+                "DELETE FROM claim_blacklist WHERE claim_id = ? AND player_uuid = ?",
+                statement -> {
+                    statement.setInt(1, claim.id());
+                    statement.setString(2, memberId.toString());
+                }
+            );
+            return true;
+        }
+    }
+
     public ClaimMemberSettings memberSettings(Claim claim, UUID memberId) {
         ClaimMemberSettings settings = claim.memberSettings(memberId);
         return settings == null ? createMemberSettings(claim) : settings;
@@ -346,8 +409,8 @@ public final class ClaimService {
                     INSERT INTO claims (
                         id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                         radius, east, south, west, north, enter_message, leave_message,
-                        allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         owner_uuid = excluded.owner_uuid,
                         owner_name = excluded.owner_name,
@@ -367,6 +430,8 @@ public final class ClaimService {
                         allow_place = excluded.allow_place,
                         allow_break = excluded.allow_break,
                         allow_interact = excluded.allow_interact,
+                        allow_container = excluded.allow_container,
+                        allow_redstone = excluded.allow_redstone,
                         allow_bucket = excluded.allow_bucket,
                         allow_teleport = excluded.allow_teleport,
                         last_expanded_at = excluded.last_expanded_at,
@@ -392,10 +457,12 @@ public final class ClaimService {
                         statement.setInt(17, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
                         statement.setInt(18, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                         statement.setInt(19, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                        statement.setInt(20, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                        statement.setInt(21, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                        statement.setLong(22, claim.lastExpandedAt());
-                        statement.setLong(23, claim.createdAt());
+                        statement.setInt(20, claim.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                        statement.setInt(21, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                        statement.setInt(22, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                        statement.setInt(23, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                        statement.setLong(24, claim.lastExpandedAt());
+                        statement.setLong(25, claim.createdAt());
                     }
                 );
                 for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
@@ -410,7 +477,7 @@ public final class ClaimService {
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                    radius, east, south, west, north, enter_message, leave_message,
-                   allow_place, allow_break, allow_interact, allow_bucket, allow_teleport, last_expanded_at, created_at
+                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
             FROM claims
             """,
             statement -> {
@@ -442,6 +509,8 @@ public final class ClaimService {
                         resultSet.getInt("allow_place") != 0,
                         resultSet.getInt("allow_break") != 0,
                         resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_container") != 0,
+                        resultSet.getInt("allow_redstone") != 0,
                         resultSet.getInt("allow_bucket") != 0,
                         resultSet.getInt("allow_teleport") != 0,
                         resultSet.getLong("last_expanded_at")
@@ -467,8 +536,22 @@ public final class ClaimService {
             }
         );
         databaseManager.query(
+            "SELECT claim_id, player_uuid FROM claim_blacklist",
+            statement -> {
+            },
+            resultSet -> {
+                while (resultSet.next()) {
+                    Claim claim = claims.get(resultSet.getInt("claim_id"));
+                    if (claim != null) {
+                        claim.addBlacklistedMember(UUID.fromString(resultSet.getString("player_uuid")));
+                    }
+                }
+                return null;
+            }
+        );
+        databaseManager.query(
             """
-            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_bucket, allow_teleport
+            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport
             FROM claim_member_permissions
             """,
             statement -> {
@@ -484,6 +567,8 @@ public final class ClaimService {
                         resultSet.getInt("allow_place") != 0,
                         resultSet.getInt("allow_break") != 0,
                         resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_container") != 0,
+                        resultSet.getInt("allow_redstone") != 0,
                         resultSet.getInt("allow_bucket") != 0,
                         resultSet.getInt("allow_teleport") != 0
                     ));
@@ -498,6 +583,8 @@ public final class ClaimService {
             claim.permission(ClaimPermission.PLACE),
             claim.permission(ClaimPermission.BREAK),
             claim.permission(ClaimPermission.INTERACT),
+            claim.permission(ClaimPermission.CONTAINER),
+            claim.permission(ClaimPermission.REDSTONE),
             claim.permission(ClaimPermission.BUCKET),
             claim.permission(ClaimPermission.TELEPORT)
         );
@@ -507,12 +594,14 @@ public final class ClaimService {
         databaseManager.update(
             """
             INSERT INTO claim_member_permissions (
-                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_bucket, allow_teleport
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
                 allow_place = excluded.allow_place,
                 allow_break = excluded.allow_break,
                 allow_interact = excluded.allow_interact,
+                allow_container = excluded.allow_container,
+                allow_redstone = excluded.allow_redstone,
                 allow_bucket = excluded.allow_bucket,
                 allow_teleport = excluded.allow_teleport
             """,
@@ -522,8 +611,10 @@ public final class ClaimService {
                 statement.setInt(3, settings.permission(ClaimPermission.PLACE) ? 1 : 0);
                 statement.setInt(4, settings.permission(ClaimPermission.BREAK) ? 1 : 0);
                 statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                statement.setInt(6, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                statement.setInt(7, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                statement.setInt(6, settings.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                statement.setInt(7, settings.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                statement.setInt(8, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                statement.setInt(9, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
             }
         );
     }

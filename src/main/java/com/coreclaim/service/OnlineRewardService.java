@@ -60,7 +60,7 @@ public final class OnlineRewardService {
             && before < plugin.settings().starterRewardMinutes()
             && profile.onlineMinutes() >= plugin.settings().starterRewardMinutes()) {
             profile.setStarterCoreGranted(true);
-            claimCoreFactory.giveClaimCore(player, 1);
+            claimCoreFactory.giveStarterCore(player, 1);
             player.sendMessage(
                 plugin.message("claim-core-rewarded", "{minutes}", String.valueOf(plugin.settings().starterRewardMinutes()))
             );

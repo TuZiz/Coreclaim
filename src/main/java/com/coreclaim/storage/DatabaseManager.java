@@ -109,7 +109,8 @@ public final class DatabaseManager {
                 name TEXT NOT NULL,
                 activity_points INTEGER NOT NULL,
                 online_minutes INTEGER NOT NULL,
-                starter_core_granted INTEGER NOT NULL
+                starter_core_granted INTEGER NOT NULL,
+                auto_show_borders INTEGER NOT NULL DEFAULT 0
             )
             """,
             statement -> {
@@ -137,6 +138,8 @@ public final class DatabaseManager {
                 allow_place INTEGER NOT NULL DEFAULT 1,
                 allow_break INTEGER NOT NULL DEFAULT 1,
                 allow_interact INTEGER NOT NULL DEFAULT 1,
+                allow_container INTEGER NOT NULL DEFAULT 1,
+                allow_redstone INTEGER NOT NULL DEFAULT 1,
                 allow_bucket INTEGER NOT NULL DEFAULT 1,
                 allow_teleport INTEGER NOT NULL DEFAULT 1,
                 last_expanded_at INTEGER NOT NULL DEFAULT 0,
@@ -157,6 +160,8 @@ public final class DatabaseManager {
         ensureColumn("claims", "allow_place", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_break", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_interact", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_container", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_redstone", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_bucket", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_teleport", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "last_expanded_at", "INTEGER NOT NULL DEFAULT 0");
@@ -185,12 +190,26 @@ public final class DatabaseManager {
         );
         update(
             """
+            CREATE TABLE IF NOT EXISTS claim_blacklist (
+                claim_id INTEGER NOT NULL,
+                player_uuid TEXT NOT NULL,
+                PRIMARY KEY (claim_id, player_uuid),
+                FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
+            )
+            """,
+            statement -> {
+            }
+        );
+        update(
+            """
             CREATE TABLE IF NOT EXISTS claim_member_permissions (
                 claim_id INTEGER NOT NULL,
                 player_uuid TEXT NOT NULL,
                 allow_place INTEGER NOT NULL DEFAULT 0,
                 allow_break INTEGER NOT NULL DEFAULT 0,
                 allow_interact INTEGER NOT NULL DEFAULT 0,
+                allow_container INTEGER NOT NULL DEFAULT 0,
+                allow_redstone INTEGER NOT NULL DEFAULT 0,
                 allow_bucket INTEGER NOT NULL DEFAULT 0,
                 allow_teleport INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (claim_id, player_uuid),
@@ -200,6 +219,9 @@ public final class DatabaseManager {
             statement -> {
             }
         );
+        ensureColumn("profiles", "auto_show_borders", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("claim_member_permissions", "allow_container", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("claim_member_permissions", "allow_redstone", "INTEGER NOT NULL DEFAULT 0");
         update(
             """
             CREATE TABLE IF NOT EXISTS profile_global_members (

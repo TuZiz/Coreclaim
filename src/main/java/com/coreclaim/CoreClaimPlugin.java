@@ -99,7 +99,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ClaimNamingListener(this, pendingClaimService), this);
         getServer().getPluginManager().registerEvents(new ClaimInputListener(this, claimInputService), this);
         getServer().getPluginManager().registerEvents(new MenuListener(menuService), this);
-        getServer().getPluginManager().registerEvents(new ClaimEnterLeaveListener(this, claimService), this);
+        getServer().getPluginManager().registerEvents(
+            new ClaimEnterLeaveListener(this, claimService, profileService, claimVisualService),
+            this
+        );
         getServer().getPluginManager().registerEvents(new RemovalConfirmListener(this, removalConfirmationService), this);
 
         PluginCommand command = getCommand("claim");

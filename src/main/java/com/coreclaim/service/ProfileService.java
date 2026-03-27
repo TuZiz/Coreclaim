@@ -17,7 +17,7 @@ public final class ProfileService {
     }
 
     public PlayerProfile getOrCreate(UUID uuid, String name) {
-        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(uuid, name, 0, 0, false));
+        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(uuid, name, 0, 0, false, false));
         profile.setLastKnownName(name);
         return profile;
     }
@@ -25,13 +25,14 @@ public final class ProfileService {
     public void saveProfile(PlayerProfile profile) {
         databaseManager.update(
             """
-            INSERT INTO profiles (uuid, name, activity_points, online_minutes, starter_core_granted)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO profiles (uuid, name, activity_points, online_minutes, starter_core_granted, auto_show_borders)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 name = excluded.name,
                 activity_points = excluded.activity_points,
                 online_minutes = excluded.online_minutes,
-                starter_core_granted = excluded.starter_core_granted
+                starter_core_granted = excluded.starter_core_granted,
+                auto_show_borders = excluded.auto_show_borders
             """,
             statement -> {
                 statement.setString(1, profile.uuid().toString());
@@ -39,6 +40,7 @@ public final class ProfileService {
                 statement.setInt(3, profile.activityPoints());
                 statement.setInt(4, profile.onlineMinutes());
                 statement.setInt(5, profile.starterCoreGranted() ? 1 : 0);
+                statement.setInt(6, profile.autoShowBorders() ? 1 : 0);
             }
         );
 
@@ -86,7 +88,7 @@ public final class ProfileService {
 
     private void load() {
         databaseManager.query(
-            "SELECT uuid, name, activity_points, online_minutes, starter_core_granted FROM profiles",
+            "SELECT uuid, name, activity_points, online_minutes, starter_core_granted, auto_show_borders FROM profiles",
             statement -> {
             },
             resultSet -> {
@@ -97,7 +99,8 @@ public final class ProfileService {
                         resultSet.getString("name"),
                         resultSet.getInt("activity_points"),
                         resultSet.getInt("online_minutes"),
-                        resultSet.getInt("starter_core_granted") == 1
+                        resultSet.getInt("starter_core_granted") == 1,
+                        resultSet.getInt("auto_show_borders") == 1
                     );
                     profiles.put(uuid, profile);
                 }

@@ -36,6 +36,8 @@ database:
 # 当前项目仍沿用 claim-core 作为主配置节点，同时兼容读取 core-tool.name / core-tool.lore
 claim-core:
   material: "AMETHYST_CLUSTER"
+  glow: false
+  custom-model-data: 1700
   name: "&d&l领地核心"
   lore:
     - ""
@@ -44,7 +46,22 @@ claim-core:
     - ""
     - " &8▪ &7对着地面右键后开始命名"
     - " &8▪ &7聊天输入领地名字后才会真正放下核心"
-    - " &8▪ &7首个核心由在线奖励自动发放"
+    - " &8▪ &7首块领地请使用在线奖励获得的新人核心"
+
+starter-tool:
+  material: "AMETHYST_CLUSTER"
+  glow: true
+  custom-model-data: 1701
+  name: "&b&l✦ 新人核心 ✦"
+  lore:
+    - ""
+    - " &b&l专属奖励核心"
+    - " &f▶ &7用途: &e用于创建第一块领地"
+    - " &f▶ &7来源: &b在线 %starter-reward-minutes% 分钟自动发放"
+    - ""
+    - " &6▪ &7仅限首块领地使用"
+    - " &6▪ &7对着地面右键后开始命名"
+    - " &6▪ &7聊天输入领地名字后才会真正放下核心"
 
 center-core:
   material: "AMETHYST_CLUSTER"
@@ -63,16 +80,21 @@ claim-visual:
     green: 255
     blue: 140
 
-allow-interact:
-  - "CHEST"
-  - "TRAPPED_CHEST"
-  - "BARREL"
-  - "ENDER_CHEST"
-  - "SHULKER_BOX"
-  - "ENCHANTING_TABLE"
-  - "ANVIL"
-  - "CHIPPED_ANVIL"
-  - "DAMAGED_ANVIL"
-  - "CRAFTING_TABLE"
+allow-interact: []
+
+protection:
+  allow-ender-pearl-entry: false
+  allow-chorus-fruit-entry: false
+  allow-portal-entry: false
+  allow-fishing-hook-interact: false
+  allow-vehicle-cross-border: false
+  block-special-explosive-use: true
+  strict-redstone-interact: true
+  always-protected-interact:
+    - "BELL"
+    - "LEVER"
+    - "LECTERN"
+    - "NOTE_BLOCK"
+    - "RESPAWN_ANCHOR"
 
 # 组别相关的初始大小 / 最大扩建 / 单价 / 数量上限请到 groups.yml 配置

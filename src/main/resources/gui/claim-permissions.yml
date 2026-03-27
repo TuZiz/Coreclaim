@@ -2,8 +2,9 @@ title: '&8» &5&l默认权限设置 - {name}'
 GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
-  - "FPFBFRFKT"
-  - "FFFFFFFFF"
+  - "PFBFRFKFT"
+  - "FFCFSFFFF"
+  - "FFFFDFFFF"
   - "FFFFXFFFF"
 
 items:
@@ -26,6 +27,8 @@ items:
       - ' &8▪ &7放置权限: {perm_place}'
       - ' &8▪ &7破坏权限: {perm_break}'
       - ' &8▪ &7交互权限: {perm_interact}'
+      - ' &8▪ &7容器权限: {perm_container}'
+      - ' &8▪ &7红石权限: {perm_redstone}'
       - ' &8▪ &7桶使用权: {perm_bucket}'
       - ' &8▪ &7传送权限: {perm_teleport}'
 
@@ -77,6 +80,30 @@ items:
       - ' &6&l» &e点击切换状态'
     sound: UI_BUTTON_CLICK
 
+  perm-container:
+    char: "C"
+    material: BARREL
+    custom-model-data: 1608
+    name: '&6&l容器权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-redstone:
+    char: "S"
+    material: REDSTONE_TORCH
+    custom-model-data: 1609
+    name: '&c&l红石权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
   perm-teleport:
     char: "T"
     material: ENDER_PEARL
@@ -89,10 +116,22 @@ items:
       - ' &6&l» &e点击切换状态'
     sound: UI_BUTTON_CLICK
 
+  disable-all:
+    char: "D"
+    material: REDSTONE_BLOCK
+    custom-model-data: 1611
+    name: '&c&l一键全关'
+    lore:
+      - ''
+      - ' &8▪ &7关闭全部默认权限'
+      - ''
+      - ' &6&l» &e点击全部设为禁止'
+    sound: UI_BUTTON_CLICK
+
   back:
     char: "X"
     material: BARRIER
-    custom-model-data: 1607
+    custom-model-data: 1612
     name: '&c&l返回'
     lore:
       - ''

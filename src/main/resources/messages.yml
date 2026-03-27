@@ -1,6 +1,22 @@
 # 领地系统语言配置文件 - 视觉美化版
 prefix: '&8[&6Claim&8] &f'
 
+show-auto-usage: '&c用法: &7/claim show auto [on|off]'
+show-auto-status: '&a&l边界显示: &7当前状态为 &e{value}&7。'
+show-auto-enabled: '&a&l边界显示: &7已开启进入领地自动显示边界。'
+show-auto-disabled: '&c&l边界显示: &7已关闭进入领地自动显示边界。'
+blacklist-usage: '&c用法: &7/claim blacklist <add|remove|list> ...'
+blacklist-add-usage: '&c用法: &7/claim blacklist add <玩家> &8(当前领地) &7或 /claim blacklist add <领地名> <玩家>'
+blacklist-remove-usage: '&c用法: &7/claim blacklist remove <玩家> &8(当前领地) &7或 /claim blacklist remove <领地名> <玩家>'
+blacklist-add-success: '&a&l黑名单: &7已将 &e{player} &7加入领地 &b{name} &7的黑名单。'
+blacklist-add-exists: '&7玩家 &e{player} &7已经在领地 &b{name} &7的黑名单中。'
+blacklist-add-notify: '&c&l黑名单: &7你已被 &e{owner} &7加入领地 &b{name} &7的黑名单。'
+blacklist-remove-success: '&a&l黑名单: &7已将 &e{player} &7从领地 &b{name} &7的黑名单移除。'
+blacklist-remove-missing: '&7玩家 &e{player} &7不在领地 &b{name} &7的黑名单中。'
+blacklist-list-header: '&6&l黑名单: &7领地 &e{name} &7当前黑名单如下:'
+blacklist-list-empty: '&7领地 &e{name} &7当前没有黑名单玩家。'
+blacklist-deny-enter: '&c&l! &7你已被该领地加入黑名单，无法进入 &e{name}&7。'
+
 # 基础权限与限制
 no-permission: '&c&l! &7你没有足够的权限执行此操作。'
 player-only: '&c&l! &7该命令仅限玩家在游戏内使用。'
@@ -12,6 +28,7 @@ world-missing: '&c&l! &7目标世界不存在或未加载。'
 claim-overlap: '&c&l! &7这里离其他领地太近了，请换个地方试试。'
 claim-core-too-close: '&c&l! &7保护区重叠：&e100x100 &7范围内只能存在一个领地核心。'
 claim-core-activity-low: '&c&l! &7活跃度不足：需要 &e{value} &7点活跃度才能放置核心。'
+starter-core-first-only: '&c&l! &7新人核心只能用于创建第一块领地。'
 claim-world-only: '&c&l! &7当前世界禁止圈地，请前往 &b{world} &7世界。'
 claim-max-size: '&c&l! &7扩建受阻：该方向已达到你所在权限组的距离上限。'
 claim-no-slot: '&c&l! &7领地数量已达上限（取决于你的活跃度与等级）。'
@@ -43,7 +60,7 @@ claim-expand-success: '&a&l扩建: &7向 &b{direction} &7延伸 &e{amount} &7格
 claim-core-info-opened: '&a&l菜单: &7已开启领地管理面板。'
 claim-core-hidden: '&a&l隐藏: &7已移除 &e{name} &7的核心模型，领地范围依然有效。'
 claim-core-already-hidden: '&7该领地核心此前已被移除。'
-claim-core-rewarded: '&a&l奖励: &7累计在线达 &e{minutes} &7分钟，赠送 1 枚领地核心！'
+claim-core-rewarded: '&a&l奖励: &7累计在线达 &e{minutes} &7分钟，赠送 1 枚新人核心！'
 claim-core-given: '&a&l发放: &7已向 &e{player} &7发放 &6{amount} &7个领地核心。'
 
 # 权限与信任系统

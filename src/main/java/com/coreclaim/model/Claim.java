@@ -19,6 +19,7 @@ public final class Claim {
     private final int centerZ;
     private final long createdAt;
     private final Set<UUID> trustedMembers = new LinkedHashSet<>();
+    private final Set<UUID> blacklistedMembers = new LinkedHashSet<>();
     private final Map<UUID, ClaimMemberSettings> memberSettings = new LinkedHashMap<>();
     private String name;
     private boolean coreVisible;
@@ -31,6 +32,8 @@ public final class Claim {
     private boolean allowPlace;
     private boolean allowBreak;
     private boolean allowInteract;
+    private boolean allowContainer;
+    private boolean allowRedstone;
     private boolean allowBucket;
     private boolean allowTeleport;
     private long lastExpandedAt;
@@ -55,6 +58,8 @@ public final class Claim {
         boolean allowPlace,
         boolean allowBreak,
         boolean allowInteract,
+        boolean allowContainer,
+        boolean allowRedstone,
         boolean allowBucket,
         boolean allowTeleport,
         long lastExpandedAt
@@ -78,6 +83,8 @@ public final class Claim {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
         this.allowInteract = allowInteract;
+        this.allowContainer = allowContainer;
+        this.allowRedstone = allowRedstone;
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
@@ -163,7 +170,7 @@ public final class Claim {
     }
 
     public synchronized boolean canAccess(UUID playerId) {
-        return owner.equals(playerId) || trustedMembers.contains(playerId);
+        return owner.equals(playerId) || (trustedMembers.contains(playerId) && !blacklistedMembers.contains(playerId));
     }
 
     public synchronized boolean addTrustedMember(UUID playerId) {
@@ -183,6 +190,25 @@ public final class Claim {
 
     public synchronized int trustedCount() {
         return trustedMembers.size();
+    }
+
+    public synchronized boolean addBlacklistedMember(UUID playerId) {
+        if (owner.equals(playerId)) {
+            return false;
+        }
+        return blacklistedMembers.add(playerId);
+    }
+
+    public synchronized boolean removeBlacklistedMember(UUID playerId) {
+        return blacklistedMembers.remove(playerId);
+    }
+
+    public synchronized boolean isBlacklisted(UUID playerId) {
+        return blacklistedMembers.contains(playerId);
+    }
+
+    public synchronized Set<UUID> blacklistedMembers() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(blacklistedMembers));
     }
 
     public synchronized ClaimMemberSettings memberSettings(UUID playerId) {
@@ -230,6 +256,8 @@ public final class Claim {
             case PLACE -> allowPlace;
             case BREAK -> allowBreak;
             case INTERACT -> allowInteract;
+            case CONTAINER -> allowContainer;
+            case REDSTONE -> allowRedstone;
             case BUCKET -> allowBucket;
             case TELEPORT -> allowTeleport;
         };
@@ -240,6 +268,8 @@ public final class Claim {
             case PLACE -> allowPlace = allowed;
             case BREAK -> allowBreak = allowed;
             case INTERACT -> allowInteract = allowed;
+            case CONTAINER -> allowContainer = allowed;
+            case REDSTONE -> allowRedstone = allowed;
             case BUCKET -> allowBucket = allowed;
             case TELEPORT -> allowTeleport = allowed;
         }

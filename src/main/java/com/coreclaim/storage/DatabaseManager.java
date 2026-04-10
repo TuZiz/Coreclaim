@@ -128,6 +128,9 @@ public final class DatabaseManager {
                 center_x INTEGER NOT NULL,
                 center_y INTEGER NOT NULL,
                 center_z INTEGER NOT NULL,
+                min_y INTEGER NOT NULL DEFAULT -64,
+                max_y INTEGER NOT NULL DEFAULT 319,
+                full_height INTEGER NOT NULL DEFAULT 1,
                 radius INTEGER NOT NULL,
                 east INTEGER NOT NULL DEFAULT 0,
                 south INTEGER NOT NULL DEFAULT 0,
@@ -140,6 +143,7 @@ public final class DatabaseManager {
                 allow_interact INTEGER NOT NULL DEFAULT 1,
                 allow_container INTEGER NOT NULL DEFAULT 1,
                 allow_redstone INTEGER NOT NULL DEFAULT 1,
+                allow_explosion INTEGER NOT NULL DEFAULT 0,
                 allow_bucket INTEGER NOT NULL DEFAULT 1,
                 allow_teleport INTEGER NOT NULL DEFAULT 1,
                 last_expanded_at INTEGER NOT NULL DEFAULT 0,
@@ -151,6 +155,9 @@ public final class DatabaseManager {
         );
         ensureColumn("claims", "name", "TEXT NOT NULL DEFAULT ''");
         ensureColumn("claims", "core_visible", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "min_y", "INTEGER NOT NULL DEFAULT -64");
+        ensureColumn("claims", "max_y", "INTEGER NOT NULL DEFAULT 319");
+        ensureColumn("claims", "full_height", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "east", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claims", "south", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claims", "west", "INTEGER NOT NULL DEFAULT 0");
@@ -162,6 +169,7 @@ public final class DatabaseManager {
         ensureColumn("claims", "allow_interact", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_container", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_redstone", "INTEGER NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_explosion", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_bucket", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_teleport", "INTEGER NOT NULL DEFAULT 1");
         ensureColumn("claims", "last_expanded_at", "INTEGER NOT NULL DEFAULT 0");
@@ -210,6 +218,7 @@ public final class DatabaseManager {
                 allow_interact INTEGER NOT NULL DEFAULT 0,
                 allow_container INTEGER NOT NULL DEFAULT 0,
                 allow_redstone INTEGER NOT NULL DEFAULT 0,
+                allow_explosion INTEGER NOT NULL DEFAULT 0,
                 allow_bucket INTEGER NOT NULL DEFAULT 0,
                 allow_teleport INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (claim_id, player_uuid),
@@ -222,6 +231,7 @@ public final class DatabaseManager {
         ensureColumn("profiles", "auto_show_borders", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_container", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_redstone", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("claim_member_permissions", "allow_explosion", "INTEGER NOT NULL DEFAULT 0");
         update(
             """
             CREATE TABLE IF NOT EXISTS profile_global_members (

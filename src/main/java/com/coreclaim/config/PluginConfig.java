@@ -2,19 +2,30 @@ package com.coreclaim.config;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 public final class PluginConfig {
 
     private final String claimWorld;
+    private final List<String> claimWorlds;
+    private final Set<String> claimWorldNamesLower;
     private final int starterRewardMinutes;
+    private final int starterReclaimReminderIntervalMinutes;
     private final int directionExpandAmount;
     private final int minimumCoreSpacing;
+    private final int selectionMinimumGap;
     private final int minimumGap;
     private final int claimNameMaxLength;
     private final int chatInputTimeoutSeconds;
+    private final Material selectionToolMaterial;
+    private final String selectionToolName;
+    private final List<String> selectionToolLore;
+    private final boolean selectionToolGlow;
+    private final int selectionToolCustomModelData;
     private final Material coreMaterial;
     private final String centerCoreHologramText;
     private final double centerCoreHologramHeight;
@@ -42,12 +53,39 @@ public final class PluginConfig {
 
     public PluginConfig(FileConfiguration config) {
         this.claimWorld = config.getString("world", "world");
+        Set<String> configuredClaimWorlds = new LinkedHashSet<>();
+        for (String worldName : config.getStringList("claim-worlds")) {
+            if (worldName != null && !worldName.isBlank()) {
+                configuredClaimWorlds.add(worldName);
+            }
+        }
+        if (configuredClaimWorlds.isEmpty()) {
+            configuredClaimWorlds.add(this.claimWorld);
+            if ("world".equalsIgnoreCase(this.claimWorld)) {
+                configuredClaimWorlds.add("world_nether");
+                configuredClaimWorlds.add("world_the_end");
+            }
+        }
+        this.claimWorlds = List.copyOf(configuredClaimWorlds);
+        this.claimWorldNamesLower = new HashSet<>();
+        for (String worldName : configuredClaimWorlds) {
+            if (worldName != null && !worldName.isBlank()) {
+                this.claimWorldNamesLower.add(worldName.toLowerCase(java.util.Locale.ROOT));
+            }
+        }
         this.starterRewardMinutes = Math.max(1, config.getInt("starter-reward-minutes", 30));
+        this.starterReclaimReminderIntervalMinutes = Math.max(1, config.getInt("starter-reclaim-reminder-interval-minutes", 5));
         this.directionExpandAmount = Math.max(1, config.getInt("direction-expand-amount", 10));
         this.minimumGap = Math.max(5, config.getInt("minimum-gap", config.getInt("minimum-core-spacing", 100)));
         this.minimumCoreSpacing = minimumGap;
+        this.selectionMinimumGap = Math.max(0, config.getInt("selection-minimum-gap", 10));
         this.claimNameMaxLength = Math.max(3, config.getInt("claim-name-max-length", 16));
         this.chatInputTimeoutSeconds = Math.max(5, config.getInt("chat-input-timeout-seconds", 30));
+        this.selectionToolMaterial = resolveMaterial(config.getString("selection-tool.material", "GOLDEN_HOE"), Material.GOLDEN_HOE);
+        this.selectionToolName = config.getString("selection-tool.name", "&6&l圈地工具");
+        this.selectionToolLore = new ArrayList<>(config.getStringList("selection-tool.lore"));
+        this.selectionToolGlow = config.getBoolean("selection-tool.glow", false);
+        this.selectionToolCustomModelData = Math.max(0, config.getInt("selection-tool.custom-model-data", 0));
         this.coreMaterial = resolveMaterial(config.getString("center-core.material",
             config.getString("claim-core.material",
                 config.getString("core-tool.material", "AMETHYST_CLUSTER"))));
@@ -77,8 +115,12 @@ public final class PluginConfig {
     }
 
     private Material resolveMaterial(String name) {
+        return resolveMaterial(name, Material.AMETHYST_CLUSTER);
+    }
+
+    private Material resolveMaterial(String name, Material fallback) {
         Material material = Material.matchMaterial(name == null ? "" : name);
-        return material == null ? Material.AMETHYST_CLUSTER : material;
+        return material == null ? fallback : material;
     }
 
     private int clampColor(int value) {
@@ -100,8 +142,24 @@ public final class PluginConfig {
         return claimWorld;
     }
 
+    public List<String> claimWorlds() {
+        return claimWorlds;
+    }
+
+    public String claimWorldsDisplay() {
+        return String.join(", ", claimWorlds);
+    }
+
+    public boolean isClaimWorld(String worldName) {
+        return worldName != null && claimWorldNamesLower.contains(worldName.toLowerCase(java.util.Locale.ROOT));
+    }
+
     public int starterRewardMinutes() {
         return starterRewardMinutes;
+    }
+
+    public int starterReclaimReminderIntervalMinutes() {
+        return starterReclaimReminderIntervalMinutes;
     }
 
     public int directionExpandAmount() {
@@ -116,12 +174,36 @@ public final class PluginConfig {
         return minimumGap;
     }
 
+    public int selectionMinimumGap() {
+        return selectionMinimumGap;
+    }
+
     public int claimNameMaxLength() {
         return claimNameMaxLength;
     }
 
     public int chatInputTimeoutSeconds() {
         return chatInputTimeoutSeconds;
+    }
+
+    public Material selectionToolMaterial() {
+        return selectionToolMaterial;
+    }
+
+    public String selectionToolName() {
+        return selectionToolName;
+    }
+
+    public List<String> selectionToolLore() {
+        return List.copyOf(selectionToolLore);
+    }
+
+    public boolean selectionToolGlow() {
+        return selectionToolGlow;
+    }
+
+    public int selectionToolCustomModelData() {
+        return selectionToolCustomModelData;
     }
 
     public Material coreMaterial() {

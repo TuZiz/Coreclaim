@@ -5,6 +5,7 @@ import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ExplosionAuthorizationService;
 import java.util.Iterator;
 import java.util.Optional;
 import org.bukkit.Location;
@@ -14,8 +15,10 @@ import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.Tameable;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
@@ -60,11 +63,18 @@ public final class ClaimProtectionListener implements Listener {
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
     private final ClaimCoreFactory claimCoreFactory;
+    private final ExplosionAuthorizationService explosionAuthorizationService;
 
-    public ClaimProtectionListener(CoreClaimPlugin plugin, ClaimService claimService, ClaimCoreFactory claimCoreFactory) {
+    public ClaimProtectionListener(
+        CoreClaimPlugin plugin,
+        ClaimService claimService,
+        ClaimCoreFactory claimCoreFactory,
+        ExplosionAuthorizationService explosionAuthorizationService
+    ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.claimCoreFactory = claimCoreFactory;
+        this.explosionAuthorizationService = explosionAuthorizationService;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -85,7 +95,7 @@ public final class ClaimProtectionListener implements Listener {
         }
         if (!claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.BREAK)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(player, claim.get());
             return;
         }
 
@@ -104,7 +114,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getBlockPlaced().getLocation());
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.PLACE)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -128,9 +138,13 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && allowListed) {
             return;
         }
+        if (claim.isPresent() && requiredPermission == ClaimPermission.EXPLOSION && !isBypassing(event.getPlayer())
+            && claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.EXPLOSION)) {
+            explosionAuthorizationService.authorize(event.getClickedBlock().getLocation());
+        }
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), requiredPermission)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -140,7 +154,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(target);
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -149,7 +163,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getBlockClicked().getLocation());
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -200,7 +214,7 @@ public final class ClaimProtectionListener implements Listener {
             if (event.getHook() != null) {
                 event.getHook().remove();
             }
-            player.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(player, claim.get());
         }
     }
 
@@ -232,7 +246,7 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         event.setTo(event.getFrom());
-        event.getPlayer().sendMessage(plugin.message("protection-deny"));
+        sendProtectionDeny(event.getPlayer(), toClaim.get());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -246,7 +260,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getTo());
         if (claim.isPresent() && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.TELEPORT)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -261,7 +275,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getTo());
         if (claim.isPresent() && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.TELEPORT)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -273,7 +287,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getTo());
         if (claim.isPresent() && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.TELEPORT)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(event.getPlayer(), claim.get());
         }
     }
 
@@ -328,7 +342,10 @@ public final class ClaimProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onVehicleMove(VehicleMoveEvent event) {
-        if (plugin.settings().allowVehicleCrossBorder() || event.getTo() == null || sameBlock(event.getFrom(), event.getTo())) {
+        if (plugin.settings().allowVehicleCrossBorder()
+            || event.getVehicle() instanceof Minecart
+            || event.getTo() == null
+            || sameBlock(event.getFrom(), event.getTo())) {
             return;
         }
         Optional<Claim> fromClaim = claimService.findClaim(event.getFrom());
@@ -344,7 +361,7 @@ public final class ClaimProtectionListener implements Listener {
         event.getVehicle().setVelocity(event.getVehicle().getVelocity().zero());
         Player notifier = findNotifiablePassenger(event.getVehicle());
         if (notifier != null) {
-            notifier.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(notifier, toClaim.get());
         }
     }
 
@@ -358,7 +375,7 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
         if (claim.isPresent() && !claimService.hasPermission(claim.get(), attacker.getUniqueId(), ClaimPermission.BREAK)) {
             event.setCancelled(true);
-            attacker.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(attacker, claim.get());
         }
     }
 
@@ -378,14 +395,14 @@ public final class ClaimProtectionListener implements Listener {
                     && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.INTERACT)) {
                     event.setCancelled(true);
                     event.getEntity().remove();
-                    shooter.sendMessage(plugin.message("protection-deny"));
+                    sendProtectionDeny(shooter, claim.get());
                     return;
                 }
                 if (isHazardousProjectile(event.getEntity())
-                    && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK)) {
+                    && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()))) {
                     event.setCancelled(true);
                     event.getEntity().remove();
-                    shooter.sendMessage(plugin.message("protection-deny"));
+                    sendProtectionDeny(shooter, claim.get());
                     return;
                 }
             }
@@ -395,10 +412,10 @@ public final class ClaimProtectionListener implements Listener {
         }
         Optional<Claim> claim = claimService.findClaim(event.getHitEntity().getLocation());
         if (claim.isPresent() && isHazardousProjectile(event.getEntity())
-            && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK)) {
+            && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()))) {
             event.setCancelled(true);
             event.getEntity().remove();
-            shooter.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(shooter, claim.get());
         }
     }
 
@@ -409,15 +426,19 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         boolean blocked = false;
+        Claim deniedClaim = null;
         for (LivingEntity entity : event.getAffectedEntities()) {
             Optional<Claim> claim = claimService.findClaim(entity.getLocation());
-            if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK)) {
+            if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()))) {
                 event.setIntensity(entity, 0D);
                 blocked = true;
+                if (deniedClaim == null) {
+                    deniedClaim = claim.get();
+                }
             }
         }
-        if (blocked) {
-            shooter.sendMessage(plugin.message("protection-deny"));
+        if (blocked && deniedClaim != null) {
+            sendProtectionDeny(shooter, deniedClaim);
         }
     }
 
@@ -428,10 +449,10 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = claimService.findClaim(event.getAreaEffectCloud().getLocation());
-        if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK)) {
+        if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()))) {
             event.setCancelled(true);
             event.getAreaEffectCloud().remove();
-            shooter.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(shooter, claim.get());
         }
     }
 
@@ -441,15 +462,20 @@ public final class ClaimProtectionListener implements Listener {
         if (shooter == null || isBypassing(shooter)) {
             return;
         }
+        Claim[] deniedClaim = new Claim[1];
         boolean blocked = event.getAffectedEntities().removeIf(entity -> {
             Optional<Claim> claim = claimService.findClaim(entity.getLocation());
-            return claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK);
+            boolean denied = claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()));
+            if (denied && deniedClaim[0] == null) {
+                deniedClaim[0] = claim.get();
+            }
+            return denied;
         });
         if (blocked && event.getAffectedEntities().isEmpty()) {
             event.setCancelled(true);
         }
-        if (blocked) {
-            shooter.sendMessage(plugin.message("protection-deny"));
+        if (blocked && deniedClaim[0] != null) {
+            sendProtectionDeny(shooter, deniedClaim[0]);
         }
     }
 
@@ -463,10 +489,10 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
-        if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.BREAK)) {
+        if (claim.isPresent() && !claimService.hasPermission(claim.get(), shooter.getUniqueId(), projectilePermission(event.getEntity()))) {
             event.setCancelled(true);
             event.getEntity().remove();
-            shooter.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(shooter, claim.get());
         }
     }
 
@@ -477,17 +503,24 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
-        if (claim.isPresent() && !claimService.hasPermission(claim.get(), attacker.getUniqueId(), ClaimPermission.BREAK)) {
+        ClaimPermission permission = isExplosionEntity(event.getCombuster()) ? ClaimPermission.EXPLOSION : ClaimPermission.BREAK;
+        if (claim.isPresent() && !claimService.hasPermission(claim.get(), attacker.getUniqueId(), permission)) {
             event.setCancelled(true);
-            attacker.sendMessage(plugin.message("protection-deny"));
+            sendProtectionDeny(attacker, claim.get());
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent event) {
+        Player sourcePlayer = resolvePlayer(event.getEntity());
+        boolean bypassing = sourcePlayer != null && isBypassing(sourcePlayer);
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
-            if (claimService.findClaim(iterator.next().getLocation()).isPresent()) {
+            Optional<Claim> claim = claimService.findClaim(iterator.next().getLocation());
+            if (claim.isEmpty()) {
+                continue;
+            }
+            if (!bypassing && (sourcePlayer == null || !claimService.hasPermission(claim.get(), sourcePlayer.getUniqueId(), ClaimPermission.EXPLOSION))) {
                 iterator.remove();
             }
         }
@@ -506,7 +539,11 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         cancellable.setCancelled(true);
-        player.sendMessage(plugin.message("protection-deny"));
+        sendProtectionDeny(player, claim.get());
+    }
+
+    private void sendProtectionDeny(Player player, Claim claim) {
+        player.sendMessage(plugin.message("protection-deny", "{owner}", claim.ownerName()));
     }
 
     private boolean isCoreBlock(Block block, Claim claim) {
@@ -538,6 +575,9 @@ public final class ClaimProtectionListener implements Listener {
                 return resolveOwnedEntityPlayer(sourceEntity);
             }
         }
+        if (entity instanceof TNTPrimed tnt && tnt.getSource() != null) {
+            return resolveOwnedEntityPlayer(tnt.getSource());
+        }
         return null;
     }
 
@@ -555,7 +595,7 @@ public final class ClaimProtectionListener implements Listener {
 
     private ClaimPermission requiredPermissionForBlockInteract(Material material) {
         if (isSpecialExplosiveMaterial(material)) {
-            return ClaimPermission.BREAK;
+            return ClaimPermission.EXPLOSION;
         }
         if (isContainerMaterial(material)) {
             return ClaimPermission.CONTAINER;
@@ -584,10 +624,25 @@ public final class ClaimProtectionListener implements Listener {
         String name = entity.getType().name();
         return name.contains("POTION")
             || name.contains("FIREBALL")
+            || name.contains("WITHER_SKULL")
             || name.contains("WIND_CHARGE")
             || name.contains("SPIT")
             || name.equals("DRAGON_FIREBALL")
             || name.equals("SMALL_FIREBALL");
+    }
+
+    private boolean isExplosionEntity(Entity entity) {
+        String name = entity.getType().name();
+        return entity instanceof TNTPrimed
+            || name.contains("FIREBALL")
+            || name.contains("WITHER_SKULL")
+            || name.contains("WIND_CHARGE")
+            || name.equals("DRAGON_FIREBALL")
+            || name.equals("SMALL_FIREBALL");
+    }
+
+    private ClaimPermission projectilePermission(Entity entity) {
+        return isExplosionEntity(entity) ? ClaimPermission.EXPLOSION : ClaimPermission.BREAK;
     }
 
     private Player resolveOwnedEntityPlayer(Entity entity) {

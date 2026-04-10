@@ -2,6 +2,7 @@ package com.coreclaim.service;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
+import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.PlayerProfile;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 public final class PendingClaimService {
@@ -19,6 +21,7 @@ public final class PendingClaimService {
     private final ClaimCoreFactory claimCoreFactory;
     private final HologramService hologramService;
     private final ClaimVisualService claimVisualService;
+    private final EconomyHook economyHook;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
     private final Map<UUID, com.coreclaim.platform.PlatformScheduler.TaskHandle> timeoutTasks = new ConcurrentHashMap<>();
 
@@ -28,7 +31,8 @@ public final class PendingClaimService {
         ProfileService profileService,
         ClaimCoreFactory claimCoreFactory,
         HologramService hologramService,
-        ClaimVisualService claimVisualService
+        ClaimVisualService claimVisualService,
+        EconomyHook economyHook
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -36,54 +40,18 @@ public final class PendingClaimService {
         this.claimCoreFactory = claimCoreFactory;
         this.hologramService = hologramService;
         this.claimVisualService = claimVisualService;
+        this.economyHook = economyHook;
     }
 
     public boolean beginClaimCreation(Player player, Location coreLocation, boolean starterCore) {
-        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
-        if (starterCore && claimService.countClaims(player.getUniqueId()) > 0) {
-            player.sendMessage(plugin.message("starter-core-first-only"));
+        ValidationResult validation = validateCreation(player, coreLocation, starterCore);
+        if (!validation.allowed()) {
+            player.sendMessage(validation.message());
             return false;
-        }
-        if (!starterCore && profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
-            player.sendMessage(plugin.message(
-                "claim-core-activity-low",
-                "{value}",
-                String.valueOf(plugin.settings().coreUseMinActivity())
-            ));
-            return false;
-        }
-        if (coreLocation.getWorld() == null || !plugin.settings().claimWorld().equalsIgnoreCase(coreLocation.getWorld().getName())) {
-            player.sendMessage(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorld()));
-            return false;
-        }
-        ClaimGroup group = plugin.groups().resolve(player);
-        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
-        if (claimService.countClaims(player.getUniqueId()) >= maxClaims) {
-            player.sendMessage(plugin.message("claim-no-slot"));
-            return false;
-        }
-        if (plugin.settings().warnOnSecondClaim() && claimService.countClaims(player.getUniqueId()) == 1) {
-            player.sendMessage(plugin.message("second-claim-warning"));
         }
 
-        int initialDistance = group.initialDistance();
-        int minX = coreLocation.getBlockX() - initialDistance;
-        int maxX = coreLocation.getBlockX() + initialDistance;
-        int minZ = coreLocation.getBlockZ() - initialDistance;
-        int maxZ = coreLocation.getBlockZ() + initialDistance;
-        if (claimService.overlaps(coreLocation.getWorld().getName(), minX, maxX, minZ, maxZ, null)) {
-            player.sendMessage(plugin.message("claim-overlap"));
-            return false;
-        }
-        if (claimService.hasCoreWithinSpacing(
-            coreLocation.getWorld().getName(),
-            coreLocation.getBlockX(),
-            coreLocation.getBlockZ(),
-            plugin.settings().minimumGap(),
-            null
-        )) {
-            player.sendMessage(plugin.message("claim-core-too-close"));
-            return false;
+        if (plugin.settings().warnOnSecondClaim() && validation.claimCount() == 1) {
+            player.sendMessage(plugin.message("second-claim-warning"));
         }
 
         cancelPendingClaim(player, false);
@@ -120,6 +88,12 @@ public final class PendingClaimService {
         }
 
         Location coreLocation = pending.coreLocation();
+        ValidationResult validation = validateCreation(player, coreLocation, pending.starterCore());
+        if (!validation.allowed()) {
+            refundCore(pending);
+            player.sendMessage(validation.message());
+            return null;
+        }
         if (!coreLocation.getBlock().getType().isAir()) {
             refundCore(pending);
             player.sendMessage(plugin.message("claim-core-blocked"));
@@ -127,7 +101,25 @@ public final class PendingClaimService {
         }
         coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
 
-        ClaimGroup group = plugin.groups().resolve(player);
+        ClaimGroup group = validation.group();
+        double createCost = pending.starterCore() ? 0D : claimArea(group.initialDistance()) * group.coreCreatePricePerBlock();
+        if (createCost > 0D) {
+            if (!economyHook.available()) {
+                refundCore(pending);
+                player.sendMessage(plugin.message("economy-missing"));
+                return null;
+            }
+            if (!economyHook.has(player, createCost)) {
+                refundCore(pending);
+                player.sendMessage(plugin.message("economy-not-enough", "{cost}", ClaimActionService.formatMoney(createCost)));
+                return null;
+            }
+            if (!economyHook.withdraw(player, createCost)) {
+                refundCore(pending);
+                player.sendMessage(plugin.message("economy-missing"));
+                return null;
+            }
+        }
         Claim claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);
@@ -135,7 +127,8 @@ public final class PendingClaimService {
             "claim-name-created",
             "{name}", claim.name(),
             "{width}", String.valueOf(claim.width()),
-            "{depth}", String.valueOf(claim.depth())
+            "{depth}", String.valueOf(claim.depth()),
+            "{cost}", ClaimActionService.formatMoney(createCost)
         ));
         return claim;
     }
@@ -182,6 +175,52 @@ public final class PendingClaimService {
         }
     }
 
+    private ValidationResult validateCreation(Player player, Location coreLocation, boolean starterCore) {
+        if (player == null || coreLocation == null || coreLocation.getWorld() == null) {
+            return ValidationResult.denied(plugin.message("world-missing"));
+        }
+        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        int claimCount = claimService.countClaims(player.getUniqueId());
+        if (starterCore && claimCount > 0) {
+            return ValidationResult.denied(plugin.message("starter-core-first-only"));
+        }
+        if (!starterCore && profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
+            return ValidationResult.denied(plugin.message(
+                "claim-core-activity-low",
+                "{value}",
+                String.valueOf(plugin.settings().coreUseMinActivity())
+            ));
+        }
+        World world = coreLocation.getWorld();
+        if (!plugin.settings().isClaimWorld(world.getName())) {
+            return ValidationResult.denied(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorldsDisplay()));
+        }
+        ClaimGroup group = plugin.groups().resolve(player);
+        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
+        if (claimCount >= maxClaims) {
+            return ValidationResult.denied(plugin.message("claim-no-slot"));
+        }
+
+        int initialDistance = group.initialDistance();
+        int minX = coreLocation.getBlockX() - initialDistance;
+        int maxX = coreLocation.getBlockX() + initialDistance;
+        int minZ = coreLocation.getBlockZ() - initialDistance;
+        int maxZ = coreLocation.getBlockZ() + initialDistance;
+        if (claimService.overlaps(world.getName(), minX, maxX, world.getMinHeight(), world.getMaxHeight() - 1, minZ, maxZ, null, true)) {
+            return ValidationResult.denied(plugin.message("claim-overlap"));
+        }
+        if (claimService.hasCoreWithinSpacing(
+            world.getName(),
+            coreLocation.getBlockX(),
+            coreLocation.getBlockZ(),
+            plugin.settings().minimumCoreSpacing(),
+            null
+        )) {
+            return ValidationResult.denied(plugin.message("claim-core-too-close"));
+        }
+        return ValidationResult.allowed(group, claimCount);
+    }
+
     private void refundCore(PendingClaim pending) {
         Location location = pending.coreLocation();
         Player player = plugin.getServer().getPlayer(pending.ownerId());
@@ -200,5 +239,20 @@ public final class PendingClaimService {
     }
 
     public record PendingClaim(UUID ownerId, Location coreLocation, boolean starterCore) {
+    }
+
+    private record ValidationResult(boolean allowed, String message, ClaimGroup group, int claimCount) {
+        private static ValidationResult denied(String message) {
+            return new ValidationResult(false, message, null, 0);
+        }
+
+        private static ValidationResult allowed(ClaimGroup group, int claimCount) {
+            return new ValidationResult(true, "", group, claimCount);
+        }
+    }
+
+    private long claimArea(int initialDistance) {
+        int edge = initialDistance * 2 + 1;
+        return (long) edge * edge;
     }
 }

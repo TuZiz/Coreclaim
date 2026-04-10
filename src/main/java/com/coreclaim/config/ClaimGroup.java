@@ -11,6 +11,8 @@ public record ClaimGroup(
     String permission,
     int initialDistance,
     int maxDistance,
+    double coreCreatePricePerBlock,
+    double selectionCreatePricePerBlock,
     double expandPricePerBlock,
     TreeMap<Integer, Integer> claimSlots
 ) {

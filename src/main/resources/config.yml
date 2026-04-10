@@ -1,5 +1,9 @@
 # 固定可创建领地的世界
 world: "world"
+claim-worlds:
+  - "world"
+  - "world_nether"
+  - "world_the_end"
 
 # 玩家在线多少分钟后获得首个领地核心
 starter-reward-minutes: 30
@@ -11,6 +15,10 @@ direction-expand-amount: 10
 # 当前版本会保证 100x100 内只能存在一个领地核心
 minimum-gap: 100
 
+# 锄头选区创建领地之间的最小边界间隔
+# 只检查领地边界，不再沿用核心的 100 格限制
+selection-minimum-gap: 10
+
 # 领地名称最大长度
 claim-name-max-length: 16
 
@@ -21,7 +29,7 @@ chat-input-timeout-seconds: 30
 show-enter-leave-messages: true
 
 # 领地扩建冷却，单位秒
-expand-cooldown-seconds: 300
+expand-cooldown-seconds: 0
 
 # 创建第二块领地时是否提醒玩家确认位置
 warn-on-second-claim: true
@@ -46,7 +54,7 @@ claim-core:
     - ""
     - " &8▪ &7对着地面右键后开始命名"
     - " &8▪ &7聊天输入领地名字后才会真正放下核心"
-    - " &8▪ &7首块领地请使用在线奖励获得的新人核心"
+    - " &8▪ &7第一块领地也可以直接使用当前核心或圈地工具创建"
 
 starter-tool:
   material: "AMETHYST_CLUSTER"
@@ -98,3 +106,26 @@ protection:
     - "RESPAWN_ANCHOR"
 
 # 组别相关的初始大小 / 最大扩建 / 单价 / 数量上限请到 groups.yml 配置
+# =========================================================
+# 💡 提示: 组别相关的 初始大小/最大扩建/单价/数量上限 
+# 请前往 groups.yml 中进行详细配置
+# =========================================================
+selection-tool:
+  material: "GOLDEN_HOE"
+  glow: false
+  custom-model-data: 0
+  name: "&6&l✦ &e&l专属圈地工具 &6&l✦"
+  lore:
+    - ""
+    - "&8▸ &7手持此工具选定对角线区域，"
+    - "&8▸ &7即可规划并创建你的私人领地。"
+    - ""
+    - "&b&l| &3操作指南"
+    - "&8▪ &e[左键点击] &7方块 &0➔ &a设置 点 1"
+    - "&8▪ &e[右键点击] &7方块 &0➔ &a设置 点 2"
+    - ""
+    - "&d&l| &5确认创建"
+    - "&8▪ &7选好对角线的两点后，输入指令："
+    - "&8▪ &f/claim create <领地名字>"
+    - ""
+    - "&7💡 &8提示: 领地大小上限由你的权限组决定"

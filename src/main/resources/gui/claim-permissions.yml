@@ -2,7 +2,7 @@ title: '&8» &5&l默认权限设置 - {name}'
 GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
-  - "PFBFRFKFT"
+  - "PFBERFKFT"
   - "FFCFSFFFF"
   - "FFFFDFFFF"
   - "FFFFXFFFF"
@@ -29,6 +29,7 @@ items:
       - ' &8▪ &7交互权限: {perm_interact}'
       - ' &8▪ &7容器权限: {perm_container}'
       - ' &8▪ &7红石权限: {perm_redstone}'
+      - ' &8▪ &7爆炸权限: {perm_explosion}'
       - ' &8▪ &7桶使用权: {perm_bucket}'
       - ' &8▪ &7传送权限: {perm_teleport}'
 
@@ -97,6 +98,18 @@ items:
     material: REDSTONE_TORCH
     custom-model-data: 1609
     name: '&c&l红石权限'
+    lore:
+      - ''
+      - ' &f▶ &7当前状态: {state}'
+      - ''
+      - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-explosion:
+    char: "E"
+    material: TNT
+    custom-model-data: 1610
+    name: '&6&l爆炸权限'
     lore:
       - ''
       - ' &f▶ &7当前状态: {state}'

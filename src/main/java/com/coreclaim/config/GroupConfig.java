@@ -39,13 +39,15 @@ public final class GroupConfig {
                 section.getString("permission", ""),
                 Math.max(1, section.getInt("initial-distance", 8)),
                 Math.max(1, section.getInt("max-distance", 50)),
+                Math.max(0D, section.getDouble("core-create-price-per-block", 0D)),
+                Math.max(0D, section.getDouble("selection-create-price-per-block", section.getDouble("expand-price-per-block", 50D))),
                 Math.max(0D, section.getDouble("expand-price-per-block", 50D)),
                 claimSlots
             ));
         }
 
         if (loadedGroups.isEmpty()) {
-            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 50, 50D, new TreeMap<>()));
+            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 50, 0D, 50D, 50D, new TreeMap<>()));
         }
 
         loadedGroups.sort(Comparator.comparingInt(ClaimGroup::priority).reversed());

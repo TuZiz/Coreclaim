@@ -6,6 +6,7 @@ public enum ClaimPermission {
     INTERACT,
     CONTAINER,
     REDSTONE,
+    EXPLOSION,
     BUCKET,
     TELEPORT
 }

@@ -75,6 +75,15 @@ public final class ClaimCoreFactory {
         giveItem(player, createStarterCore(amount));
     }
 
+    public boolean hasStarterCore(Player player) {
+        if (player == null) {
+            return false;
+        }
+        return containsStarterCore(player.getInventory().getContents())
+            || containsStarterCore(player.getEnderChest().getContents())
+            || isStarterCore(player.getOpenInventory().getCursor());
+    }
+
     private ItemStack createConfiguredCore(
         int amount,
         Material material,
@@ -122,6 +131,18 @@ public final class ClaimCoreFactory {
         return "true".equals(marker);
     }
 
+    private boolean containsStarterCore(ItemStack[] contents) {
+        if (contents == null) {
+            return false;
+        }
+        for (ItemStack item : contents) {
+            if (isStarterCore(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void giveItem(Player player, ItemStack stack) {
         player.getInventory().addItem(stack).values().forEach(leftover ->
             player.getWorld().dropItemNaturally(player.getLocation(), leftover)
@@ -140,6 +161,6 @@ public final class ClaimCoreFactory {
         return text
             .replace("%core-use-min-activity%", String.valueOf(plugin.settings().coreUseMinActivity()))
             .replace("%starter-reward-minutes%", String.valueOf(plugin.settings().starterRewardMinutes()))
-            .replace("%claim-world%", plugin.settings().claimWorld());
+            .replace("%claim-world%", plugin.settings().claimWorldsDisplay());
     }
 }

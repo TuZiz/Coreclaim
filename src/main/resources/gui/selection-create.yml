@@ -1,0 +1,124 @@
+title: '&8» &6&l选区创建确认 - {name}'
+GuiPlain:
+  - "FFFFFFFFF"
+  - "FFFIJFFFF"
+  - "FFKLMFFFF"
+  - "FFFNPOFFF"
+  - "FFFFCFFFF"
+  - "FFFFBFFFF"
+
+items:
+  filler:
+    char: "F"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1600
+
+  info:
+    char: "I"
+    material: BOOK
+    custom-model-data: 1710
+    name: '&e&l创建概览'
+    lore:
+      - ''
+      - ' &f▶ &7领地名称: &b{name}'
+      - ' &f▶ &7创建世界: &e{world}'
+      - ' &f▶ &7核心坐标: &f({center_x}, {center_y}, {center_z})'
+      - ''
+      - ' &f▶ &7当前状态: {status}'
+
+  size:
+    char: "J"
+    material: FILLED_MAP
+    custom-model-data: 1711
+    name: '&b&l大小预览'
+    lore:
+      - ''
+      - ' &f▶ &7宽度: &e{width}'
+      - ' &f▶ &7高度: &e{height}'
+      - ' &f▶ &7深度: &e{depth}'
+      - ' &f▶ &7占地面积: &e{area}'
+      - ' &f▶ &7总体积: &e{volume}'
+
+  price:
+    char: "K"
+    material: SUNFLOWER
+    custom-model-data: 1712
+    name: '&6&l价格预览'
+    lore:
+      - ''
+      - ' &f▶ &7预计花费: &6{cost}'
+      - ''
+      - ' &8▪ &7确认时会再次校验价格与范围'
+
+  bounds:
+    char: "L"
+    material: COMPASS
+    custom-model-data: 1713
+    name: '&d&l选区坐标'
+    lore:
+      - ''
+      - ' &f▶ &7最小 X: &e{min_x}'
+      - ' &f▶ &7最大 X: &e{max_x}'
+      - ' &f▶ &7最小 Y: &e{min_y}'
+      - ' &f▶ &7最大 Y: &e{max_y}'
+      - ' &f▶ &7最小 Z: &e{min_z}'
+      - ' &f▶ &7最大 Z: &e{max_z}'
+
+  tips:
+    char: "M"
+    material: OAK_SIGN
+    custom-model-data: 1714
+    name: '&a&l创建说明'
+    lore:
+      - ''
+      - ' &8▪ &7圈地工具默认读取 config 里的配置'
+      - ' &8▪ &7ActionBar 会实时显示大小与价格'
+      - ' &8▪ &7确认前会再次校验重叠、间距、世界'
+
+  refresh:
+    char: "N"
+    material: CLOCK
+    custom-model-data: 1715
+    name: '&e&l刷新预览'
+    lore:
+      - ''
+      - ' &6&l» &e点击重新读取当前选区信息'
+    sound: UI_BUTTON_CLICK
+
+  cancel:
+    char: "B"
+    material: BARRIER
+    custom-model-data: 1716
+    name: '&c&l取消创建'
+    lore:
+      - ''
+      - ' &6&l» &e点击关闭菜单'
+    sound: UI_BUTTON_CLICK
+
+  confirm:
+    char: "C"
+    material: EMERALD
+    custom-model-data: 1717
+    glow: true
+    name: '&a&l确认创建'
+    lore:
+      - ''
+      - ' &f▶ &7领地名称: &b{name}'
+      - ' &f▶ &7最终大小: &e{width}x{height}x{depth}'
+      - ' &f▶ &7预计花费: &6{cost}'
+      - ''
+      - ' &6&l» &e点击正式创建领地'
+    sound: ENTITY_PLAYER_LEVELUP
+
+  placeholder-left:
+    char: "O"
+    material: LIGHT_BLUE_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1601
+
+  placeholder-right:
+    char: "P"
+    material: LIGHT_BLUE_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1601

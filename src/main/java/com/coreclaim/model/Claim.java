@@ -17,6 +17,9 @@ public final class Claim {
     private final int centerX;
     private final int centerY;
     private final int centerZ;
+    private final int minY;
+    private final int maxY;
+    private final boolean fullHeight;
     private final long createdAt;
     private final Set<UUID> trustedMembers = new LinkedHashSet<>();
     private final Set<UUID> blacklistedMembers = new LinkedHashSet<>();
@@ -34,6 +37,7 @@ public final class Claim {
     private boolean allowInteract;
     private boolean allowContainer;
     private boolean allowRedstone;
+    private boolean allowExplosion;
     private boolean allowBucket;
     private boolean allowTeleport;
     private long lastExpandedAt;
@@ -47,6 +51,9 @@ public final class Claim {
         int centerX,
         int centerY,
         int centerZ,
+        int minY,
+        int maxY,
+        boolean fullHeight,
         int east,
         int south,
         int west,
@@ -60,6 +67,7 @@ public final class Claim {
         boolean allowInteract,
         boolean allowContainer,
         boolean allowRedstone,
+        boolean allowExplosion,
         boolean allowBucket,
         boolean allowTeleport,
         long lastExpandedAt
@@ -72,6 +80,9 @@ public final class Claim {
         this.centerX = centerX;
         this.centerY = centerY;
         this.centerZ = centerZ;
+        this.minY = Math.min(minY, maxY);
+        this.maxY = Math.max(minY, maxY);
+        this.fullHeight = fullHeight;
         this.east = east;
         this.south = south;
         this.west = west;
@@ -85,6 +96,7 @@ public final class Claim {
         this.allowInteract = allowInteract;
         this.allowContainer = allowContainer;
         this.allowRedstone = allowRedstone;
+        this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
@@ -132,6 +144,22 @@ public final class Claim {
 
     public int centerZ() {
         return centerZ;
+    }
+
+    public int minY() {
+        return minY;
+    }
+
+    public int maxY() {
+        return maxY;
+    }
+
+    public boolean fullHeight() {
+        return fullHeight;
+    }
+
+    public int height() {
+        return Math.max(1, maxY - minY + 1);
     }
 
     public synchronized int east() {
@@ -252,27 +280,60 @@ public final class Claim {
     }
 
     public synchronized boolean permission(ClaimPermission permission) {
-        return switch (permission) {
-            case PLACE -> allowPlace;
-            case BREAK -> allowBreak;
-            case INTERACT -> allowInteract;
-            case CONTAINER -> allowContainer;
-            case REDSTONE -> allowRedstone;
-            case BUCKET -> allowBucket;
-            case TELEPORT -> allowTeleport;
-        };
+        if (permission == ClaimPermission.PLACE) {
+            return allowPlace;
+        }
+        if (permission == ClaimPermission.BREAK) {
+            return allowBreak;
+        }
+        if (permission == ClaimPermission.INTERACT) {
+            return allowInteract;
+        }
+        if (permission == ClaimPermission.CONTAINER) {
+            return allowContainer;
+        }
+        if (permission == ClaimPermission.REDSTONE) {
+            return allowRedstone;
+        }
+        if (permission == ClaimPermission.EXPLOSION) {
+            return allowExplosion;
+        }
+        if (permission == ClaimPermission.BUCKET) {
+            return allowBucket;
+        }
+        return allowTeleport;
     }
 
     public synchronized void setPermission(ClaimPermission permission, boolean allowed) {
-        switch (permission) {
-            case PLACE -> allowPlace = allowed;
-            case BREAK -> allowBreak = allowed;
-            case INTERACT -> allowInteract = allowed;
-            case CONTAINER -> allowContainer = allowed;
-            case REDSTONE -> allowRedstone = allowed;
-            case BUCKET -> allowBucket = allowed;
-            case TELEPORT -> allowTeleport = allowed;
+        if (permission == ClaimPermission.PLACE) {
+            allowPlace = allowed;
+            return;
         }
+        if (permission == ClaimPermission.BREAK) {
+            allowBreak = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.INTERACT) {
+            allowInteract = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.CONTAINER) {
+            allowContainer = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.REDSTONE) {
+            allowRedstone = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.EXPLOSION) {
+            allowExplosion = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.BUCKET) {
+            allowBucket = allowed;
+            return;
+        }
+        allowTeleport = allowed;
     }
 
     public synchronized long lastExpandedAt() {
@@ -316,12 +377,16 @@ public final class Claim {
     }
 
     public synchronized int distance(ClaimDirection direction) {
-        return switch (direction) {
-            case EAST -> east;
-            case SOUTH -> south;
-            case WEST -> west;
-            case NORTH -> north;
-        };
+        if (direction == ClaimDirection.EAST) {
+            return east;
+        }
+        if (direction == ClaimDirection.SOUTH) {
+            return south;
+        }
+        if (direction == ClaimDirection.WEST) {
+            return west;
+        }
+        return north;
     }
 
     public boolean contains(Location location) {
@@ -333,20 +398,39 @@ public final class Claim {
         }
         int blockX = location.getBlockX();
         int blockZ = location.getBlockZ();
-        return blockX >= minX() && blockX <= maxX()
-            && blockZ >= minZ() && blockZ <= maxZ();
+        if (blockX < minX() || blockX > maxX() || blockZ < minZ() || blockZ > maxZ()) {
+            return false;
+        }
+        if (blockX == centerX && location.getBlockY() == centerY && blockZ == centerZ) {
+            return true;
+        }
+        return fullHeight || (location.getBlockY() >= minY && location.getBlockY() <= maxY);
     }
 
-    public boolean overlaps(String targetWorld, int targetMinX, int targetMaxX, int targetMinZ, int targetMaxZ, Integer ignoredId) {
+    public boolean overlaps(
+        String targetWorld,
+        int targetMinX,
+        int targetMaxX,
+        int targetMinY,
+        int targetMaxY,
+        int targetMinZ,
+        int targetMaxZ,
+        Integer ignoredId,
+        boolean targetFullHeight
+    ) {
         if (!world.equals(targetWorld)) {
             return false;
         }
         if (ignoredId != null && ignoredId == id) {
             return false;
         }
-        return targetMinX <= maxX()
+        boolean horizontalOverlap = targetMinX <= maxX()
             && targetMaxX >= minX()
             && targetMinZ <= maxZ()
             && targetMaxZ >= minZ();
+        if (!horizontalOverlap) {
+            return false;
+        }
+        return fullHeight || targetFullHeight || (targetMinY <= maxY && targetMaxY >= minY);
     }
 }

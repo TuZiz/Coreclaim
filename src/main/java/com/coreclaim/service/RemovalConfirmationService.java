@@ -21,7 +21,7 @@ public final class RemovalConfirmationService {
     }
 
     public boolean request(Player player, Claim claim) {
-        if (!claim.owner().equals(player.getUniqueId())) {
+        if (!claim.owner().equals(player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }

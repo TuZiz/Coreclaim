@@ -3,6 +3,7 @@ package com.coreclaim.listener;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ExplosionAuthorizationService;
 import java.util.Iterator;
 import java.util.Optional;
 import org.bukkit.Location;
@@ -12,6 +13,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
+import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Tameable;
 import org.bukkit.event.EventHandler;
@@ -35,16 +37,24 @@ import org.bukkit.inventory.InventoryHolder;
 public final class ClaimEnvironmentProtectionListener implements Listener {
 
     private final ClaimService claimService;
+    private final ExplosionAuthorizationService explosionAuthorizationService;
 
-    public ClaimEnvironmentProtectionListener(ClaimService claimService) {
+    public ClaimEnvironmentProtectionListener(ClaimService claimService, ExplosionAuthorizationService explosionAuthorizationService) {
         this.claimService = claimService;
+        this.explosionAuthorizationService = explosionAuthorizationService;
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
+        Optional<Claim> sourceClaim = claimService.findClaim(event.getBlock().getLocation());
+        boolean authorized = explosionAuthorizationService.isAuthorized(event.getBlock().getLocation());
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
-            if (claimService.findClaim(iterator.next().getLocation()).isPresent()) {
+            Optional<Claim> targetClaim = claimService.findClaim(iterator.next().getLocation());
+            if (targetClaim.isEmpty()) {
+                continue;
+            }
+            if (!authorized || sourceClaim.isEmpty() || claimId(sourceClaim) != claimId(targetClaim)) {
                 iterator.remove();
             }
         }
@@ -91,7 +101,10 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
-        if (player == null || !claimService.hasPermission(claim.get(), player.getUniqueId(), com.coreclaim.model.ClaimPermission.INTERACT)) {
+        ClaimPermission permission = event.getBlock().getType() == org.bukkit.Material.TNT
+            ? ClaimPermission.EXPLOSION
+            : ClaimPermission.INTERACT;
+        if (player == null || !claimService.hasPermission(claim.get(), player.getUniqueId(), permission)) {
             event.setCancelled(true);
         }
     }
@@ -210,6 +223,17 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return blockState.getLocation();
         }
         if (holder instanceof Entity entity) {
+            if (entity instanceof Minecart) {
+                Location railLocation = entity.getLocation().getBlock().getLocation();
+                if (claimService.findClaim(railLocation).isPresent()) {
+                    return railLocation;
+                }
+                Location belowRail = railLocation.clone().subtract(0D, 1D, 0D);
+                if (claimService.findClaim(belowRail).isPresent()) {
+                    return belowRail;
+                }
+                return railLocation;
+            }
             return entity.getLocation();
         }
         return null;

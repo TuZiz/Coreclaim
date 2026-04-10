@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public final class ClaimActionService {
@@ -58,7 +59,7 @@ public final class ClaimActionService {
     }
 
     public boolean expandClaim(Player player, Claim claim, ClaimDirection direction, int amount) {
-        if (!claim.owner().equals(player.getUniqueId())) {
+        if (!canEditClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -99,7 +100,7 @@ public final class ClaimActionService {
         player.sendMessage(plugin.message(
             "claim-expand-success",
             "{direction}", direction.displayName(),
-            "{amount}", String.valueOf(amount),
+            "{amount}", String.valueOf(preview.expandAmount()),
             "{cost}", MONEY.format(preview.cost()),
             "{width}", String.valueOf(preview.width()),
             "{depth}", String.valueOf(preview.depth())
@@ -117,13 +118,24 @@ public final class ClaimActionService {
     }
 
     public boolean unclaim(Player player, Claim claim) {
-        if (!claim.owner().equals(player.getUniqueId())) {
+        if (!canEditClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
         hologramService.removeClaimHologram(claim.id());
         claimService.removeClaim(claim);
         player.sendMessage(plugin.message("claim-removed"));
+        return true;
+    }
+
+    public boolean adminRemoveClaim(CommandSender sender, Claim claim) {
+        if (claim == null) {
+            sender.sendMessage(plugin.message("claim-not-found"));
+            return false;
+        }
+        hologramService.removeClaimHologram(claim.id());
+        claimService.removeClaim(claim);
+        sender.sendMessage(plugin.message("admin-remove-success", "{name}", claim.name(), "{owner}", claim.ownerName()));
         return true;
     }
 
@@ -149,6 +161,22 @@ public final class ClaimActionService {
         return true;
     }
 
+    public void syncClaimCoreState(Claim claim) {
+        if (claim == null || !claim.coreVisible()) {
+            return;
+        }
+        World world = Bukkit.getWorld(claim.world());
+        if (world == null) {
+            return;
+        }
+        Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
+        if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
+            return;
+        }
+        hologramService.removeClaimHologram(claim.id());
+        claimService.updateCoreVisibility(claim, false);
+    }
+
     public boolean trustCurrentClaim(Player player, OfflinePlayer target) {
         Claim claim = findOwnedClaim(player);
         if (claim == null) {
@@ -159,7 +187,7 @@ public final class ClaimActionService {
     }
 
     public boolean trustPlayer(Player player, Claim claim, OfflinePlayer target) {
-        if (!claim.owner().equals(player.getUniqueId())) {
+        if (!canEditClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -193,7 +221,7 @@ public final class ClaimActionService {
     }
 
     public boolean untrustPlayer(Player player, Claim claim, OfflinePlayer target) {
-        if (!claim.owner().equals(player.getUniqueId())) {
+        if (!canEditClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -210,7 +238,7 @@ public final class ClaimActionService {
     }
 
     public boolean teleportToClaim(Player player, Claim claim) {
-        if (!claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)) {
+        if (!player.hasPermission("coreclaim.admin") && !claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -233,39 +261,40 @@ public final class ClaimActionService {
         int west = claim.west();
         int north = claim.north();
 
-        switch (direction) {
-            case EAST -> east += amount;
-            case SOUTH -> south += amount;
-            case WEST -> west += amount;
-            case NORTH -> north += amount;
+        int currentDistance = claim.distance(direction);
+        int expandAmount = Math.max(0, Math.min(Math.max(0, amount), group.maxDistance() - currentDistance));
+        if (expandAmount <= 0) {
+            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.depth(), east, south, west, north, true, false);
         }
 
-        int targetDistance = switch (direction) {
-            case EAST -> east;
-            case SOUTH -> south;
-            case WEST -> west;
-            case NORTH -> north;
-        };
-        if (targetDistance > group.maxDistance()) {
-            return new ExpansionPreview(false, 0D, claim.distance(direction), claim.width(), claim.depth(), east, south, west, north, true, false);
+        int targetDistance = currentDistance + expandAmount;
+        switch (direction) {
+            case EAST -> east = targetDistance;
+            case SOUTH -> south = targetDistance;
+            case WEST -> west = targetDistance;
+            case NORTH -> north = targetDistance;
         }
 
         int minX = claim.centerX() - west;
         int maxX = claim.centerX() + east;
         int minZ = claim.centerZ() - north;
         int maxZ = claim.centerZ() + south;
-        if (claimService.overlaps(claim.world(), minX, maxX, minZ, maxZ, claim.id())) {
-            return new ExpansionPreview(false, 0D, claim.distance(direction), claim.width(), claim.depth(), east, south, west, north, false, true);
+        if (claimService.overlaps(claim.world(), minX, maxX, claim.minY(), claim.maxY(), minZ, maxZ, claim.id(), claim.fullHeight())) {
+            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.depth(), east, south, west, north, false, true);
         }
 
         long oldArea = claim.area();
         long newArea = (long) (east + west + 1) * (south + north + 1);
         double cost = (newArea - oldArea) * group.expandPricePerBlock();
-        return new ExpansionPreview(true, cost, targetDistance, east + west + 1, south + north + 1, east, south, west, north, false, false);
+        return new ExpansionPreview(true, cost, targetDistance, expandAmount, east + west + 1, south + north + 1, east, south, west, north, false, false);
     }
 
     private String displayName(OfflinePlayer player) {
         return player.getName() == null ? player.getUniqueId().toString() : player.getName();
+    }
+
+    private boolean canEditClaim(Player player, Claim claim) {
+        return claim.owner().equals(player.getUniqueId()) || player.hasPermission("coreclaim.admin");
     }
 
     public static String formatMoney(double value) {
@@ -273,18 +302,14 @@ public final class ClaimActionService {
     }
 
     public long cooldownRemainingSeconds(Claim claim) {
-        if (plugin.settings().expandCooldownSeconds() <= 0) {
-            return 0L;
-        }
-        long now = Instant.now().getEpochSecond();
-        long endsAt = claim.lastExpandedAt() + plugin.settings().expandCooldownSeconds();
-        return Math.max(0L, endsAt - now);
+        return 0L;
     }
 
     public record ExpansionPreview(
         boolean allowed,
         double cost,
         int targetDistance,
+        int expandAmount,
         int width,
         int depth,
         int east,

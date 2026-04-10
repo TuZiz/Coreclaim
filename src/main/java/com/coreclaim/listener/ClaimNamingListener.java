@@ -5,7 +5,9 @@ import com.coreclaim.service.PendingClaimService;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 public final class ClaimNamingListener implements Listener {
@@ -40,8 +42,17 @@ public final class ClaimNamingListener implements Listener {
         pendingClaimService.cancelPendingClaim(event.getPlayer(), false);
     }
 
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        pendingClaimService.cancelPendingClaim(event.getEntity(), false);
+    }
+
+    @EventHandler
+    public void onChangedWorld(PlayerChangedWorldEvent event) {
+        pendingClaimService.cancelPendingClaim(event.getPlayer(), false);
+    }
+
     private boolean isCancel(String message) {
         return "取消".equals(message) || "cancel".equalsIgnoreCase(message);
     }
 }
-

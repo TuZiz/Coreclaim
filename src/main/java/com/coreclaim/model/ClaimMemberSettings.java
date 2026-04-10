@@ -7,6 +7,7 @@ public final class ClaimMemberSettings {
     private boolean allowInteract;
     private boolean allowContainer;
     private boolean allowRedstone;
+    private boolean allowExplosion;
     private boolean allowBucket;
     private boolean allowTeleport;
 
@@ -16,6 +17,7 @@ public final class ClaimMemberSettings {
         boolean allowInteract,
         boolean allowContainer,
         boolean allowRedstone,
+        boolean allowExplosion,
         boolean allowBucket,
         boolean allowTeleport
     ) {
@@ -24,31 +26,65 @@ public final class ClaimMemberSettings {
         this.allowInteract = allowInteract;
         this.allowContainer = allowContainer;
         this.allowRedstone = allowRedstone;
+        this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
     }
 
     public boolean permission(ClaimPermission permission) {
-        return switch (permission) {
-            case PLACE -> allowPlace;
-            case BREAK -> allowBreak;
-            case INTERACT -> allowInteract;
-            case CONTAINER -> allowContainer;
-            case REDSTONE -> allowRedstone;
-            case BUCKET -> allowBucket;
-            case TELEPORT -> allowTeleport;
-        };
+        if (permission == ClaimPermission.PLACE) {
+            return allowPlace;
+        }
+        if (permission == ClaimPermission.BREAK) {
+            return allowBreak;
+        }
+        if (permission == ClaimPermission.INTERACT) {
+            return allowInteract;
+        }
+        if (permission == ClaimPermission.CONTAINER) {
+            return allowContainer;
+        }
+        if (permission == ClaimPermission.REDSTONE) {
+            return allowRedstone;
+        }
+        if (permission == ClaimPermission.EXPLOSION) {
+            return allowExplosion;
+        }
+        if (permission == ClaimPermission.BUCKET) {
+            return allowBucket;
+        }
+        return allowTeleport;
     }
 
     public void setPermission(ClaimPermission permission, boolean allowed) {
-        switch (permission) {
-            case PLACE -> allowPlace = allowed;
-            case BREAK -> allowBreak = allowed;
-            case INTERACT -> allowInteract = allowed;
-            case CONTAINER -> allowContainer = allowed;
-            case REDSTONE -> allowRedstone = allowed;
-            case BUCKET -> allowBucket = allowed;
-            case TELEPORT -> allowTeleport = allowed;
+        if (permission == ClaimPermission.PLACE) {
+            allowPlace = allowed;
+            return;
         }
+        if (permission == ClaimPermission.BREAK) {
+            allowBreak = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.INTERACT) {
+            allowInteract = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.CONTAINER) {
+            allowContainer = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.REDSTONE) {
+            allowRedstone = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.EXPLOSION) {
+            allowExplosion = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.BUCKET) {
+            allowBucket = allowed;
+            return;
+        }
+        allowTeleport = allowed;
     }
 }

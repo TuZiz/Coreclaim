@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 public final class ClaimCoreInteractionListener implements Listener {
@@ -84,5 +85,23 @@ public final class ClaimCoreInteractionListener implements Listener {
         event.setDropItems(false);
         event.setExpToDrop(0);
         claimActionService.hideClaimCore(player, claim);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onCorePhysics(BlockPhysicsEvent event) {
+        Block block = event.getBlock();
+        if (block.getType() != plugin.settings().coreMaterial()) {
+            return;
+        }
+
+        Claim claim = claimService.findClaim(block.getLocation())
+            .filter(found -> found.coreVisible())
+            .filter(found -> found.centerX() == block.getX() && found.centerY() == block.getY() && found.centerZ() == block.getZ())
+            .orElse(null);
+        if (claim == null) {
+            return;
+        }
+
+        plugin.platformScheduler().runLater(() -> claimActionService.syncClaimCoreState(claim), 1L);
     }
 }

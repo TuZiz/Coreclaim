@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -62,8 +63,12 @@ public final class ClaimService {
     }
 
     public boolean overlaps(String world, int minX, int maxX, int minZ, int maxZ, Integer ignoredId) {
+        return overlaps(world, minX, maxX, -64, 319, minZ, maxZ, ignoredId, true);
+    }
+
+    public boolean overlaps(String world, int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Integer ignoredId, boolean fullHeight) {
         for (Claim claim : claims.values()) {
-            if (claim.overlaps(world, minX, maxX, minZ, maxZ, ignoredId)) {
+            if (claim.overlaps(world, minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight)) {
                 return true;
             }
         }
@@ -79,6 +84,34 @@ public final class ClaimService {
                 continue;
             }
             if (Math.abs(claim.centerX() - centerX) < spacing && Math.abs(claim.centerZ() - centerZ) < spacing) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasClaimWithinGap(
+        String world,
+        int minX,
+        int maxX,
+        int minY,
+        int maxY,
+        int minZ,
+        int maxZ,
+        int gap,
+        Integer ignoredId,
+        boolean fullHeight,
+        Predicate<Claim> filter
+    ) {
+        int expandedMinX = minX - Math.max(0, gap);
+        int expandedMaxX = maxX + Math.max(0, gap);
+        int expandedMinZ = minZ - Math.max(0, gap);
+        int expandedMaxZ = maxZ + Math.max(0, gap);
+        for (Claim claim : claims.values()) {
+            if (filter != null && !filter.test(claim)) {
+                continue;
+            }
+            if (claim.overlaps(world, expandedMinX, expandedMaxX, minY, maxY, expandedMinZ, expandedMaxZ, ignoredId, fullHeight)) {
                 return true;
             }
         }
@@ -105,19 +138,21 @@ public final class ClaimService {
         if (claim.isTrusted(playerId)) {
             return claim.memberPermission(playerId, permission, claim.permission(permission));
         }
-        return profileService.isGloballyTrusted(claim.owner(), playerId) && claim.permission(permission);
+        return profileService.isGloballyTrusted(claim.owner(), playerId);
     }
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
         synchronized (mutationLock) {
+            int minY = center.getWorld() == null ? -64 : center.getWorld().getMinHeight();
+            int maxY = center.getWorld() == null ? 319 : center.getWorld().getMaxHeight() - 1;
             long createdAt = Instant.now().getEpochSecond();
             int generatedId = (int) databaseManager.insertAndReturnKey(
                 """
                 INSERT INTO claims (
                     owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                    radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
+                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 statement -> {
                     statement.setString(1, owner.toString());
@@ -128,22 +163,26 @@ public final class ClaimService {
                     statement.setInt(6, center.getBlockX());
                     statement.setInt(7, center.getBlockY());
                     statement.setInt(8, center.getBlockZ());
-                    statement.setInt(9, initialDistance);
-                    statement.setInt(10, initialDistance);
-                    statement.setInt(11, initialDistance);
+                    statement.setInt(9, minY);
+                    statement.setInt(10, maxY);
+                    statement.setInt(11, 1);
                     statement.setInt(12, initialDistance);
                     statement.setInt(13, initialDistance);
-                    statement.setString(14, "");
-                    statement.setString(15, "");
-                    statement.setInt(16, 0);
-                    statement.setInt(17, 0);
-                    statement.setInt(18, 0);
+                    statement.setInt(14, initialDistance);
+                    statement.setInt(15, initialDistance);
+                    statement.setInt(16, initialDistance);
+                    statement.setString(17, "");
+                    statement.setString(18, "");
                     statement.setInt(19, 0);
                     statement.setInt(20, 0);
                     statement.setInt(21, 0);
                     statement.setInt(22, 0);
-                    statement.setLong(23, 0L);
-                    statement.setLong(24, createdAt);
+                    statement.setInt(23, 0);
+                    statement.setInt(24, 0);
+                    statement.setInt(25, 0);
+                    statement.setInt(26, 0);
+                    statement.setLong(27, 0L);
+                    statement.setLong(28, createdAt);
                 }
             );
 
@@ -156,6 +195,9 @@ public final class ClaimService {
                 center.getBlockX(),
                 center.getBlockY(),
                 center.getBlockZ(),
+                minY,
+                maxY,
+                true,
                 initialDistance,
                 initialDistance,
                 initialDistance,
@@ -164,6 +206,85 @@ public final class ClaimService {
                 true,
                 "",
                 "",
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                0L
+            );
+            claims.put(claim.id(), claim);
+            return claim;
+        }
+    }
+
+    public Claim createClaimFromBounds(UUID owner, String ownerName, String name, Location coreLocation, int minY, int maxY, int east, int south, int west, int north) {
+        synchronized (mutationLock) {
+            long createdAt = Instant.now().getEpochSecond();
+            int generatedId = (int) databaseManager.insertAndReturnKey(
+                """
+                INSERT INTO claims (
+                    owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
+                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
+                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                statement -> {
+                    statement.setString(1, owner.toString());
+                    statement.setString(2, ownerName);
+                    statement.setString(3, name);
+                    statement.setInt(4, 1);
+                    statement.setString(5, coreLocation.getWorld().getName());
+                    statement.setInt(6, coreLocation.getBlockX());
+                    statement.setInt(7, coreLocation.getBlockY());
+                    statement.setInt(8, coreLocation.getBlockZ());
+                    statement.setInt(9, minY);
+                    statement.setInt(10, maxY);
+                    statement.setInt(11, 0);
+                    statement.setInt(12, Math.max(Math.max(east, west), Math.max(south, north)));
+                    statement.setInt(13, east);
+                    statement.setInt(14, south);
+                    statement.setInt(15, west);
+                    statement.setInt(16, north);
+                    statement.setString(17, "");
+                    statement.setString(18, "");
+                    statement.setInt(19, 0);
+                    statement.setInt(20, 0);
+                    statement.setInt(21, 0);
+                    statement.setInt(22, 0);
+                    statement.setInt(23, 0);
+                    statement.setInt(24, 0);
+                    statement.setInt(25, 0);
+                    statement.setInt(26, 0);
+                    statement.setLong(27, 0L);
+                    statement.setLong(28, createdAt);
+                }
+            );
+
+            Claim claim = new Claim(
+                generatedId,
+                owner,
+                ownerName,
+                name,
+                coreLocation.getWorld().getName(),
+                coreLocation.getBlockX(),
+                coreLocation.getBlockY(),
+                coreLocation.getBlockZ(),
+                minY,
+                maxY,
+                false,
+                east,
+                south,
+                west,
+                north,
+                createdAt,
+                true,
+                "",
+                "",
+                false,
                 false,
                 false,
                 false,
@@ -258,6 +379,7 @@ public final class ClaimService {
                 case INTERACT -> "allow_interact";
                 case CONTAINER -> "allow_container";
                 case REDSTONE -> "allow_redstone";
+                case EXPLOSION -> "allow_explosion";
                 case BUCKET -> "allow_bucket";
                 case TELEPORT -> "allow_teleport";
             };
@@ -408,9 +530,9 @@ public final class ClaimService {
                     """
                     INSERT INTO claims (
                         id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                        radius, east, south, west, north, enter_message, leave_message,
-                        allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
+                        allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         owner_uuid = excluded.owner_uuid,
                         owner_name = excluded.owner_name,
@@ -420,6 +542,9 @@ public final class ClaimService {
                         center_x = excluded.center_x,
                         center_y = excluded.center_y,
                         center_z = excluded.center_z,
+                        min_y = excluded.min_y,
+                        max_y = excluded.max_y,
+                        full_height = excluded.full_height,
                         radius = excluded.radius,
                         east = excluded.east,
                         south = excluded.south,
@@ -432,6 +557,7 @@ public final class ClaimService {
                         allow_interact = excluded.allow_interact,
                         allow_container = excluded.allow_container,
                         allow_redstone = excluded.allow_redstone,
+                        allow_explosion = excluded.allow_explosion,
                         allow_bucket = excluded.allow_bucket,
                         allow_teleport = excluded.allow_teleport,
                         last_expanded_at = excluded.last_expanded_at,
@@ -447,22 +573,26 @@ public final class ClaimService {
                         statement.setInt(7, claim.centerX());
                         statement.setInt(8, claim.centerY());
                         statement.setInt(9, claim.centerZ());
-                        statement.setInt(10, claim.displayRadius());
-                        statement.setInt(11, claim.east());
-                        statement.setInt(12, claim.south());
-                        statement.setInt(13, claim.west());
-                        statement.setInt(14, claim.north());
-                        statement.setString(15, claim.enterMessage());
-                        statement.setString(16, claim.leaveMessage());
-                        statement.setInt(17, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
-                        statement.setInt(18, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
-                        statement.setInt(19, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                        statement.setInt(20, claim.permission(ClaimPermission.CONTAINER) ? 1 : 0);
-                        statement.setInt(21, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                        statement.setInt(22, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                        statement.setInt(23, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                        statement.setLong(24, claim.lastExpandedAt());
-                        statement.setLong(25, claim.createdAt());
+                        statement.setInt(10, claim.minY());
+                        statement.setInt(11, claim.maxY());
+                        statement.setInt(12, claim.fullHeight() ? 1 : 0);
+                        statement.setInt(13, claim.displayRadius());
+                        statement.setInt(14, claim.east());
+                        statement.setInt(15, claim.south());
+                        statement.setInt(16, claim.west());
+                        statement.setInt(17, claim.north());
+                        statement.setString(18, claim.enterMessage());
+                        statement.setString(19, claim.leaveMessage());
+                        statement.setInt(20, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
+                        statement.setInt(21, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
+                        statement.setInt(22, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                        statement.setInt(23, claim.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                        statement.setInt(24, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                        statement.setInt(25, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                        statement.setInt(26, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                        statement.setInt(27, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                        statement.setLong(28, claim.lastExpandedAt());
+                        statement.setLong(29, claim.createdAt());
                     }
                 );
                 for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
@@ -476,8 +606,8 @@ public final class ClaimService {
         databaseManager.query(
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                   radius, east, south, west, north, enter_message, leave_message,
-                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport, last_expanded_at, created_at
+                   min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
+                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
             FROM claims
             """,
             statement -> {
@@ -498,6 +628,9 @@ public final class ClaimService {
                         resultSet.getInt("center_x"),
                         resultSet.getInt("center_y"),
                         resultSet.getInt("center_z"),
+                        resultSet.getInt("min_y"),
+                        resultSet.getInt("max_y"),
+                        resultSet.getInt("full_height") != 0,
                         east <= 0 ? fallbackDistance : east,
                         south <= 0 ? fallbackDistance : south,
                         west <= 0 ? fallbackDistance : west,
@@ -511,6 +644,7 @@ public final class ClaimService {
                         resultSet.getInt("allow_interact") != 0,
                         resultSet.getInt("allow_container") != 0,
                         resultSet.getInt("allow_redstone") != 0,
+                        resultSet.getInt("allow_explosion") != 0,
                         resultSet.getInt("allow_bucket") != 0,
                         resultSet.getInt("allow_teleport") != 0,
                         resultSet.getLong("last_expanded_at")
@@ -551,7 +685,7 @@ public final class ClaimService {
         );
         databaseManager.query(
             """
-            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport
+            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport
             FROM claim_member_permissions
             """,
             statement -> {
@@ -569,6 +703,7 @@ public final class ClaimService {
                         resultSet.getInt("allow_interact") != 0,
                         resultSet.getInt("allow_container") != 0,
                         resultSet.getInt("allow_redstone") != 0,
+                        resultSet.getInt("allow_explosion") != 0,
                         resultSet.getInt("allow_bucket") != 0,
                         resultSet.getInt("allow_teleport") != 0
                     ));
@@ -585,6 +720,7 @@ public final class ClaimService {
             claim.permission(ClaimPermission.INTERACT),
             claim.permission(ClaimPermission.CONTAINER),
             claim.permission(ClaimPermission.REDSTONE),
+            claim.permission(ClaimPermission.EXPLOSION),
             claim.permission(ClaimPermission.BUCKET),
             claim.permission(ClaimPermission.TELEPORT)
         );
@@ -594,14 +730,15 @@ public final class ClaimService {
         databaseManager.update(
             """
             INSERT INTO claim_member_permissions (
-                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_bucket, allow_teleport
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
                 allow_place = excluded.allow_place,
                 allow_break = excluded.allow_break,
                 allow_interact = excluded.allow_interact,
                 allow_container = excluded.allow_container,
                 allow_redstone = excluded.allow_redstone,
+                allow_explosion = excluded.allow_explosion,
                 allow_bucket = excluded.allow_bucket,
                 allow_teleport = excluded.allow_teleport
             """,
@@ -613,8 +750,9 @@ public final class ClaimService {
                 statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(6, settings.permission(ClaimPermission.CONTAINER) ? 1 : 0);
                 statement.setInt(7, settings.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                statement.setInt(8, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                statement.setInt(9, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                statement.setInt(8, settings.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                statement.setInt(9, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                statement.setInt(10, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
             }
         );
     }

@@ -9,6 +9,7 @@ import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimInputService;
+import com.coreclaim.service.ClaimSelectionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
@@ -42,6 +43,7 @@ public final class MenuService {
     private final ClaimActionService claimActionService;
     private final RemovalConfirmationService removalConfirmationService;
     private final ClaimInputService claimInputService;
+    private final ClaimSelectionService claimSelectionService;
 
     public MenuService(
         CoreClaimPlugin plugin,
@@ -49,7 +51,8 @@ public final class MenuService {
         ProfileService profileService,
         ClaimActionService claimActionService,
         RemovalConfirmationService removalConfirmationService,
-        ClaimInputService claimInputService
+        ClaimInputService claimInputService,
+        ClaimSelectionService claimSelectionService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -57,6 +60,7 @@ public final class MenuService {
         this.claimActionService = claimActionService;
         this.removalConfirmationService = removalConfirmationService;
         this.claimInputService = claimInputService;
+        this.claimSelectionService = claimSelectionService;
     }
 
     public void openMainMenu(Player player) {
@@ -105,7 +109,6 @@ public final class MenuService {
         holder.inventory = inventory;
         fill(inventory, "claim-manage", "filler");
 
-        int amount = plugin.settings().directionExpandAmount();
         ClaimActionService.ExpansionPreview north = claimActionService.previewExpansion(player, claim, ClaimDirection.NORTH);
         ClaimActionService.ExpansionPreview south = claimActionService.previewExpansion(player, claim, ClaimDirection.SOUTH);
         ClaimActionService.ExpansionPreview west = claimActionService.previewExpansion(player, claim, ClaimDirection.WEST);
@@ -121,13 +124,13 @@ public final class MenuService {
             "{area}", String.valueOf(claim.area())
         ));
         inventory.setItem(slot("claim-manage", "expand-north"), configuredItem("claim-manage", "expand-north",
-            "{amount}", String.valueOf(amount), "{price}", north.costText(), "{current}", String.valueOf(claim.north()), "{target}", String.valueOf(north.targetDistance())));
+            "{amount}", String.valueOf(north.expandAmount()), "{price}", north.costText(), "{current}", String.valueOf(claim.north()), "{target}", String.valueOf(north.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-south"), configuredItem("claim-manage", "expand-south",
-            "{amount}", String.valueOf(amount), "{price}", south.costText(), "{current}", String.valueOf(claim.south()), "{target}", String.valueOf(south.targetDistance())));
+            "{amount}", String.valueOf(south.expandAmount()), "{price}", south.costText(), "{current}", String.valueOf(claim.south()), "{target}", String.valueOf(south.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-west"), configuredItem("claim-manage", "expand-west",
-            "{amount}", String.valueOf(amount), "{price}", west.costText(), "{current}", String.valueOf(claim.west()), "{target}", String.valueOf(west.targetDistance())));
+            "{amount}", String.valueOf(west.expandAmount()), "{price}", west.costText(), "{current}", String.valueOf(claim.west()), "{target}", String.valueOf(west.targetDistance())));
         inventory.setItem(slot("claim-manage", "expand-east"), configuredItem("claim-manage", "expand-east",
-            "{amount}", String.valueOf(amount), "{price}", east.costText(), "{current}", String.valueOf(claim.east()), "{target}", String.valueOf(east.targetDistance())));
+            "{amount}", String.valueOf(east.expandAmount()), "{price}", east.costText(), "{current}", String.valueOf(claim.east()), "{target}", String.valueOf(east.targetDistance())));
         inventory.setItem(slot("claim-manage", "delete"), configuredItem("claim-manage", "delete"));
         inventory.setItem(slot("claim-manage", "back"), configuredItem("claim-manage", "back"));
         player.openInventory(inventory);
@@ -243,6 +246,7 @@ public final class MenuService {
             "{perm_interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
             "{perm_container}", stateText(claim.permission(ClaimPermission.CONTAINER)),
             "{perm_redstone}", stateText(claim.permission(ClaimPermission.REDSTONE)),
+            "{perm_explosion}", stateText(claim.permission(ClaimPermission.EXPLOSION)),
             "{perm_bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
             "{perm_teleport}", stateText(claim.permission(ClaimPermission.TELEPORT))
         ));
@@ -251,6 +255,7 @@ public final class MenuService {
         inventory.setItem(slot("claim-permissions", "perm-interact"), configuredItem("claim-permissions", "perm-interact", "{state}", stateText(claim.permission(ClaimPermission.INTERACT))));
         inventory.setItem(slot("claim-permissions", "perm-container"), configuredItem("claim-permissions", "perm-container", "{state}", stateText(claim.permission(ClaimPermission.CONTAINER))));
         inventory.setItem(slot("claim-permissions", "perm-redstone"), configuredItem("claim-permissions", "perm-redstone", "{state}", stateText(claim.permission(ClaimPermission.REDSTONE))));
+        inventory.setItem(slot("claim-permissions", "perm-explosion"), configuredItem("claim-permissions", "perm-explosion", "{state}", stateText(claim.permission(ClaimPermission.EXPLOSION))));
         inventory.setItem(slot("claim-permissions", "perm-bucket"), configuredItem("claim-permissions", "perm-bucket", "{state}", stateText(claim.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("claim-permissions", "perm-teleport"), configuredItem("claim-permissions", "perm-teleport", "{state}", stateText(claim.permission(ClaimPermission.TELEPORT))));
         inventory.setItem(slot("claim-permissions", "disable-all"), configuredItem("claim-permissions", "disable-all"));
@@ -277,6 +282,7 @@ public final class MenuService {
             "{perm_interact}", stateText(settings.permission(ClaimPermission.INTERACT)),
             "{perm_container}", stateText(settings.permission(ClaimPermission.CONTAINER)),
             "{perm_redstone}", stateText(settings.permission(ClaimPermission.REDSTONE)),
+            "{perm_explosion}", stateText(settings.permission(ClaimPermission.EXPLOSION)),
             "{perm_bucket}", stateText(settings.permission(ClaimPermission.BUCKET)),
             "{perm_teleport}", stateText(settings.permission(ClaimPermission.TELEPORT))
         ));
@@ -289,9 +295,64 @@ public final class MenuService {
         if (hasItem("trust-member-permissions", "perm-redstone")) {
             inventory.setItem(slot("trust-member-permissions", "perm-redstone"), configuredItem("trust-member-permissions", "perm-redstone", "{state}", stateText(settings.permission(ClaimPermission.REDSTONE))));
         }
+        if (hasItem("trust-member-permissions", "perm-explosion")) {
+            inventory.setItem(slot("trust-member-permissions", "perm-explosion"), configuredItem("trust-member-permissions", "perm-explosion", "{state}", stateText(settings.permission(ClaimPermission.EXPLOSION))));
+        }
         inventory.setItem(slot("trust-member-permissions", "perm-bucket"), configuredItem("trust-member-permissions", "perm-bucket", "{state}", stateText(settings.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("trust-member-permissions", "perm-teleport"), configuredItem("trust-member-permissions", "perm-teleport", "{state}", stateText(settings.permission(ClaimPermission.TELEPORT))));
         inventory.setItem(slot("trust-member-permissions", "back"), configuredItem("trust-member-permissions", "back"));
+        player.openInventory(inventory);
+    }
+
+    public void openSelectionCreateMenu(Player player, String claimName, ClaimSelectionService.SelectionPreview preview) {
+        SelectionCreateHolder holder = new SelectionCreateHolder(claimName);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("selection-create"), menuTitle("selection-create", "{name}", claimName));
+        holder.inventory = inventory;
+        fill(inventory, "selection-create", "filler");
+
+        String status = preview.allowed() ? "&a可创建" : "&c" + stripMessagePrefix(preview.failureMessage());
+        inventory.setItem(slot("selection-create", "info"), configuredItem("selection-create", "info",
+            "{name}", claimName,
+            "{world}", preview.coreLocation() == null || preview.coreLocation().getWorld() == null ? plugin.settings().claimWorldsDisplay() : preview.coreLocation().getWorld().getName(),
+            "{center_x}", preview.coreLocation() == null ? "-" : String.valueOf(preview.coreLocation().getBlockX()),
+            "{center_y}", preview.coreLocation() == null ? "-" : String.valueOf(preview.coreLocation().getBlockY()),
+            "{center_z}", preview.coreLocation() == null ? "-" : String.valueOf(preview.coreLocation().getBlockZ()),
+            "{status}", plugin.color(status)
+        ));
+        inventory.setItem(slot("selection-create", "size"), configuredItem("selection-create", "size",
+            "{width}", String.valueOf(preview.width()),
+            "{height}", String.valueOf(preview.height()),
+            "{depth}", String.valueOf(preview.depth()),
+            "{area}", String.valueOf(preview.area()),
+            "{volume}", String.valueOf(preview.volume())
+        ));
+        inventory.setItem(slot("selection-create", "price"), configuredItem("selection-create", "price",
+            "{cost}", ClaimActionService.formatMoney(preview.cost())
+        ));
+        inventory.setItem(slot("selection-create", "bounds"), configuredItem("selection-create", "bounds",
+            "{min_x}", String.valueOf(preview.minX()),
+            "{max_x}", String.valueOf(preview.maxX()),
+            "{min_y}", String.valueOf(preview.minY()),
+            "{max_y}", String.valueOf(preview.maxY()),
+            "{min_z}", String.valueOf(preview.minZ()),
+            "{max_z}", String.valueOf(preview.maxZ())
+        ));
+        inventory.setItem(slot("selection-create", "tips"), configuredItem("selection-create", "tips"));
+        inventory.setItem(slot("selection-create", "refresh"), configuredItem("selection-create", "refresh"));
+        inventory.setItem(slot("selection-create", "confirm"), configuredItem("selection-create", "confirm",
+            "{name}", claimName,
+            "{cost}", ClaimActionService.formatMoney(preview.cost()),
+            "{width}", String.valueOf(preview.width()),
+            "{height}", String.valueOf(preview.height()),
+            "{depth}", String.valueOf(preview.depth())
+        ));
+        if (hasItem("selection-create", "placeholder-left")) {
+            inventory.setItem(slot("selection-create", "placeholder-left"), configuredItem("selection-create", "placeholder-left"));
+        }
+        if (hasItem("selection-create", "placeholder-right")) {
+            inventory.setItem(slot("selection-create", "placeholder-right"), configuredItem("selection-create", "placeholder-right"));
+        }
+        inventory.setItem(slot("selection-create", "cancel"), configuredItem("selection-create", "cancel"));
         player.openInventory(inventory);
     }
 
@@ -322,6 +383,8 @@ public final class MenuService {
             handlePermissionMenu(player, permissionHolder, slot);
         } else if (holder instanceof TrustMemberPermissionHolder permissionHolder) {
             handleTrustMemberPermissionMenu(player, permissionHolder, slot);
+        } else if (holder instanceof SelectionCreateHolder selectionCreateHolder) {
+            handleSelectionCreateMenu(player, selectionCreateHolder, slot);
         }
     }
 
@@ -595,6 +658,10 @@ public final class MenuService {
             togglePermission(player, claim, ClaimPermission.REDSTONE, "perm-redstone");
             return;
         }
+        if (slot == slot("claim-permissions", "perm-explosion")) {
+            togglePermission(player, claim, ClaimPermission.EXPLOSION, "perm-explosion");
+            return;
+        }
         if (slot == slot("claim-permissions", "perm-bucket")) {
             togglePermission(player, claim, ClaimPermission.BUCKET, "perm-bucket");
             return;
@@ -641,6 +708,10 @@ public final class MenuService {
             toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.REDSTONE, "perm-redstone");
             return;
         }
+        if (hasItem("trust-member-permissions", "perm-explosion") && slot == slot("trust-member-permissions", "perm-explosion")) {
+            toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.EXPLOSION, "perm-explosion");
+            return;
+        }
         if (slot == slot("trust-member-permissions", "perm-bucket")) {
             toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.BUCKET, "perm-bucket");
             return;
@@ -652,6 +723,34 @@ public final class MenuService {
         if (slot == slot("trust-member-permissions", "back")) {
             playConfiguredSound(player, "trust-member-permissions", "back");
             openTrustMenu(player, claim, 0);
+        }
+    }
+
+    private void handleSelectionCreateMenu(Player player, SelectionCreateHolder holder, int slot) {
+        ClaimSelectionService.SelectionPreview preview = claimSelectionService.preview(player);
+        if (slot == slot("selection-create", "refresh")) {
+            playConfiguredSound(player, "selection-create", "refresh");
+            if (preview == null || !preview.ready()) {
+                player.closeInventory();
+                player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c请先重新选择两个对角点。"));
+                return;
+            }
+            openSelectionCreateMenu(player, holder.claimName, preview);
+            return;
+        }
+        if (slot == slot("selection-create", "confirm")) {
+            playConfiguredSound(player, "selection-create", "confirm");
+            if (claimSelectionService.createClaim(player, holder.claimName)) {
+                player.closeInventory();
+            } else if (preview != null && preview.ready()) {
+                openSelectionCreateMenu(player, holder.claimName, claimSelectionService.preview(player));
+            }
+            return;
+        }
+        if (slot == slot("selection-create", "cancel")) {
+            playConfiguredSound(player, "selection-create", "cancel");
+            claimSelectionService.clear(player);
+            player.closeInventory();
         }
     }
 
@@ -870,6 +969,11 @@ public final class MenuService {
             .replace("{owner}", claim.ownerName());
     }
 
+    private String stripMessagePrefix(String message) {
+        String prefix = plugin.color(plugin.messagesConfig().getString("prefix", ""));
+        return message != null && message.startsWith(prefix) ? message.substring(prefix.length()) : (message == null ? "" : message);
+    }
+
     private String stateText(boolean enabled) {
         return enabled ? "&a允许" : "&c禁止";
     }
@@ -959,5 +1063,10 @@ public final class MenuService {
         private final int claimId;
         private final UUID memberId;
         private TrustMemberPermissionHolder(int claimId, UUID memberId) { this.claimId = claimId; this.memberId = memberId; }
+    }
+
+    private static final class SelectionCreateHolder extends BaseHolder {
+        private final String claimName;
+        private SelectionCreateHolder(String claimName) { this.claimName = claimName; }
     }
 }

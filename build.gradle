@@ -1,9 +1,18 @@
 plugins {
     id 'java'
+    id 'maven-publish'
 }
 
 group = 'com.coreclaim'
-version = '12.34'
+version = '1.0'
+
+def githubRepository = providers.gradleProperty('gpr.repo')
+    .orElse(providers.environmentVariable('GITHUB_REPOSITORY'))
+    .orElse('TuZiz/Coreclaim')
+    .get()
+def repositoryParts = githubRepository.tokenize('/')
+def githubOwner = repositoryParts.size() > 0 ? repositoryParts[0] : 'TuZiz'
+def githubRepo = repositoryParts.size() > 1 ? repositoryParts[1] : 'Coreclaim'
 
 java {
     toolchain {
@@ -47,4 +56,36 @@ jar {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = project.group
+            artifactId = rootProject.name
+            version = project.version
+
+            pom {
+                name = rootProject.name
+                description = 'CoreClaim Minecraft claim plugin'
+                url = "https://github.com/${githubOwner}/${githubRepo}"
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri("https://maven.pkg.github.com/${githubOwner}/${githubRepo}")
+            credentials {
+                username = providers.gradleProperty('gpr.user')
+                    .orElse(providers.environmentVariable('GITHUB_ACTOR'))
+                    .orNull
+                password = providers.gradleProperty('gpr.key')
+                    .orElse(providers.environmentVariable('GITHUB_TOKEN'))
+                    .orNull
+            }
+        }
+    }
 }

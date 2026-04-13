@@ -63,7 +63,7 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
             groupId = project.group
-            artifactId = rootProject.name
+            artifactId = 'coreclaim'
             version = project.version
 
             pom {

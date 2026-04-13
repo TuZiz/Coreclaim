@@ -12,15 +12,25 @@ public final class PlayerProfile {
     private int activityPoints;
     private int onlineMinutes;
     private boolean starterCoreGranted;
+    private boolean starterCoreReclaimed;
     private boolean autoShowBorders;
     private final Set<UUID> globalTrustedMembers = new LinkedHashSet<>();
 
-    public PlayerProfile(UUID uuid, String lastKnownName, int activityPoints, int onlineMinutes, boolean starterCoreGranted, boolean autoShowBorders) {
+    public PlayerProfile(
+        UUID uuid,
+        String lastKnownName,
+        int activityPoints,
+        int onlineMinutes,
+        boolean starterCoreGranted,
+        boolean starterCoreReclaimed,
+        boolean autoShowBorders
+    ) {
         this.uuid = uuid;
         this.lastKnownName = lastKnownName;
         this.activityPoints = Math.max(0, activityPoints);
         this.onlineMinutes = Math.max(0, onlineMinutes);
         this.starterCoreGranted = starterCoreGranted;
+        this.starterCoreReclaimed = starterCoreReclaimed;
         this.autoShowBorders = autoShowBorders;
     }
 
@@ -60,6 +70,14 @@ public final class PlayerProfile {
 
     public synchronized void setStarterCoreGranted(boolean starterCoreGranted) {
         this.starterCoreGranted = starterCoreGranted;
+    }
+
+    public synchronized boolean starterCoreReclaimed() {
+        return starterCoreReclaimed;
+    }
+
+    public synchronized void setStarterCoreReclaimed(boolean starterCoreReclaimed) {
+        this.starterCoreReclaimed = starterCoreReclaimed;
     }
 
     public synchronized boolean autoShowBorders() {

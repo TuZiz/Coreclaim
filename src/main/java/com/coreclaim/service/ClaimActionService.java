@@ -45,6 +45,10 @@ public final class ClaimActionService {
             .orElse(null);
     }
 
+    public Claim findCurrentClaim(Player player) {
+        return claimService.findClaim(player.getLocation()).orElse(null);
+    }
+
     public ExpansionPreview previewExpansion(Player player, Claim claim, ClaimDirection direction) {
         return buildExpansionPreview(player, claim, direction, plugin.settings().directionExpandAmount());
     }
@@ -293,7 +297,7 @@ public final class ClaimActionService {
         return player.getName() == null ? player.getUniqueId().toString() : player.getName();
     }
 
-    private boolean canEditClaim(Player player, Claim claim) {
+    public boolean canEditClaim(Player player, Claim claim) {
         return claim.owner().equals(player.getUniqueId()) || player.hasPermission("coreclaim.admin");
     }
 

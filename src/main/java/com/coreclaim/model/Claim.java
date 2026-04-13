@@ -11,8 +11,8 @@ import org.bukkit.Location;
 public final class Claim {
 
     private final int id;
-    private final UUID owner;
-    private final String ownerName;
+    private volatile UUID owner;
+    private volatile String ownerName;
     private final String world;
     private final int centerX;
     private final int centerY;
@@ -40,6 +40,7 @@ public final class Claim {
     private boolean allowExplosion;
     private boolean allowBucket;
     private boolean allowTeleport;
+    private boolean allowFlight;
     private long lastExpandedAt;
 
     public Claim(
@@ -70,6 +71,7 @@ public final class Claim {
         boolean allowExplosion,
         boolean allowBucket,
         boolean allowTeleport,
+        boolean allowFlight,
         long lastExpandedAt
     ) {
         this.id = id;
@@ -99,6 +101,7 @@ public final class Claim {
         this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
+        this.allowFlight = allowFlight;
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
     }
 
@@ -112,6 +115,14 @@ public final class Claim {
 
     public String ownerName() {
         return ownerName;
+    }
+
+    public synchronized void setOwner(UUID owner, String ownerName) {
+        if (owner == null) {
+            throw new IllegalArgumentException("owner");
+        }
+        this.owner = owner;
+        this.ownerName = ownerName == null || ownerName.isBlank() ? owner.toString() : ownerName;
     }
 
     public synchronized String name() {
@@ -216,6 +227,10 @@ public final class Claim {
         return Collections.unmodifiableSet(new LinkedHashSet<>(trustedMembers));
     }
 
+    public synchronized void clearTrustedMembers() {
+        trustedMembers.clear();
+    }
+
     public synchronized int trustedCount() {
         return trustedMembers.size();
     }
@@ -239,6 +254,10 @@ public final class Claim {
         return Collections.unmodifiableSet(new LinkedHashSet<>(blacklistedMembers));
     }
 
+    public synchronized void clearBlacklistedMembers() {
+        blacklistedMembers.clear();
+    }
+
     public synchronized ClaimMemberSettings memberSettings(UUID playerId) {
         return memberSettings.get(playerId);
     }
@@ -256,6 +275,10 @@ public final class Claim {
 
     public synchronized Map<UUID, ClaimMemberSettings> memberSettings() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(memberSettings));
+    }
+
+    public synchronized void clearMemberSettings() {
+        memberSettings.clear();
     }
 
     public synchronized boolean memberPermission(UUID playerId, ClaimPermission permission, boolean fallback) {
@@ -301,7 +324,10 @@ public final class Claim {
         if (permission == ClaimPermission.BUCKET) {
             return allowBucket;
         }
-        return allowTeleport;
+        if (permission == ClaimPermission.TELEPORT) {
+            return allowTeleport;
+        }
+        return allowFlight;
     }
 
     public synchronized void setPermission(ClaimPermission permission, boolean allowed) {
@@ -333,7 +359,11 @@ public final class Claim {
             allowBucket = allowed;
             return;
         }
-        allowTeleport = allowed;
+        if (permission == ClaimPermission.TELEPORT) {
+            allowTeleport = allowed;
+            return;
+        }
+        allowFlight = allowed;
     }
 
     public synchronized long lastExpandedAt() {

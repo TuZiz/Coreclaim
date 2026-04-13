@@ -10,6 +10,7 @@ public final class ClaimMemberSettings {
     private boolean allowExplosion;
     private boolean allowBucket;
     private boolean allowTeleport;
+    private boolean allowFlight;
 
     public ClaimMemberSettings(
         boolean allowPlace,
@@ -19,7 +20,8 @@ public final class ClaimMemberSettings {
         boolean allowRedstone,
         boolean allowExplosion,
         boolean allowBucket,
-        boolean allowTeleport
+        boolean allowTeleport,
+        boolean allowFlight
     ) {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
@@ -29,6 +31,7 @@ public final class ClaimMemberSettings {
         this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
+        this.allowFlight = allowFlight;
     }
 
     public boolean permission(ClaimPermission permission) {
@@ -53,7 +56,10 @@ public final class ClaimMemberSettings {
         if (permission == ClaimPermission.BUCKET) {
             return allowBucket;
         }
-        return allowTeleport;
+        if (permission == ClaimPermission.TELEPORT) {
+            return allowTeleport;
+        }
+        return allowFlight;
     }
 
     public void setPermission(ClaimPermission permission, boolean allowed) {
@@ -85,6 +91,10 @@ public final class ClaimMemberSettings {
             allowBucket = allowed;
             return;
         }
-        allowTeleport = allowed;
+        if (permission == ClaimPermission.TELEPORT) {
+            allowTeleport = allowed;
+            return;
+        }
+        allowFlight = allowed;
     }
 }

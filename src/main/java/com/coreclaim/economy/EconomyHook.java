@@ -3,6 +3,7 @@ package com.coreclaim.economy;
 import com.coreclaim.CoreClaimPlugin;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
@@ -44,6 +45,28 @@ public final class EconomyHook {
             return false;
         }
         EconomyResponse response = economy.withdrawPlayer(player, amount);
+        return response.transactionSuccess();
+    }
+
+    public boolean deposit(Player player, double amount) {
+        if (amount <= 0D) {
+            return true;
+        }
+        if (economy == null) {
+            return false;
+        }
+        EconomyResponse response = economy.depositPlayer(player, amount);
+        return response.transactionSuccess();
+    }
+
+    public boolean deposit(OfflinePlayer player, double amount) {
+        if (amount <= 0D) {
+            return true;
+        }
+        if (economy == null || player == null) {
+            return false;
+        }
+        EconomyResponse response = economy.depositPlayer(player, amount);
         return response.transactionSuccess();
     }
 }

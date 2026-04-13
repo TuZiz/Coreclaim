@@ -3,7 +3,7 @@ GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "PFBERFKFT"
-  - "FFCFSFFFF"
+  - "FFCFSYFFF"
   - "FFFFDFFFF"
   - "FFFFXFFFF"
 
@@ -127,6 +127,18 @@ items:
       - ' &f▶ &7当前状态: {state}'
       - ''
       - ' &6&l» &e点击切换状态'
+    sound: UI_BUTTON_CLICK
+
+  perm-flight:
+    char: "Y"
+    material: FEATHER
+    custom-model-data: 1613
+    name: '&b&l飞行权限'
+    lore:
+      - ''
+      - ' &f• &7当前状态: {state}'
+      - ''
+      - ' &6&l▶ &e点击切换状态'
     sound: UI_BUTTON_CLICK
 
   disable-all:

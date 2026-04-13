@@ -5,17 +5,21 @@ import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
+import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimMarketService;
 import com.coreclaim.service.ClaimSelectionService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimTransferService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -33,6 +37,8 @@ public final class CoreClaimCommand implements TabExecutor {
     private final ClaimSelectionService claimSelectionService;
     private final MenuService menuService;
     private final RemovalConfirmationService removalConfirmationService;
+    private final ClaimTransferService claimTransferService;
+    private final ClaimMarketService claimMarketService;
 
     public CoreClaimCommand(
         CoreClaimPlugin plugin,
@@ -42,7 +48,9 @@ public final class CoreClaimCommand implements TabExecutor {
         ClaimVisualService claimVisualService,
         ClaimSelectionService claimSelectionService,
         MenuService menuService,
-        RemovalConfirmationService removalConfirmationService
+        RemovalConfirmationService removalConfirmationService,
+        ClaimTransferService claimTransferService,
+        ClaimMarketService claimMarketService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -52,6 +60,8 @@ public final class CoreClaimCommand implements TabExecutor {
         this.claimSelectionService = claimSelectionService;
         this.menuService = menuService;
         this.removalConfirmationService = removalConfirmationService;
+        this.claimTransferService = claimTransferService;
+        this.claimMarketService = claimMarketService;
     }
 
     @Override
@@ -88,8 +98,13 @@ public final class CoreClaimCommand implements TabExecutor {
             case "untrust" -> handleUntrust(sender, args);
             case "blacklist", "deny" -> handleBlacklist(sender, args);
             case "admin" -> handleAdmin(sender, args);
-            case "add", "globaladd" -> handleGlobalAdd(sender, args);
-            case "unadd", "globalremove" -> handleGlobalRemove(sender, args);
+            case "add" -> handleAdd(sender, args);
+            case "unadd" -> handleUnadd(sender, args);
+            case "globaladd" -> handleGlobalAdd(sender, args);
+            case "globalremove" -> handleGlobalRemove(sender, args);
+            case "transfer" -> handleTransfer(sender, args);
+            case "sell" -> handleSell(sender, args);
+            case "market" -> handleMarket(sender);
             case "starter", "reclaim", "reclaimstarter" -> handleReclaimStarter(sender);
             case "activity" -> handleActivity(sender, args);
             case "reload" -> handleReload(sender);
@@ -203,16 +218,8 @@ public final class CoreClaimCommand implements TabExecutor {
 
         Claim claim;
         if (args.length >= 2) {
-            claim = claimService.allClaims().stream()
-                .filter(found -> found.name().equalsIgnoreCase(args[1]))
-                .findFirst()
-                .orElse(null);
+            claim = resolveAccessibleClaimByName(player, joinArgs(args, 1));
             if (claim == null) {
-                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
-                return true;
-            }
-            if (!claim.owner().equals(player.getUniqueId()) && !claimService.canAccess(claim, player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
-                player.sendMessage(plugin.message("trust-no-permission"));
                 return true;
             }
         } else {
@@ -290,6 +297,10 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return true;
         }
+        if (claimService.isClaimNameTaken(name)) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return true;
+        }
         menuService.openSelectionCreateMenu(player, name, preview);
         return true;
     }
@@ -304,12 +315,8 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = claimService.allClaims().stream()
-            .filter(found -> found.name().equalsIgnoreCase(args[1]))
-            .findFirst()
-            .orElse(null);
+        Claim claim = resolveTeleportClaimByName(player, joinArgs(args, 1));
         if (claim == null) {
-            player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
             return true;
         }
         claimActionService.teleportToClaim(player, claim);
@@ -326,9 +333,8 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = findOwnedClaimByName(player, args[1]);
+        Claim claim = resolveOwnedClaimByName(player, joinArgs(args, 1));
         if (claim == null) {
-            player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
             return true;
         }
 
@@ -367,12 +373,16 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = findOwnedClaimByName(player, args[1]);
-        if (claim == null) {
-            player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
+        String claimName = joinArgs(args, 1, args.length - 1);
+        if (claimName.isBlank()) {
+            player.sendMessage(plugin.message("trust-usage"));
             return true;
         }
-        OfflinePlayer target = resolveKnownPlayer(args[2]);
+        Claim claim = resolveOwnedClaimByName(player, claimName);
+        if (claim == null) {
+            return true;
+        }
+        OfflinePlayer target = resolveKnownPlayer(args[args.length - 1]);
         if (target == null) {
             player.sendMessage(plugin.message("trust-no-target"));
             return true;
@@ -401,12 +411,70 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = findOwnedClaimByName(player, args[1]);
-        if (claim == null) {
-            player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
+        String claimName = joinArgs(args, 1, args.length - 1);
+        if (claimName.isBlank()) {
+            player.sendMessage(plugin.message("untrust-usage"));
             return true;
         }
-        OfflinePlayer target = resolveKnownPlayer(args[2]);
+        Claim claim = resolveOwnedClaimByName(player, claimName);
+        if (claim == null) {
+            return true;
+        }
+        OfflinePlayer target = resolveKnownPlayer(args[args.length - 1]);
+        if (target == null) {
+            player.sendMessage(plugin.message("trust-no-target"));
+            return true;
+        }
+        claimActionService.untrustPlayer(player, claim, target);
+        return true;
+    }
+
+    private boolean handleAdd(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (args.length != 2) {
+            player.sendMessage(plugin.color("&c\u7528\u6cd5: &7/claim add <\u73a9\u5bb6>"));
+            return true;
+        }
+        Claim claim = claimActionService.findCurrentClaim(player);
+        if (claim == null) {
+            player.sendMessage(plugin.color("&c\u4f60\u5fc5\u987b\u7ad9\u5728\u4e00\u5757\u53ef\u7f16\u8f91\u7684\u9886\u5730\u5185\u624d\u80fd\u4f7f\u7528 /claim add"));
+            return true;
+        }
+        if (!claimActionService.canEditClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return true;
+        }
+        OfflinePlayer target = resolveKnownPlayer(args[1]);
+        if (target == null) {
+            player.sendMessage(plugin.message("trust-no-target"));
+            return true;
+        }
+        claimActionService.trustPlayer(player, claim, target);
+        return true;
+    }
+
+    private boolean handleUnadd(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (args.length != 2) {
+            player.sendMessage(plugin.color("&c\u7528\u6cd5: &7/claim unadd <\u73a9\u5bb6>"));
+            return true;
+        }
+        Claim claim = claimActionService.findCurrentClaim(player);
+        if (claim == null) {
+            player.sendMessage(plugin.color("&c\u4f60\u5fc5\u987b\u7ad9\u5728\u4e00\u5757\u53ef\u7f16\u8f91\u7684\u9886\u5730\u5185\u624d\u80fd\u4f7f\u7528 /claim unadd"));
+            return true;
+        }
+        if (!claimActionService.canEditClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return true;
+        }
+        OfflinePlayer target = resolveKnownPlayer(args[1]);
         if (target == null) {
             player.sendMessage(plugin.message("trust-no-target"));
             return true;
@@ -448,18 +516,26 @@ public final class CoreClaimCommand implements TabExecutor {
             }
             targetName = args[2];
         } else if (args.length >= 4) {
-            claim = findOwnedClaimByName(player, args[2]);
-            if (claim == null) {
-                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[2]));
+            String claimName = joinArgs(args, 2, args.length - 1);
+            if (claimName.isBlank()) {
+                player.sendMessage(plugin.message("blacklist-add-usage"));
                 return true;
             }
-            targetName = args[3];
+            claim = resolveOwnedClaimByName(player, claimName);
+            if (claim == null) {
+                return true;
+            }
+            targetName = args[args.length - 1];
         } else {
             player.sendMessage(plugin.message("blacklist-add-usage"));
             return true;
         }
 
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        OfflinePlayer target = resolveKnownPlayer(targetName);
+        if (target == null) {
+            player.sendMessage(plugin.message("trust-no-target"));
+            return true;
+        }
         if (target.getUniqueId().equals(player.getUniqueId())) {
             player.sendMessage(plugin.message("trust-self"));
             return true;
@@ -487,18 +563,26 @@ public final class CoreClaimCommand implements TabExecutor {
             }
             targetName = args[2];
         } else if (args.length >= 4) {
-            claim = findOwnedClaimByName(player, args[2]);
-            if (claim == null) {
-                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[2]));
+            String claimName = joinArgs(args, 2, args.length - 1);
+            if (claimName.isBlank()) {
+                player.sendMessage(plugin.message("blacklist-remove-usage"));
                 return true;
             }
-            targetName = args[3];
+            claim = resolveOwnedClaimByName(player, claimName);
+            if (claim == null) {
+                return true;
+            }
+            targetName = args[args.length - 1];
         } else {
             player.sendMessage(plugin.message("blacklist-remove-usage"));
             return true;
         }
 
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        OfflinePlayer target = resolveKnownPlayer(targetName);
+        if (target == null) {
+            player.sendMessage(plugin.message("trust-no-target"));
+            return true;
+        }
         if (!claimService.removeBlacklistedMember(claim, target.getUniqueId())) {
             player.sendMessage(plugin.message("blacklist-remove-missing", "{player}", displayName(target), "{name}", claim.name()));
             return true;
@@ -516,9 +600,8 @@ public final class CoreClaimCommand implements TabExecutor {
                 return true;
             }
         } else {
-            claim = findOwnedClaimByName(player, args[2]);
+            claim = resolveOwnedClaimByName(player, joinArgs(args, 2));
             if (claim == null) {
-                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[2]));
                 return true;
             }
         }
@@ -549,6 +632,7 @@ public final class CoreClaimCommand implements TabExecutor {
         return switch (action) {
             case "info" -> handleAdminInfo(sender, args);
             case "remove", "delete" -> handleAdminRemove(sender, args);
+            case "transfer" -> handleAdminTransfer(sender, args);
             default -> {
                 sender.sendMessage(plugin.message("admin-usage"));
                 yield true;
@@ -562,12 +646,8 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = claimService.allClaims().stream()
-            .filter(found -> found.name().equalsIgnoreCase(args[2]))
-            .findFirst()
-            .orElse(null);
+        Claim claim = resolveAdminClaimByName(sender, joinArgs(args, 2));
         if (claim == null) {
-            sender.sendMessage(plugin.message("claim-name-not-found", "{name}", args[2]));
             return true;
         }
 
@@ -581,15 +661,30 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        Claim claim = claimService.allClaims().stream()
-            .filter(found -> found.name().equalsIgnoreCase(args[2]))
-            .findFirst()
-            .orElse(null);
+        Claim claim = resolveAdminClaimByName(sender, joinArgs(args, 2));
         if (claim == null) {
-            sender.sendMessage(plugin.message("claim-name-not-found", "{name}", args[2]));
             return true;
         }
         return claimActionService.adminRemoveClaim(sender, claim);
+    }
+
+    private boolean handleAdminTransfer(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            sender.sendMessage(plugin.message("admin-transfer-usage"));
+            return true;
+        }
+        String claimName = joinArgs(args, 2, args.length - 1);
+        if (claimName.isBlank()) {
+            sender.sendMessage(plugin.message("admin-transfer-usage"));
+            return true;
+        }
+        Claim claim = resolveAdminClaimByName(sender, claimName);
+        if (claim == null) {
+            return true;
+        }
+        Player target = resolveOnlinePlayer(args[args.length - 1]);
+        claimTransferService.forceTransfer(sender, claim, target);
+        return true;
     }
 
     private boolean handleEdit(CommandSender sender, String[] args) {
@@ -604,9 +699,8 @@ public final class CoreClaimCommand implements TabExecutor {
 
         Claim claim;
         if (args.length >= 2) {
-            claim = findAnyClaimByName(args[1]);
+            claim = resolveAdminClaimByName(player, joinArgs(args, 1));
             if (claim == null) {
-                player.sendMessage(plugin.message("claim-name-not-found", "{name}", args[1]));
                 return true;
             }
         } else {
@@ -640,11 +734,11 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.message("trust-self"));
             return true;
         }
+        profileService.getOrCreate(player.getUniqueId(), player.getName());
         if (!profileService.addGlobalTrustedMember(player.getUniqueId(), target.getUniqueId())) {
             player.sendMessage(plugin.message("global-add-exists", "{player}", displayName(target)));
             return true;
         }
-        profileService.save();
         player.sendMessage(plugin.message("global-add-success", "{player}", displayName(target)));
         Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
         if (onlineTarget != null) {
@@ -667,12 +761,133 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
+        profileService.getOrCreate(player.getUniqueId(), player.getName());
         if (!profileService.removeGlobalTrustedMember(player.getUniqueId(), target.getUniqueId())) {
             player.sendMessage(plugin.message("global-remove-missing", "{player}", displayName(target)));
             return true;
         }
-        profileService.save();
         player.sendMessage(plugin.message("global-remove-success", "{player}", displayName(target)));
+        return true;
+    }
+
+    private boolean handleTransfer(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (!player.hasPermission("coreclaim.transfer")) {
+            player.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            player.sendMessage(plugin.message("transfer-usage"));
+            return true;
+        }
+        if (args.length == 2 && args[1].equalsIgnoreCase("accept")) {
+            claimTransferService.accept(player);
+            return true;
+        }
+        if (args.length == 2 && (args[1].equalsIgnoreCase("deny") || args[1].equalsIgnoreCase("cancel"))) {
+            claimTransferService.deny(player);
+            return true;
+        }
+
+        Claim claim;
+        String targetName;
+        if (args.length == 2) {
+            claim = claimActionService.findOwnedClaim(player);
+            if (claim == null) {
+                player.sendMessage(plugin.message("claim-not-found"));
+                return true;
+            }
+            targetName = args[1];
+        } else {
+            String claimName = joinArgs(args, 1, args.length - 1);
+            if (claimName.isBlank()) {
+                player.sendMessage(plugin.message("transfer-usage"));
+                return true;
+            }
+            claim = resolveOwnedClaimByName(player, claimName);
+            if (claim == null) {
+                return true;
+            }
+            targetName = args[args.length - 1];
+        }
+
+        Player target = resolveOnlinePlayer(targetName);
+        claimTransferService.requestTransfer(player, claim, target);
+        return true;
+    }
+
+    private boolean handleSell(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (!player.hasPermission("coreclaim.sell")) {
+            player.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            player.sendMessage(plugin.message("sell-usage"));
+            return true;
+        }
+
+        if (args[1].equalsIgnoreCase("cancel")) {
+            Claim claim;
+            if (args.length == 2) {
+                claim = claimActionService.findOwnedClaim(player);
+                if (claim == null) {
+                    player.sendMessage(plugin.message("claim-not-found"));
+                    return true;
+                }
+            } else {
+                claim = resolveOwnedClaimByName(player, joinArgs(args, 2));
+                if (claim == null) {
+                    return true;
+                }
+            }
+            claimMarketService.cancelListing(player, claim);
+            return true;
+        }
+
+        double price = parsePositiveDouble(args[args.length - 1], player);
+        if (price <= 0D) {
+            return true;
+        }
+
+        Claim claim;
+        if (args.length == 2) {
+            claim = claimActionService.findOwnedClaim(player);
+            if (claim == null) {
+                player.sendMessage(plugin.message("claim-not-found"));
+                return true;
+            }
+        } else {
+            String claimName = joinArgs(args, 1, args.length - 1);
+            if (claimName.isBlank()) {
+                player.sendMessage(plugin.message("sell-usage"));
+                return true;
+            }
+            claim = resolveOwnedClaimByName(player, claimName);
+            if (claim == null) {
+                return true;
+            }
+        }
+        claimMarketService.listClaim(player, claim, price);
+        return true;
+    }
+
+    private boolean handleMarket(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (!player.hasPermission("coreclaim.market")) {
+            player.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+        menuService.openClaimMarketMenu(player, 0);
         return true;
     }
 
@@ -687,8 +902,12 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         String action = args[1].toLowerCase(Locale.ROOT);
-        org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(args[2]);
-        String name = target.getName() == null ? args[2] : target.getName();
+        OfflinePlayer target = resolveKnownPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage(plugin.message("activity-player-unknown"));
+            return true;
+        }
+        String name = displayName(target);
         PlayerProfile profile = profileService.getOrCreate(target.getUniqueId(), name);
 
         switch (action) {
@@ -704,7 +923,7 @@ public final class CoreClaimCommand implements TabExecutor {
                     return true;
                 }
                 profile.setActivityPoints(value);
-                profileService.save();
+                profileService.saveProfile(profile);
                 sender.sendMessage(plugin.message("activity-set", "{player}", profile.lastKnownName(), "{value}", String.valueOf(value)));
             }
             case "add" -> {
@@ -717,7 +936,7 @@ public final class CoreClaimCommand implements TabExecutor {
                     return true;
                 }
                 profile.setActivityPoints(profile.activityPoints() + value);
-                profileService.save();
+                profileService.saveProfile(profile);
                 sender.sendMessage(plugin.message("activity-add", "{player}", profile.lastKnownName(), "{value}", String.valueOf(value)));
             }
             case "take" -> {
@@ -730,7 +949,7 @@ public final class CoreClaimCommand implements TabExecutor {
                     return true;
                 }
                 profile.setActivityPoints(Math.max(0, profile.activityPoints() - value));
-                profileService.save();
+                profileService.saveProfile(profile);
                 sender.sendMessage(plugin.message("activity-take", "{player}", profile.lastKnownName(), "{value}", String.valueOf(value)));
             }
             default -> sender.sendMessage(plugin.message("activity-usage"));
@@ -785,6 +1004,13 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
+        if (profile.starterCoreReclaimed()) {
+            player.sendMessage(chatMessage("starter-core-reclaim-used", "&c&l! &7你已经补领过一次新人核心了，无法再次补领。"));
+            return true;
+        }
+
+        profile.setStarterCoreReclaimed(true);
+        profileService.saveProfile(profile);
         plugin.claimCoreFactory().giveStarterCore(player, 1);
         player.sendMessage(chatMessage("starter-core-reclaim-success", "&a&l补领: &7已为你补发 1 个新人核心，请尽快完成第一块领地创建。"));
         return true;
@@ -833,6 +1059,20 @@ public final class CoreClaimCommand implements TabExecutor {
         }
     }
 
+    private double parsePositiveDouble(String raw, CommandSender sender) {
+        try {
+            double value = Double.parseDouble(raw);
+            if (!Double.isFinite(value) || value <= 0D) {
+                sender.sendMessage(plugin.message("sale-price-invalid"));
+                return -1D;
+            }
+            return value;
+        } catch (NumberFormatException exception) {
+            sender.sendMessage(plugin.message("sale-price-invalid"));
+            return -1D;
+        }
+    }
+
     private String displayName(OfflinePlayer player) {
         return player.getName() == null ? player.getUniqueId().toString() : player.getName();
     }
@@ -863,7 +1103,7 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.color("&7- 爆炸: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.EXPLOSION))));
             sender.sendMessage(plugin.color("&7- 桶: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.BUCKET))));
             sender.sendMessage(plugin.color("&7- 传送: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.TELEPORT))));
-            sender.sendMessage(plugin.color("&6[Claim] &f受信任玩家: " + joinPlayerNames(claim.trustedMembers())));
+            sender.sendMessage(plugin.color("&6[Claim] &f\u6388\u6743\u73a9\u5bb6: " + joinPlayerNames(claim.trustedMembers())));
             sender.sendMessage(plugin.color("&6[Claim] &f黑名单玩家: " + joinPlayerNames(claim.blacklistedMembers())));
         }
     }
@@ -892,18 +1132,74 @@ public final class CoreClaimCommand implements TabExecutor {
         return String.join(plugin.color("&7, "), names);
     }
 
-    private Claim findOwnedClaimByName(Player player, String name) {
-        return claimService.claimsOf(player.getUniqueId()).stream()
-            .filter(claim -> claim.name().equalsIgnoreCase(name))
-            .findFirst()
-            .orElse(null);
+    private Claim resolveOwnedClaimByName(Player player, String rawName) {
+        return resolveClaimByName(
+            player,
+            rawName,
+            claim -> claim.owner().equals(player.getUniqueId())
+        );
     }
 
-    private Claim findAnyClaimByName(String name) {
-        return claimService.allClaims().stream()
-            .filter(claim -> claim.name().equalsIgnoreCase(name))
-            .findFirst()
-            .orElse(null);
+    private Claim resolveAccessibleClaimByName(Player player, String rawName) {
+        return resolveClaimByName(
+            player,
+            rawName,
+            claim -> player.hasPermission("coreclaim.admin")
+                || claim.owner().equals(player.getUniqueId())
+                || claimService.canAccess(claim, player.getUniqueId())
+        );
+    }
+
+    private Claim resolveTeleportClaimByName(Player player, String rawName) {
+        return resolveClaimByName(
+            player,
+            rawName,
+            claim -> player.hasPermission("coreclaim.admin")
+                || claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)
+        );
+    }
+
+    private Claim resolveAdminClaimByName(CommandSender sender, String rawName) {
+        return resolveClaimByName(sender, rawName, claim -> true);
+    }
+
+    private Claim resolveClaimByName(CommandSender sender, String rawName, java.util.function.Predicate<Claim> filter) {
+        String claimName = normalizeQuery(rawName);
+        if (claimName == null) {
+            sender.sendMessage(plugin.message("claim-name-not-found", "{name}", rawName == null ? "" : rawName.trim()));
+            return null;
+        }
+        List<Claim> matches = claimService.findClaimsByName(claimName).stream()
+            .filter(filter)
+            .toList();
+        if (matches.isEmpty()) {
+            sender.sendMessage(plugin.message("claim-name-not-found", "{name}", claimName));
+            return null;
+        }
+        if (matches.size() > 1) {
+            sender.sendMessage(plugin.message("claim-name-ambiguous", "{name}", claimName));
+            return null;
+        }
+        return matches.get(0);
+    }
+
+    private String joinArgs(String[] args, int startInclusive) {
+        return joinArgs(args, startInclusive, args.length);
+    }
+
+    private String joinArgs(String[] args, int startInclusive, int endExclusive) {
+        if (args == null || startInclusive >= endExclusive || startInclusive < 0 || endExclusive > args.length) {
+            return "";
+        }
+        return String.join(" ", java.util.Arrays.copyOfRange(args, startInclusive, endExclusive)).trim();
+    }
+
+    private String normalizeQuery(String rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+        String trimmed = rawValue.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private OfflinePlayer resolveKnownPlayer(String rawName) {
@@ -914,9 +1210,21 @@ public final class CoreClaimCommand implements TabExecutor {
         if (online != null) {
             return online;
         }
-        for (OfflinePlayer offline : Bukkit.getOfflinePlayers()) {
-            if (offline.getName() != null && offline.getName().equalsIgnoreCase(rawName)) {
-                return offline;
+        UUID playerId = profileService.findPlayerIdByName(rawName);
+        return playerId == null ? null : Bukkit.getOfflinePlayer(playerId);
+    }
+
+    private Player resolveOnlinePlayer(String rawName) {
+        if (rawName == null || rawName.isBlank()) {
+            return null;
+        }
+        Player exact = Bukkit.getPlayerExact(rawName);
+        if (exact != null) {
+            return exact;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online.getName().equalsIgnoreCase(rawName)) {
+                return online;
             }
         }
         return null;
@@ -924,14 +1232,10 @@ public final class CoreClaimCommand implements TabExecutor {
 
     private List<String> knownPlayerNames() {
         LinkedHashSet<String> names = new LinkedHashSet<>();
-        for (OfflinePlayer offline : Bukkit.getOfflinePlayers()) {
-            if (offline.getName() != null && !offline.getName().isBlank()) {
-                names.add(offline.getName());
-            }
-        }
         for (Player online : Bukkit.getOnlinePlayers()) {
             names.add(online.getName());
         }
+        names.addAll(profileService.knownPlayerNames());
         return new ArrayList<>(names);
     }
 
@@ -947,15 +1251,21 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&e/claim expand <east|south|west|north> &7向单个方向扩建 10 格"));
         sender.sendMessage(plugin.color("&e/claim remove <领地名字> &7删除指定领地，随后在聊天输入 confirm"));
         sender.sendMessage(plugin.color("&e/claim confirm &7直接确认待删除领地"));
-        sender.sendMessage(plugin.color("&e/claim trust <玩家> 或 <领地名> <玩家> &7给予单个领地权限"));
-        sender.sendMessage(plugin.color("&e/claim blacklist <add|remove|list> ... &7管理领地黑名单"));
-        sender.sendMessage(plugin.color("&e/claim add <玩家> &7给予全部领地全局权限"));
-        sender.sendMessage(plugin.color("&e/claim unadd <玩家> &7移除全部领地全局权限"));
-        sender.sendMessage(plugin.color("&e/claim reclaimstarter &7未圈地时补领新人核心"));
+        sender.sendMessage(plugin.color("&e/claim trust <\u73a9\u5bb6> \u6216 <\u9886\u5730\u540d> <\u73a9\u5bb6> &7\u7ed9\u4e88\u5355\u4e2a\u9886\u5730\u6743\u9650"));
+        sender.sendMessage(plugin.color("&e/claim blacklist <add|remove|list> ... &7\u7ba1\u7406\u9886\u5730\u9ed1\u540d\u5355"));
+        sender.sendMessage(plugin.color("&e/claim add <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\uff0c\u7ed9\u8fd9\u5757\u9886\u5730\u6dfb\u52a0\u6388\u6743\u73a9\u5bb6"));
+        sender.sendMessage(plugin.color("&e/claim unadd <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\uff0c\u4ece\u8fd9\u5757\u9886\u5730\u79fb\u9664\u6388\u6743\u73a9\u5bb6"));
+        sender.sendMessage(plugin.color("&e/claim globaladd <\u73a9\u5bb6> &7\u8ba9\u5bf9\u65b9\u6309\u4f60\u5404\u9886\u5730\u7684\u9ed8\u8ba4\u6210\u5458\u6743\u9650\u751f\u6548"));
+        sender.sendMessage(plugin.color("&e/claim globalremove <\u73a9\u5bb6> &7\u79fb\u9664\u5bf9\u65b9\u5bf9\u4f60\u5168\u90e8\u9886\u5730\u7684\u9ed8\u8ba4\u6210\u5458\u6743\u9650\u7ee7\u627f"));
+        sender.sendMessage(plugin.color("&e/claim transfer <玩家> &8或 &e/claim transfer <领地名> <玩家> &7转让领地，需要对方在线确认"));
+        sender.sendMessage(plugin.color("&e/claim sell <价格> &8或 &e/claim sell <领地名> <价格> &7挂牌出售领地"));
+        sender.sendMessage(plugin.color("&e/claim market &7打开玩家领地出售市场"));
+        sender.sendMessage(plugin.color("&e/claim reclaimstarter &7\u672a\u5708\u5730\u65f6\u8865\u9886\u65b0\u4eba\u6838\u5fc3"));
         if (sender.hasPermission("coreclaim.admin")) {
             sender.sendMessage(plugin.color("&e/claim edit [领地名字] &7管理员编辑当前位置或指定领地"));
             sender.sendMessage(plugin.color("&e/claim admin info <领地名> &7管理员查看指定领地详情"));
             sender.sendMessage(plugin.color("&e/claim admin remove <领地名> &7管理员直接删除指定领地"));
+            sender.sendMessage(plugin.color("&e/claim admin transfer <领地名> <玩家> &7管理员强制转让指定领地"));
             sender.sendMessage(plugin.color("&e/claim activity <get|set|add|take> <玩家> [值] &7管理活跃度"));
             sender.sendMessage(plugin.color("&e/claim reload &7重载配置与菜单"));
             sender.sendMessage(plugin.color("&e/claim givecore <玩家> [数量] &7手动发放领地核心"));
@@ -987,6 +1297,11 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("blacklist");
             options.add("add");
             options.add("unadd");
+            options.add("globaladd");
+            options.add("globalremove");
+            options.add("transfer");
+            options.add("sell");
+            options.add("market");
             options.add("starter");
             options.add("reclaim");
             options.add("reclaimstarter");
@@ -1008,10 +1323,16 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("show"))) {
             options.add("auto");
-            for (Claim claim : claimService.allClaims()) {
-                options.add(claim.name());
+            if (sender instanceof Player player) {
+                options.addAll(claimNames(claimService.allClaims().stream()
+                    .filter(claim -> player.hasPermission("coreclaim.admin")
+                        || claim.owner().equals(player.getUniqueId())
+                        || claimService.canAccess(claim, player.getUniqueId()))
+                    .toList()));
+            } else {
+                options.addAll(claimNames(claimService.allClaims()));
             }
-            return filter(options, args[1]);
+            return filterByJoinedInput(options, args, 1);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("activity")) {
             options.add("get");
@@ -1024,6 +1345,7 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("info");
             options.add("remove");
             options.add("delete");
+            options.add("transfer");
             return filter(options, args[1]);
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("blacklist") || args[0].equalsIgnoreCase("deny"))) {
@@ -1036,33 +1358,46 @@ public final class CoreClaimCommand implements TabExecutor {
             || args[0].equalsIgnoreCase("untrust")
             || args[0].equalsIgnoreCase("add")
             || args[0].equalsIgnoreCase("unadd")
-            || args[0].equalsIgnoreCase("givecore"))) {
+            || args[0].equalsIgnoreCase("globaladd")
+            || args[0].equalsIgnoreCase("globalremove")
+            || args[0].equalsIgnoreCase("givecore")
+            || args[0].equalsIgnoreCase("transfer"))) {
             options.addAll(knownPlayerNames());
-            return filter(options, args[1]);
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("edit") && sender.hasPermission("coreclaim.admin")) {
-            for (Claim claim : claimService.allClaims()) {
-                options.add(claim.name());
+            if (sender instanceof Player player && (args[0].equalsIgnoreCase("trust") || args[0].equalsIgnoreCase("untrust"))) {
+                for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
+                    options.add(claim.name());
+                }
             }
-            return filter(options, args[1]);
-        }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("delete")) && sender instanceof Player player) {
-            for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
-                options.add(claim.name());
-            }
-            return filter(options, args[1]);
-        }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("teleport"))) {
-            if (sender instanceof Player player) {
-                for (Claim claim : claimService.allClaims()) {
-                    if (player.hasPermission("coreclaim.admin")
-                        || claim.owner().equals(player.getUniqueId())
-                        || profileService.isGloballyTrusted(claim.owner(), player.getUniqueId())) {
-                        options.add(claim.name());
-                    }
+            if (sender instanceof Player player && args[0].equalsIgnoreCase("transfer")) {
+                options.add("accept");
+                options.add("deny");
+                for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
+                    options.add(claim.name());
                 }
             }
             return filter(options, args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("sell") && sender instanceof Player player) {
+            options.add("cancel");
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("edit") && sender.hasPermission("coreclaim.admin")) {
+            options.addAll(claimNames(claimService.allClaims()));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("delete")) && sender instanceof Player player) {
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("teleport"))) {
+            if (sender instanceof Player player) {
+                options.addAll(claimNames(claimService.allClaims().stream()
+                    .filter(claim -> player.hasPermission("coreclaim.admin")
+                        || claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT))
+                    .toList()));
+            }
+            return filterByJoinedInput(options, args, 1);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("show") && args[1].equalsIgnoreCase("auto")) {
             options.add("on");
@@ -1070,42 +1405,138 @@ public final class CoreClaimCommand implements TabExecutor {
             return filter(options, args[2]);
         }
         if (args.length == 3 && (args[0].equalsIgnoreCase("trust") || args[0].equalsIgnoreCase("untrust"))) {
+            if (sender instanceof Player player) {
+                List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
+                String candidateName = joinArgs(args, 1, args.length - 1);
+                if (hasUniqueMatchingClaim(ownedClaims, candidateName)) {
+                    options.addAll(knownPlayerNames());
+                    return filter(options, args[args.length - 1]);
+                }
+                options.addAll(claimNames(ownedClaims));
+                return filterByJoinedInput(options, args, 1);
+            }
             options.addAll(knownPlayerNames());
             return filter(options, args[2]);
         }
         if (args.length == 3 && (args[0].equalsIgnoreCase("blacklist") || args[0].equalsIgnoreCase("deny")) && args[1].equalsIgnoreCase("list") && sender instanceof Player player) {
-            for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
-                options.add(claim.name());
-            }
-            return filter(options, args[2]);
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 2);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("activity")) {
             options.addAll(knownPlayerNames());
             return filter(options, args[2]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin")
-            && (args[1].equalsIgnoreCase("remove") || args[1].equalsIgnoreCase("delete") || args[1].equalsIgnoreCase("info"))) {
-            for (Claim claim : claimService.allClaims()) {
-                options.add(claim.name());
-            }
-            return filter(options, args[2]);
+            && (args[1].equalsIgnoreCase("remove") || args[1].equalsIgnoreCase("delete") || args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("transfer"))) {
+            options.addAll(claimNames(claimService.allClaims()));
+            return filterByJoinedInput(options, args, 2);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("sell") && args[1].equalsIgnoreCase("cancel") && sender instanceof Player player) {
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 2);
         }
         if (args.length == 3 && (args[0].equalsIgnoreCase("blacklist") || args[0].equalsIgnoreCase("deny"))
             && (args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("remove")) && sender instanceof Player player) {
-            for (Claim claim : claimService.claimsOf(player.getUniqueId())) {
-                options.add(claim.name());
-            }
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                options.add(online.getName());
-            }
-            return filter(options, args[2]);
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            options.addAll(knownPlayerNames());
+            return filterByJoinedInput(options, args, 2);
         }
         if (args.length == 4 && (args[0].equalsIgnoreCase("blacklist") || args[0].equalsIgnoreCase("deny"))
             && (args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("remove"))) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                options.add(online.getName());
+            if (sender instanceof Player player) {
+                List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
+                String candidateName = joinArgs(args, 2, args.length - 1);
+                if (hasUniqueMatchingClaim(ownedClaims, candidateName)) {
+                    options.addAll(knownPlayerNames());
+                    return filter(options, args[args.length - 1]);
+                }
+                options.addAll(claimNames(ownedClaims));
+                return filterByJoinedInput(options, args, 2);
             }
+            options.addAll(knownPlayerNames());
             return filter(options, args[3]);
+        }
+        if (args.length > 2 && (args[0].equalsIgnoreCase("show")
+            || args[0].equalsIgnoreCase("tp")
+            || args[0].equalsIgnoreCase("teleport")
+            || args[0].equalsIgnoreCase("edit")
+            || args[0].equalsIgnoreCase("remove")
+            || args[0].equalsIgnoreCase("delete"))) {
+            if (args[0].equalsIgnoreCase("show") && args[1].equalsIgnoreCase("auto")) {
+                return options;
+            }
+            if (sender instanceof Player player) {
+                if (args[0].equalsIgnoreCase("show")) {
+                    options.addAll(claimNames(claimService.allClaims().stream()
+                        .filter(claim -> player.hasPermission("coreclaim.admin")
+                            || claim.owner().equals(player.getUniqueId())
+                            || claimService.canAccess(claim, player.getUniqueId()))
+                        .toList()));
+                } else if (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("teleport")) {
+                    options.addAll(claimNames(claimService.allClaims().stream()
+                        .filter(claim -> player.hasPermission("coreclaim.admin")
+                            || claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT))
+                        .toList()));
+                } else if (args[0].equalsIgnoreCase("edit") && sender.hasPermission("coreclaim.admin")) {
+                    options.addAll(claimNames(claimService.allClaims()));
+                } else if (args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("delete")) {
+                    options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+                }
+            } else if (args[0].equalsIgnoreCase("edit") && sender.hasPermission("coreclaim.admin")) {
+                options.addAll(claimNames(claimService.allClaims()));
+            }
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length > 3 && args[0].equalsIgnoreCase("admin")
+            && (args[1].equalsIgnoreCase("remove") || args[1].equalsIgnoreCase("delete") || args[1].equalsIgnoreCase("info") || args[1].equalsIgnoreCase("transfer"))) {
+            if (args[1].equalsIgnoreCase("transfer")) {
+                String candidateName = joinArgs(args, 2, args.length - 1);
+                if (hasUniqueMatchingClaim(claimService.allClaims(), candidateName)) {
+                    options.addAll(knownPlayerNames());
+                    return filter(options, args[args.length - 1]);
+                }
+            }
+            options.addAll(claimNames(claimService.allClaims()));
+            return filterByJoinedInput(options, args, 2);
+        }
+        if (args.length > 3 && (args[0].equalsIgnoreCase("trust") || args[0].equalsIgnoreCase("untrust")) && sender instanceof Player player) {
+            List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
+            String candidateName = joinArgs(args, 1, args.length - 1);
+            if (hasUniqueMatchingClaim(ownedClaims, candidateName)) {
+                options.addAll(knownPlayerNames());
+                return filter(options, args[args.length - 1]);
+            }
+            options.addAll(claimNames(ownedClaims));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length > 2 && args[0].equalsIgnoreCase("transfer") && sender instanceof Player player) {
+            List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
+            String candidateName = joinArgs(args, 1, args.length - 1);
+            if (hasUniqueMatchingClaim(ownedClaims, candidateName)) {
+                options.addAll(knownPlayerNames());
+                return filter(options, args[args.length - 1]);
+            }
+            options.addAll(claimNames(ownedClaims));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length > 2 && args[0].equalsIgnoreCase("sell") && sender instanceof Player player) {
+            if (args[1].equalsIgnoreCase("cancel")) {
+                options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+                return filterByJoinedInput(options, args, 2);
+            }
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length > 4 && (args[0].equalsIgnoreCase("blacklist") || args[0].equalsIgnoreCase("deny"))
+            && (args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("remove")) && sender instanceof Player player) {
+            List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
+            String candidateName = joinArgs(args, 2, args.length - 1);
+            if (hasUniqueMatchingClaim(ownedClaims, candidateName)) {
+                options.addAll(knownPlayerNames());
+                return filter(options, args[args.length - 1]);
+            }
+            options.addAll(claimNames(ownedClaims));
+            return filterByJoinedInput(options, args, 2);
         }
         return options;
     }
@@ -1123,7 +1554,24 @@ public final class CoreClaimCommand implements TabExecutor {
     private List<String> filter(List<String> options, String input) {
         String lowered = input.toLowerCase(Locale.ROOT);
         return options.stream()
+            .distinct()
             .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lowered))
             .toList();
+    }
+
+    private List<String> filterByJoinedInput(List<String> options, String[] args, int startInclusive) {
+        return filter(options, joinArgs(args, startInclusive));
+    }
+
+    private List<String> claimNames(List<Claim> claims) {
+        return claims.stream()
+            .map(Claim::name)
+            .distinct()
+            .toList();
+    }
+
+    private boolean hasUniqueMatchingClaim(List<Claim> claims, String rawName) {
+        List<Claim> matchingClaims = claimService.findClaimsByName(rawName);
+        return claims.stream().filter(matchingClaims::contains).count() == 1;
     }
 }

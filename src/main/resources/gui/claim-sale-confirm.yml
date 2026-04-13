@@ -1,0 +1,55 @@
+title: '&8» &6&l购买确认 - {name}'
+GuiPlain:
+  - "FFFFFFFFF"
+  - "FFFFIFFFF"
+  - "FFFFFFFFF"
+  - "FFFCFXFFF"
+  - "FFFFFFFFF"
+
+items:
+  filler:
+    char: "F"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1810
+
+  info:
+    char: "I"
+    material: BOOK
+    custom-model-data: 1811
+    name: '&e&l{name}'
+    lore:
+      - ''
+      - ' &f卖家: &e{seller}'
+      - ' &f世界: &b{world}'
+      - ' &f核心: &7({x}, {y}, {z})'
+      - ' &f大小: &e{width}x{depth}'
+      - ' &f面积: &e{area}'
+      - ' &f价格: &6{price}'
+      - ''
+      - ' &7购买后只更换领地主，旧授权/黑名单会清空。'
+
+  confirm:
+    char: "C"
+    material: LIME_WOOL
+    custom-model-data: 1812
+    glow: true
+    name: '&a&l确认购买'
+    lore:
+      - ''
+      - ' &f领地: &b{name}'
+      - ' &f卖家: &e{seller}'
+      - ' &f价格: &6{price}'
+      - ''
+      - ' &e点击扣款并购买'
+    sound: ENTITY_PLAYER_LEVELUP
+
+  cancel:
+    char: "X"
+    material: RED_WOOL
+    custom-model-data: 1813
+    name: '&c&l取消'
+    lore:
+      - ''
+      - ' &e返回出售市场'
+    sound: UI_BUTTON_CLICK

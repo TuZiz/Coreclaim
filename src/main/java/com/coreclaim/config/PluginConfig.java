@@ -32,6 +32,7 @@ public final class PluginConfig {
     private final int expandCooldownSeconds;
     private final boolean warnOnSecondClaim;
     private final int coreUseMinActivity;
+    private final long flightExitGraceTicks;
     private final Set<Material> allowInteract;
     private final boolean allowEnderPearlEntry;
     private final boolean allowChorusFruitEntry;
@@ -94,6 +95,7 @@ public final class PluginConfig {
         this.expandCooldownSeconds = Math.max(0, config.getInt("expand-cooldown-seconds", 0));
         this.warnOnSecondClaim = config.getBoolean("warn-on-second-claim", false);
         this.coreUseMinActivity = Math.max(0, config.getInt("core-use-min-activity", 0));
+        this.flightExitGraceTicks = Math.max(0L, config.getLong("flight.exit-grace-ticks", 20L));
         this.allowInteract = resolveMaterials(config.getStringList("allow-interact"));
         this.allowEnderPearlEntry = config.getBoolean("protection.allow-ender-pearl-entry", false);
         this.allowChorusFruitEntry = config.getBoolean("protection.allow-chorus-fruit-entry", false);
@@ -228,6 +230,10 @@ public final class PluginConfig {
 
     public int coreUseMinActivity() {
         return coreUseMinActivity;
+    }
+
+    public long flightExitGraceTicks() {
+        return flightExitGraceTicks;
     }
 
     public boolean isAllowedInteract(Material material) {

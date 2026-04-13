@@ -36,6 +36,7 @@ public final class ClaimInputService {
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.ENTER_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
+        player.sendMessage(plugin.color("&8[Claim] &7可用变量: &f{claim_name} &7/ &f{owner} &7/ &f{name} &8(也支持 %claim_name% / %owner%)"));
         player.sendMessage(plugin.color("&6[Claim] &f请在聊天栏输入进入提示，输入 &e清空 &f恢复默认，输入 &c取消 &f取消。&7(" + plugin.settings().chatInputTimeoutSeconds() + "秒后自动取消)"));
     }
 
@@ -43,6 +44,7 @@ public final class ClaimInputService {
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.LEAVE_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
+        player.sendMessage(plugin.color("&8[Claim] &7可用变量: &f{claim_name} &7/ &f{owner} &7/ &f{name} &8(也支持 %claim_name% / %owner%)"));
         player.sendMessage(plugin.color("&6[Claim] &f请在聊天栏输入离开提示，输入 &e清空 &f恢复默认，输入 &c取消 &f取消。&7(" + plugin.settings().chatInputTimeoutSeconds() + "秒后自动取消)"));
     }
 
@@ -92,8 +94,17 @@ public final class ClaimInputService {
             player.sendMessage(plugin.color("&6[Claim] &c领地名字太长，最多 " + plugin.settings().claimNameMaxLength() + " 个字符。"));
             return;
         }
-        claimService.renameClaim(claim, message);
-        player.sendMessage(plugin.color("&6[Claim] &a已将领地重命名为 &e" + message + "&a。"));
+        if (claimService.isClaimNameTaken(message, claim.id())) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", message.trim()));
+            return;
+        }
+        try {
+            claimService.renameClaim(claim, message);
+        } catch (IllegalArgumentException exception) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", message.trim()));
+            return;
+        }
+        player.sendMessage(plugin.color("&6[Claim] &a已将领地重命名为 &e" + message.trim() + "&a。"));
     }
 
     private void handleEnterMessage(Player player, Claim claim, String message) {

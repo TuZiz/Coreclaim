@@ -25,6 +25,10 @@ claim-name-max-length: 16
 # 聊天输入超时秒数
 chat-input-timeout-seconds: 30
 
+# 领地转让请求超时秒数
+transfer:
+  request-timeout-seconds: 60
+
 # 是否显示进入/离开领地提示
 show-enter-leave-messages: true
 
@@ -37,8 +41,28 @@ warn-on-second-claim: true
 # 使用领地核心所需的最低活跃度
 core-use-min-activity: 20
 
+flight:
+  # 离开可飞行领地后保留当前飞行的缓冲刻数
+  exit-grace-ticks: 20
+
 database:
   file: coreclaim.db
+  # sqlite keeps the old single-server file database. mysql enables shared MySQL/MariaDB storage.
+  type: sqlite
+  sqlite:
+    file: coreclaim.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: coreclaim
+    username: root
+    password: ""
+    use-ssl: false
+    pool-size: 5
+  migration:
+    # Only used when database.type is mysql. The target MySQL database must be empty.
+    enabled: false
+    source-sqlite-file: coreclaim.db
 
 # 领地核心物品
 # 当前项目仍沿用 claim-core 作为主配置节点，同时兼容读取 core-tool.name / core-tool.lore

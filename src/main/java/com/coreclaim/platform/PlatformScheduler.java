@@ -98,6 +98,27 @@ public final class PlatformScheduler {
         }
     }
 
+    public TaskHandle runPlayerLater(Player player, Runnable runnable, long delayTicks) {
+        if (!playerSchedulerAvailable) {
+            return runBukkitLater(runnable, delayTicks);
+        }
+
+        try {
+            Object entityScheduler = player.getClass().getMethod("getScheduler").invoke(player);
+            Object scheduledTask = entityScheduler.getClass().getMethod(
+                "runDelayed",
+                org.bukkit.plugin.Plugin.class,
+                Consumer.class,
+                Runnable.class,
+                long.class
+            ).invoke(entityScheduler, plugin, (Consumer<Object>) ignored -> runnable.run(), null, delayTicks);
+            return () -> cancelReflectively(scheduledTask);
+        } catch (Throwable exception) {
+            disablePlayerScheduler(exception);
+            return runBukkitLater(runnable, delayTicks);
+        }
+    }
+
     private boolean detectFolia() {
         try {
             plugin.getServer().getClass().getMethod("getGlobalRegionScheduler");

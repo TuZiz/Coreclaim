@@ -20,3 +20,12 @@ permissions:
   coreclaim.admin:
     description: 管理 Claim
     default: op
+  coreclaim.transfer:
+    description: 转让自己的领地
+    default: true
+  coreclaim.sell:
+    description: 挂牌出售自己的领地
+    default: true
+  coreclaim.market:
+    description: 打开领地出售市场
+    default: true

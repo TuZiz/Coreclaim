@@ -52,7 +52,7 @@ public final class OnlineRewardService {
         }
 
         saveCounter++;
-        if (saveCounter >= 5) {
+        if (!profileService.usesSharedDatabase() && saveCounter >= 5) {
             saveCounter = 0;
             profileService.save();
         }
@@ -61,6 +61,9 @@ public final class OnlineRewardService {
     private void tickPlayer(Player player) {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
         profile.addOnlineMinutes(1);
+        if (profileService.usesSharedDatabase()) {
+            profileService.saveProfile(profile);
+        }
         int current = profile.onlineMinutes();
         int requiredMinutes = plugin.settings().starterRewardMinutes();
 
@@ -80,7 +83,7 @@ public final class OnlineRewardService {
             profile.setStarterCoreGranted(true);
             claimCoreFactory.giveStarterCore(player, 1);
             player.sendMessage(plugin.message("claim-core-rewarded", "{minutes}", String.valueOf(requiredMinutes)));
-            profileService.save();
+            profileService.saveProfile(profile);
             return;
         }
 
@@ -94,6 +97,9 @@ public final class OnlineRewardService {
             return false;
         }
         if (!profile.starterCoreGranted()) {
+            return false;
+        }
+        if (profile.starterCoreReclaimed()) {
             return false;
         }
         if (claimService.countClaims(player.getUniqueId()) > 0) {

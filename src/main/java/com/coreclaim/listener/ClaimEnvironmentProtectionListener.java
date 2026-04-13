@@ -12,6 +12,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
@@ -89,6 +90,13 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityChangeBlock(EntityChangeBlockEvent event) {
+        if (event.getEntity() instanceof FallingBlock fallingBlock) {
+            Location source = fallingBlockSource(fallingBlock);
+            if (crossesClaimBoundary(source, event.getBlock().getLocation())) {
+                event.setCancelled(true);
+            }
+            return;
+        }
         if (claimService.findClaim(event.getBlock().getLocation()).isPresent()) {
             event.setCancelled(true);
         }
@@ -205,6 +213,17 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     private int claimId(Optional<Claim> claim) {
         return claim.map(Claim::id).orElse(-1);
+    }
+
+    private Location fallingBlockSource(FallingBlock fallingBlock) {
+        try {
+            Object result = fallingBlock.getClass().getMethod("getSourceLoc").invoke(fallingBlock);
+            if (result instanceof Location location) {
+                return location;
+            }
+        } catch (ReflectiveOperationException ignored) {
+        }
+        return fallingBlock.getLocation();
     }
 
     private Location inventoryLocation(Inventory inventory) {

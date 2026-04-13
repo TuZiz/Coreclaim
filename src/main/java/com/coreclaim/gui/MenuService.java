@@ -6,9 +6,11 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.model.ClaimPermission;
+import com.coreclaim.model.ClaimSaleListing;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimInputService;
+import com.coreclaim.service.ClaimMarketService;
 import com.coreclaim.service.ClaimSelectionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ProfileService;
@@ -44,6 +46,7 @@ public final class MenuService {
     private final RemovalConfirmationService removalConfirmationService;
     private final ClaimInputService claimInputService;
     private final ClaimSelectionService claimSelectionService;
+    private final ClaimMarketService claimMarketService;
 
     public MenuService(
         CoreClaimPlugin plugin,
@@ -52,7 +55,8 @@ public final class MenuService {
         ClaimActionService claimActionService,
         RemovalConfirmationService removalConfirmationService,
         ClaimInputService claimInputService,
-        ClaimSelectionService claimSelectionService
+        ClaimSelectionService claimSelectionService,
+        ClaimMarketService claimMarketService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -61,6 +65,7 @@ public final class MenuService {
         this.removalConfirmationService = removalConfirmationService;
         this.claimInputService = claimInputService;
         this.claimSelectionService = claimSelectionService;
+        this.claimMarketService = claimMarketService;
     }
 
     public void openMainMenu(Player player) {
@@ -173,7 +178,96 @@ public final class MenuService {
         ));
         inventory.setItem(slot("core", "hide"), configuredItem("core", "hide"));
         inventory.setItem(slot("core", "teleport"), configuredItem("core", "teleport"));
+        if (hasItem("core", "sell")) {
+            ClaimSaleListing listing = claimMarketService.listing(claim.id());
+            inventory.setItem(slot("core", "sell"), configuredItem("core", "sell",
+                "{name}", claim.name(),
+                "{sale_status}", listing == null ? "&a未挂牌" : "&e已挂牌",
+                "{sale_price}", listing == null ? "--" : ClaimActionService.formatMoney(listing.price())
+            ));
+        }
         inventory.setItem(slot("core", "close"), configuredItem("core", "close"));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimMarketMenu(Player player, int page) {
+        ClaimMarketHolder holder = new ClaimMarketHolder(Math.max(0, page));
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-market"), menuTitle("claim-market"));
+        holder.inventory = inventory;
+        fill(inventory, "claim-market", "filler");
+
+        List<ClaimSaleListing> listings = claimMarketService.listings();
+        List<Integer> entrySlots = slots("claim-market", "entry");
+        if (entrySlots.isEmpty()) {
+            warnMissingMarketEntrySlots(player);
+            return;
+        }
+        int start = holder.page * entrySlots.size();
+        int end = Math.min(listings.size(), start + entrySlots.size());
+        for (int index = start; index < end; index++) {
+            ClaimSaleListing listing = listings.get(index);
+            Claim claim = claimService.findClaimByIdOrLoad(listing.claimId()).orElse(null);
+            if (claim == null) {
+                continue;
+            }
+            inventory.setItem(entrySlots.get(index - start), configuredItem("claim-market", "entry",
+                "{name}", claim.name(),
+                "{seller}", listing.sellerName(),
+                "{world}", claim.world(),
+                "{x}", String.valueOf(claim.centerX()),
+                "{y}", String.valueOf(claim.centerY()),
+                "{z}", String.valueOf(claim.centerZ()),
+                "{width}", String.valueOf(claim.width()),
+                "{depth}", String.valueOf(claim.depth()),
+                "{area}", String.valueOf(claim.area()),
+                "{price}", ClaimActionService.formatMoney(listing.price())
+            ));
+        }
+        if (listings.isEmpty() && hasItem("claim-market", "empty")) {
+            inventory.setItem(slot("claim-market", "empty"), configuredItem("claim-market", "empty"));
+        }
+
+        inventory.setItem(slot("claim-market", "refresh"), configuredItem("claim-market", "refresh", "{total}", String.valueOf(listings.size())));
+        inventory.setItem(slot("claim-market", "prev-page"), configuredItem("claim-market", "prev-page"));
+        inventory.setItem(slot("claim-market", "back"), configuredItem("claim-market", "back"));
+        inventory.setItem(slot("claim-market", "next-page"), configuredItem("claim-market", "next-page"));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimSaleConfirmMenu(Player player, ClaimSaleListing listing, int returnPage) {
+        Claim claim = claimService.findClaimByIdOrLoad(listing.claimId()).orElse(null);
+        if (claim == null) {
+            player.sendMessage(plugin.message("claim-not-found"));
+            openClaimMarketMenu(player, returnPage);
+            return;
+        }
+        SaleConfirmHolder holder = new SaleConfirmHolder(listing.claimId(), Math.max(0, returnPage));
+        Inventory inventory = Bukkit.createInventory(
+            holder,
+            menuSize("claim-sale-confirm"),
+            menuTitle("claim-sale-confirm", "{name}", claim.name())
+        );
+        holder.inventory = inventory;
+        fill(inventory, "claim-sale-confirm", "filler");
+
+        inventory.setItem(slot("claim-sale-confirm", "info"), configuredItem("claim-sale-confirm", "info",
+            "{name}", claim.name(),
+            "{seller}", listing.sellerName(),
+            "{world}", claim.world(),
+            "{x}", String.valueOf(claim.centerX()),
+            "{y}", String.valueOf(claim.centerY()),
+            "{z}", String.valueOf(claim.centerZ()),
+            "{width}", String.valueOf(claim.width()),
+            "{depth}", String.valueOf(claim.depth()),
+            "{area}", String.valueOf(claim.area()),
+            "{price}", ClaimActionService.formatMoney(listing.price())
+        ));
+        inventory.setItem(slot("claim-sale-confirm", "confirm"), configuredItem("claim-sale-confirm", "confirm",
+            "{name}", claim.name(),
+            "{seller}", listing.sellerName(),
+            "{price}", ClaimActionService.formatMoney(listing.price())
+        ));
+        inventory.setItem(slot("claim-sale-confirm", "cancel"), configuredItem("claim-sale-confirm", "cancel"));
         player.openInventory(inventory);
     }
 
@@ -248,7 +342,8 @@ public final class MenuService {
             "{perm_redstone}", stateText(claim.permission(ClaimPermission.REDSTONE)),
             "{perm_explosion}", stateText(claim.permission(ClaimPermission.EXPLOSION)),
             "{perm_bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
-            "{perm_teleport}", stateText(claim.permission(ClaimPermission.TELEPORT))
+            "{perm_teleport}", stateText(claim.permission(ClaimPermission.TELEPORT)),
+            "{perm_flight}", stateText(claim.permission(ClaimPermission.FLIGHT))
         ));
         inventory.setItem(slot("claim-permissions", "perm-place"), configuredItem("claim-permissions", "perm-place", "{state}", stateText(claim.permission(ClaimPermission.PLACE))));
         inventory.setItem(slot("claim-permissions", "perm-break"), configuredItem("claim-permissions", "perm-break", "{state}", stateText(claim.permission(ClaimPermission.BREAK))));
@@ -258,6 +353,9 @@ public final class MenuService {
         inventory.setItem(slot("claim-permissions", "perm-explosion"), configuredItem("claim-permissions", "perm-explosion", "{state}", stateText(claim.permission(ClaimPermission.EXPLOSION))));
         inventory.setItem(slot("claim-permissions", "perm-bucket"), configuredItem("claim-permissions", "perm-bucket", "{state}", stateText(claim.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("claim-permissions", "perm-teleport"), configuredItem("claim-permissions", "perm-teleport", "{state}", stateText(claim.permission(ClaimPermission.TELEPORT))));
+        if (hasItem("claim-permissions", "perm-flight")) {
+            inventory.setItem(slot("claim-permissions", "perm-flight"), configuredItem("claim-permissions", "perm-flight", "{state}", stateText(claim.permission(ClaimPermission.FLIGHT))));
+        }
         inventory.setItem(slot("claim-permissions", "disable-all"), configuredItem("claim-permissions", "disable-all"));
         inventory.setItem(slot("claim-permissions", "back"), configuredItem("claim-permissions", "back"));
         player.openInventory(inventory);
@@ -284,7 +382,8 @@ public final class MenuService {
             "{perm_redstone}", stateText(settings.permission(ClaimPermission.REDSTONE)),
             "{perm_explosion}", stateText(settings.permission(ClaimPermission.EXPLOSION)),
             "{perm_bucket}", stateText(settings.permission(ClaimPermission.BUCKET)),
-            "{perm_teleport}", stateText(settings.permission(ClaimPermission.TELEPORT))
+            "{perm_teleport}", stateText(settings.permission(ClaimPermission.TELEPORT)),
+            "{perm_flight}", stateText(settings.permission(ClaimPermission.FLIGHT))
         ));
         inventory.setItem(slot("trust-member-permissions", "perm-place"), configuredItem("trust-member-permissions", "perm-place", "{state}", stateText(settings.permission(ClaimPermission.PLACE))));
         inventory.setItem(slot("trust-member-permissions", "perm-break"), configuredItem("trust-member-permissions", "perm-break", "{state}", stateText(settings.permission(ClaimPermission.BREAK))));
@@ -300,6 +399,9 @@ public final class MenuService {
         }
         inventory.setItem(slot("trust-member-permissions", "perm-bucket"), configuredItem("trust-member-permissions", "perm-bucket", "{state}", stateText(settings.permission(ClaimPermission.BUCKET))));
         inventory.setItem(slot("trust-member-permissions", "perm-teleport"), configuredItem("trust-member-permissions", "perm-teleport", "{state}", stateText(settings.permission(ClaimPermission.TELEPORT))));
+        if (hasItem("trust-member-permissions", "perm-flight")) {
+            inventory.setItem(slot("trust-member-permissions", "perm-flight"), configuredItem("trust-member-permissions", "perm-flight", "{state}", stateText(settings.permission(ClaimPermission.FLIGHT))));
+        }
         inventory.setItem(slot("trust-member-permissions", "back"), configuredItem("trust-member-permissions", "back"));
         player.openInventory(inventory);
     }
@@ -385,6 +487,10 @@ public final class MenuService {
             handleTrustMemberPermissionMenu(player, permissionHolder, slot);
         } else if (holder instanceof SelectionCreateHolder selectionCreateHolder) {
             handleSelectionCreateMenu(player, selectionCreateHolder, slot);
+        } else if (holder instanceof ClaimMarketHolder marketHolder) {
+            handleClaimMarketMenu(player, marketHolder, slot, event.isRightClick());
+        } else if (holder instanceof SaleConfirmHolder saleConfirmHolder) {
+            handleSaleConfirmMenu(player, saleConfirmHolder, slot);
         }
     }
 
@@ -525,6 +631,19 @@ public final class MenuService {
         if (slot == slot("core", "teleport")) {
             playConfiguredSound(player, "core", "teleport");
             claimActionService.teleportToClaim(player, claim);
+            return;
+        }
+        if (hasItem("core", "sell") && slot == slot("core", "sell")) {
+            playConfiguredSound(player, "core", "sell");
+            if (rightClick) {
+                ClaimSaleListing listing = claimMarketService.listing(claim.id());
+                if (listing != null) {
+                    claimMarketService.cancelListing(player, claim);
+                    openCoreMenu(player, claim);
+                    return;
+                }
+            }
+            openClaimMarketMenu(player, 0);
             return;
         }
         if (slot == slot("core", "close")) {
@@ -670,6 +789,10 @@ public final class MenuService {
             togglePermission(player, claim, ClaimPermission.TELEPORT, "perm-teleport");
             return;
         }
+        if (hasItem("claim-permissions", "perm-flight") && slot == slot("claim-permissions", "perm-flight")) {
+            togglePermission(player, claim, ClaimPermission.FLIGHT, "perm-flight");
+            return;
+        }
         if (slot == slot("claim-permissions", "disable-all")) {
             setAllPermissions(player, claim, false, "disable-all");
             return;
@@ -720,9 +843,88 @@ public final class MenuService {
             toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.TELEPORT, "perm-teleport");
             return;
         }
+        if (hasItem("trust-member-permissions", "perm-flight") && slot == slot("trust-member-permissions", "perm-flight")) {
+            toggleMemberPermission(player, claim, holder.memberId, ClaimPermission.FLIGHT, "perm-flight");
+            return;
+        }
         if (slot == slot("trust-member-permissions", "back")) {
             playConfiguredSound(player, "trust-member-permissions", "back");
             openTrustMenu(player, claim, 0);
+        }
+    }
+
+    private void handleClaimMarketMenu(Player player, ClaimMarketHolder holder, int slot, boolean rightClick) {
+        List<ClaimSaleListing> listings = claimMarketService.listings();
+        List<Integer> entrySlots = slots("claim-market", "entry");
+        if (entrySlots.isEmpty()) {
+            warnMissingMarketEntrySlots(player);
+            return;
+        }
+        int slotIndex = entrySlots.indexOf(slot);
+        int index = holder.page * entrySlots.size() + slotIndex;
+        if (slotIndex >= 0 && index < listings.size()) {
+            ClaimSaleListing listing = listings.get(index);
+            Claim claim = claimService.findClaimByIdOrLoad(listing.claimId()).orElse(null);
+            if (claim == null) {
+                player.sendMessage(plugin.message("sale-listing-missing"));
+                openClaimMarketMenu(player, holder.page);
+                return;
+            }
+            playConfiguredSound(player, "claim-market", "entry");
+            if (rightClick) {
+                player.sendMessage(plugin.message(
+                    "market-listing-detail",
+                    "{name}", claim.name(),
+                    "{seller}", listing.sellerName(),
+                    "{price}", ClaimActionService.formatMoney(listing.price()),
+                    "{world}", claim.world(),
+                    "{x}", String.valueOf(claim.centerX()),
+                    "{z}", String.valueOf(claim.centerZ())
+                ));
+                return;
+            }
+            openClaimSaleConfirmMenu(player, listing, holder.page);
+            return;
+        }
+        if (slot == slot("claim-market", "refresh")) {
+            playConfiguredSound(player, "claim-market", "refresh");
+            openClaimMarketMenu(player, holder.page);
+            return;
+        }
+        if (slot == slot("claim-market", "prev-page") && holder.page > 0) {
+            playConfiguredSound(player, "claim-market", "prev-page");
+            openClaimMarketMenu(player, holder.page - 1);
+            return;
+        }
+        if (slot == slot("claim-market", "back")) {
+            playConfiguredSound(player, "claim-market", "back");
+            openMainMenu(player);
+            return;
+        }
+        if (slot == slot("claim-market", "next-page") && (holder.page + 1) * entrySlots.size() < listings.size()) {
+            playConfiguredSound(player, "claim-market", "next-page");
+            openClaimMarketMenu(player, holder.page + 1);
+        }
+    }
+
+    private void warnMissingMarketEntrySlots(Player player) {
+        player.sendMessage(plugin.message("market-config-invalid"));
+        plugin.getLogger().warning("The claim-market GUI has no configured entry slots. Check gui/claim-market.yml items.entry.");
+    }
+
+    private void handleSaleConfirmMenu(Player player, SaleConfirmHolder holder, int slot) {
+        if (slot == slot("claim-sale-confirm", "confirm")) {
+            playConfiguredSound(player, "claim-sale-confirm", "confirm");
+            if (claimMarketService.purchase(player, holder.claimId)) {
+                player.closeInventory();
+            } else {
+                openClaimMarketMenu(player, holder.returnPage);
+            }
+            return;
+        }
+        if (slot == slot("claim-sale-confirm", "cancel")) {
+            playConfiguredSound(player, "claim-sale-confirm", "cancel");
+            openClaimMarketMenu(player, holder.returnPage);
         }
     }
 
@@ -1068,5 +1270,19 @@ public final class MenuService {
     private static final class SelectionCreateHolder extends BaseHolder {
         private final String claimName;
         private SelectionCreateHolder(String claimName) { this.claimName = claimName; }
+    }
+
+    private static final class ClaimMarketHolder extends BaseHolder {
+        private final int page;
+        private ClaimMarketHolder(int page) { this.page = page; }
+    }
+
+    private static final class SaleConfirmHolder extends BaseHolder {
+        private final int claimId;
+        private final int returnPage;
+        private SaleConfirmHolder(int claimId, int returnPage) {
+            this.claimId = claimId;
+            this.returnPage = returnPage;
+        }
     }
 }

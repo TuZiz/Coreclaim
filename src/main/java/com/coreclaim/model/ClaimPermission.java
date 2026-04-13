@@ -8,5 +8,6 @@ public enum ClaimPermission {
     REDSTONE,
     EXPLOSION,
     BUCKET,
-    TELEPORT
+    TELEPORT,
+    FLIGHT
 }

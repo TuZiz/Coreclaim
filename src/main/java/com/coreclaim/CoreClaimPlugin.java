@@ -21,8 +21,10 @@ import com.coreclaim.listener.SelectionToolListener;
 import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimMarketService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.service.ClaimTransferService;
 import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ExplosionAuthorizationService;
@@ -57,6 +59,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private ClaimVisualService claimVisualService;
     private ClaimSelectionService claimSelectionService;
     private ClaimInputService claimInputService;
+    private ClaimTransferService claimTransferService;
+    private ClaimMarketService claimMarketService;
     private MenuService menuService;
     private OnlineRewardService onlineRewardService;
     private RemovalConfirmationService removalConfirmationService;
@@ -83,9 +87,20 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook);
         this.claimSelectionService = new ClaimSelectionService(this, claimService, profileService, claimVisualService, hologramService, economyHook);
         this.claimInputService = new ClaimInputService(this, claimService);
+        this.claimTransferService = new ClaimTransferService(this, claimService, profileService);
+        this.claimMarketService = new ClaimMarketService(this, databaseManager, claimService, profileService, economyHook);
         this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
         this.explosionAuthorizationService = new ExplosionAuthorizationService();
-        this.menuService = new MenuService(this, claimService, profileService, claimActionService, removalConfirmationService, claimInputService, claimSelectionService);
+        this.menuService = new MenuService(
+            this,
+            claimService,
+            profileService,
+            claimActionService,
+            removalConfirmationService,
+            claimInputService,
+            claimSelectionService,
+            claimMarketService
+        );
         this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory);
 
         getServer().getPluginManager().registerEvents(
@@ -125,7 +140,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
                 claimVisualService,
                 claimSelectionService,
                 menuService,
-                removalConfirmationService
+                removalConfirmationService,
+                claimTransferService,
+                claimMarketService
             );
             command.setExecutor(executor);
             command.setTabCompleter(executor);
@@ -137,7 +154,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
         hologramService.refreshAll(claimService);
         onlineRewardService.start();
-        getLogger().info(message("database-ready", "{file}", databaseManager.databaseFile().getName()));
+        getLogger().info(message("database-ready", "{file}", databaseManager.displayName()));
         getLogger().info("CoreClaim enabled in " + (platformScheduler.isFolia() ? "Folia" : "Spigot/Bukkit") + " mode.");
     }
 
@@ -145,6 +162,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
     public void onDisable() {
         if (onlineRewardService != null) {
             onlineRewardService.stop();
+        }
+        if (claimTransferService != null) {
+            claimTransferService.clear();
         }
         if (profileService != null) {
             profileService.save();
@@ -239,5 +259,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         menuResources.put("trust-member-permissions", new ResourceConfig(this, "gui/trust-member-permissions.yml"));
         menuResources.put("selection-create", new ResourceConfig(this, "gui/selection-create.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
+        menuResources.put("claim-market", new ResourceConfig(this, "gui/claim-market.yml"));
+        menuResources.put("claim-sale-confirm", new ResourceConfig(this, "gui/claim-sale-confirm.yml"));
     }
 }

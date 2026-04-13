@@ -132,7 +132,7 @@ public final class ClaimProtectionListener implements Listener {
             return;
         }
         Material clickedType = event.getClickedBlock().getType();
-        ClaimPermission requiredPermission = requiredPermissionForBlockInteract(clickedType);
+        ClaimPermission requiredPermission = requiredPermissionForBlockInteract(clickedType, event.getItem());
         boolean allowListed = plugin.settings().isAllowedInteract(clickedType)
             && !(plugin.settings().strictRedstoneInteract() && plugin.settings().isAlwaysProtectedInteract(clickedType));
         if (claim.isPresent() && allowListed) {
@@ -593,7 +593,10 @@ public final class ClaimProtectionListener implements Listener {
             || material == Material.TARGET;
     }
 
-    private ClaimPermission requiredPermissionForBlockInteract(Material material) {
+    private ClaimPermission requiredPermissionForBlockInteract(Material material, ItemStack item) {
+        if (isAxe(item) && isStrippableWood(material)) {
+            return ClaimPermission.BREAK;
+        }
         if (isSpecialExplosiveMaterial(material)) {
             return ClaimPermission.EXPLOSION;
         }
@@ -604,6 +607,22 @@ public final class ClaimProtectionListener implements Listener {
             return ClaimPermission.REDSTONE;
         }
         return ClaimPermission.INTERACT;
+    }
+
+    private boolean isAxe(ItemStack item) {
+        return item != null && item.getType().name().endsWith("_AXE");
+    }
+
+    private boolean isStrippableWood(Material material) {
+        String name = material.name();
+        if (name.startsWith("STRIPPED_")) {
+            return false;
+        }
+        return name.endsWith("_LOG")
+            || name.endsWith("_WOOD")
+            || name.endsWith("_STEM")
+            || name.endsWith("_HYPHAE")
+            || name.equals("BAMBOO_BLOCK");
     }
 
     private ClaimPermission requiredPermissionForEntityInteract(Player player, Entity entity) {

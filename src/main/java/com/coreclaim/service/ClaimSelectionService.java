@@ -219,6 +219,10 @@ public final class ClaimSelectionService {
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return false;
         }
+        if (claimService.isClaimNameTaken(name)) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return false;
+        }
 
         if (preview.cost() > 0D) {
             if (!economyHook.available()) {
@@ -235,18 +239,27 @@ public final class ClaimSelectionService {
             }
         }
 
-        Claim claim = claimService.createClaimFromBounds(
-            player.getUniqueId(),
-            player.getName(),
-            name,
-            preview.coreLocation(),
-            preview.minY(),
-            preview.maxY(),
-            preview.east(),
-            preview.south(),
-            preview.west(),
-            preview.north()
-        );
+        Claim claim;
+        try {
+            claim = claimService.createClaimFromBounds(
+                player.getUniqueId(),
+                player.getName(),
+                name,
+                preview.coreLocation(),
+                preview.minY(),
+                preview.maxY(),
+                preview.east(),
+                preview.south(),
+                preview.west(),
+                preview.north()
+            );
+        } catch (IllegalArgumentException exception) {
+            if (preview.cost() > 0D && economyHook.available()) {
+                economyHook.deposit(player, preview.cost());
+            }
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return false;
+        }
         preview.coreLocation().getBlock().setType(plugin.settings().coreMaterial(), false);
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);

@@ -6,10 +6,12 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.PlayerProfile;
+import java.util.logging.Level;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -86,6 +88,11 @@ public final class PendingClaimService {
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return null;
         }
+        if (claimService.isClaimNameTaken(name)) {
+            refundCore(pending);
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return null;
+        }
 
         Location coreLocation = pending.coreLocation();
         ValidationResult validation = validateCreation(player, coreLocation, pending.starterCore());
@@ -94,15 +101,13 @@ public final class PendingClaimService {
             player.sendMessage(validation.message());
             return null;
         }
+        ClaimGroup group = validation.group();
+        double createCost = pending.starterCore() ? 0D : claimArea(group.initialDistance()) * group.coreCreatePricePerBlock();
         if (!coreLocation.getBlock().getType().isAir()) {
             refundCore(pending);
             player.sendMessage(plugin.message("claim-core-blocked"));
             return null;
         }
-        coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
-
-        ClaimGroup group = validation.group();
-        double createCost = pending.starterCore() ? 0D : claimArea(group.initialDistance()) * group.coreCreatePricePerBlock();
         if (createCost > 0D) {
             if (!economyHook.available()) {
                 refundCore(pending);
@@ -120,17 +125,52 @@ public final class PendingClaimService {
                 return null;
             }
         }
-        Claim claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
-        hologramService.spawnClaimHologram(claim);
-        claimVisualService.showClaim(player, claim);
-        player.sendMessage(plugin.message(
-            "claim-name-created",
-            "{name}", claim.name(),
-            "{width}", String.valueOf(claim.width()),
-            "{depth}", String.valueOf(claim.depth()),
-            "{cost}", ClaimActionService.formatMoney(createCost)
-        ));
-        return claim;
+        Claim claim = null;
+        coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
+        try {
+            claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
+            hologramService.spawnClaimHologram(claim);
+            claimVisualService.showClaim(player, claim);
+            player.sendMessage(plugin.message(
+                "claim-name-created",
+                "{name}", claim.name(),
+                "{width}", String.valueOf(claim.width()),
+                "{depth}", String.valueOf(claim.depth()),
+                "{cost}", ClaimActionService.formatMoney(createCost)
+            ));
+            return claim;
+        } catch (RuntimeException exception) {
+            rollbackFailedClaimCreation(claim, coreLocation, pending, player, createCost);
+            if (exception instanceof IllegalArgumentException illegalArgumentException
+                && "claim-name-exists".equals(illegalArgumentException.getMessage())) {
+                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            } else {
+                plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
+                player.sendMessage(plugin.message("claim-create-failed"));
+            }
+            return null;
+        }
+    }
+
+    private void rollbackFailedClaimCreation(Claim claim, Location coreLocation, PendingClaim pending, Player player, double createCost) {
+        if (claim != null) {
+            claimService.removeClaim(claim);
+        } else {
+            clearPlacedCoreBlock(coreLocation);
+        }
+        if (createCost > 0D && economyHook.available()) {
+            economyHook.deposit(player, createCost);
+        }
+        refundCore(pending);
+    }
+
+    private void clearPlacedCoreBlock(Location coreLocation) {
+        if (coreLocation == null || coreLocation.getWorld() == null) {
+            return;
+        }
+        if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
+            coreLocation.getBlock().setType(Material.AIR, false);
+        }
     }
 
     public void cancelPendingClaim(Player player, boolean notify) {

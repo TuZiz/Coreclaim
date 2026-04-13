@@ -5,10 +5,14 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.storage.DatabaseManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +28,7 @@ public final class ClaimService {
     private final DatabaseManager databaseManager;
     private final ProfileService profileService;
     private final Map<Integer, Claim> claims = new ConcurrentHashMap<>();
+    private volatile Map<String, Map<Long, List<Claim>>> claimChunkIndex = Map.of();
     private final Object mutationLock = new Object();
 
     public ClaimService(CoreClaimPlugin plugin, DatabaseManager databaseManager, ProfileService profileService) {
@@ -34,13 +39,49 @@ public final class ClaimService {
     }
 
     public Optional<Claim> findClaim(Location location) {
-        return claims.values().stream()
+        if (location == null || location.getWorld() == null) {
+            return Optional.empty();
+        }
+        Map<Long, List<Claim>> worldIndex = claimChunkIndex.get(location.getWorld().getName());
+        if (worldIndex == null || worldIndex.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Claim> candidates = worldIndex.get(chunkKey(location.getBlockX() >> 4, location.getBlockZ() >> 4));
+        if (candidates == null || candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        return candidates.stream()
             .filter(claim -> claim.contains(location))
             .min(Comparator.comparingLong(Claim::area));
     }
 
     public Optional<Claim> findClaimById(int id) {
         return Optional.ofNullable(claims.get(id));
+    }
+
+    public Optional<Claim> findClaimByIdOrLoad(int id) {
+        Claim claim = claims.get(id);
+        if (claim != null) {
+            return Optional.of(claim);
+        }
+        return refreshClaimFromDatabase(id);
+    }
+
+    public Optional<Claim> refreshClaimFromDatabase(int id) {
+        synchronized (mutationLock) {
+            Optional<Claim> loadedClaim = loadClaimFromDatabase(id);
+            Claim previousClaim = claims.get(id);
+            if (loadedClaim.isPresent()) {
+                claims.put(id, loadedClaim.get());
+                rebuildClaimChunkIndex();
+                return loadedClaim;
+            }
+            if (previousClaim != null) {
+                claims.remove(id);
+                rebuildClaimChunkIndex();
+            }
+            return Optional.empty();
+        }
     }
 
     public List<Claim> claimsOf(UUID owner) {
@@ -60,6 +101,37 @@ public final class ClaimService {
 
     public List<Claim> allClaims() {
         return new ArrayList<>(claims.values());
+    }
+
+    public List<Claim> findClaimsByName(String rawName) {
+        String normalizedName = normalizeClaimName(rawName);
+        if (normalizedName == null) {
+            return List.of();
+        }
+        return claims.values().stream()
+            .filter(claim -> normalizedName.equals(normalizeClaimName(claim.name())))
+            .sorted(Comparator.comparingInt(Claim::id))
+            .toList();
+    }
+
+    public boolean isClaimNameTaken(String rawName) {
+        return isClaimNameTaken(rawName, null);
+    }
+
+    public boolean isClaimNameTaken(String rawName, Integer excludedClaimId) {
+        String normalizedName = normalizeClaimName(rawName);
+        if (normalizedName == null) {
+            return false;
+        }
+        for (Claim claim : claims.values()) {
+            if (excludedClaimId != null && excludedClaimId == claim.id()) {
+                continue;
+            }
+            if (normalizedName.equals(normalizeClaimName(claim.name()))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean overlaps(String world, int minX, int maxX, int minZ, int maxZ, Integer ignoredId) {
@@ -138,11 +210,15 @@ public final class ClaimService {
         if (claim.isTrusted(playerId)) {
             return claim.memberPermission(playerId, permission, claim.permission(permission));
         }
-        return profileService.isGloballyTrusted(claim.owner(), playerId);
+        if (profileService.isGloballyTrusted(claim.owner(), playerId)) {
+            return claim.permission(permission);
+        }
+        return false;
     }
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
         synchronized (mutationLock) {
+            String sanitizedName = validateAvailableClaimName(name, null);
             int minY = center.getWorld() == null ? -64 : center.getWorld().getMinHeight();
             int maxY = center.getWorld() == null ? 319 : center.getWorld().getMaxHeight() - 1;
             long createdAt = Instant.now().getEpochSecond();
@@ -151,13 +227,13 @@ public final class ClaimService {
                 INSERT INTO claims (
                     owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 statement -> {
                     statement.setString(1, owner.toString());
                     statement.setString(2, ownerName);
-                    statement.setString(3, name);
+                    statement.setString(3, sanitizedName);
                     statement.setInt(4, 1);
                     statement.setString(5, center.getWorld().getName());
                     statement.setInt(6, center.getBlockX());
@@ -181,8 +257,9 @@ public final class ClaimService {
                     statement.setInt(24, 0);
                     statement.setInt(25, 0);
                     statement.setInt(26, 0);
-                    statement.setLong(27, 0L);
-                    statement.setLong(28, createdAt);
+                    statement.setInt(27, 1);
+                    statement.setLong(28, 0L);
+                    statement.setLong(29, createdAt);
                 }
             );
 
@@ -190,7 +267,7 @@ public final class ClaimService {
                 generatedId,
                 owner,
                 ownerName,
-                name,
+                sanitizedName,
                 center.getWorld().getName(),
                 center.getBlockX(),
                 center.getBlockY(),
@@ -214,28 +291,31 @@ public final class ClaimService {
                 false,
                 false,
                 false,
+                true,
                 0L
             );
             claims.put(claim.id(), claim);
+            rebuildClaimChunkIndex();
             return claim;
         }
     }
 
     public Claim createClaimFromBounds(UUID owner, String ownerName, String name, Location coreLocation, int minY, int maxY, int east, int south, int west, int north) {
         synchronized (mutationLock) {
+            String sanitizedName = validateAvailableClaimName(name, null);
             long createdAt = Instant.now().getEpochSecond();
             int generatedId = (int) databaseManager.insertAndReturnKey(
                 """
                 INSERT INTO claims (
                     owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 statement -> {
                     statement.setString(1, owner.toString());
                     statement.setString(2, ownerName);
-                    statement.setString(3, name);
+                    statement.setString(3, sanitizedName);
                     statement.setInt(4, 1);
                     statement.setString(5, coreLocation.getWorld().getName());
                     statement.setInt(6, coreLocation.getBlockX());
@@ -259,8 +339,9 @@ public final class ClaimService {
                     statement.setInt(24, 0);
                     statement.setInt(25, 0);
                     statement.setInt(26, 0);
-                    statement.setLong(27, 0L);
-                    statement.setLong(28, createdAt);
+                    statement.setInt(27, 1);
+                    statement.setLong(28, 0L);
+                    statement.setLong(29, createdAt);
                 }
             );
 
@@ -268,7 +349,7 @@ public final class ClaimService {
                 generatedId,
                 owner,
                 ownerName,
-                name,
+                sanitizedName,
                 coreLocation.getWorld().getName(),
                 coreLocation.getBlockX(),
                 coreLocation.getBlockY(),
@@ -292,9 +373,11 @@ public final class ClaimService {
                 false,
                 false,
                 false,
+                true,
                 0L
             );
             claims.put(claim.id(), claim);
+            rebuildClaimChunkIndex();
             return claim;
         }
     }
@@ -315,6 +398,7 @@ public final class ClaimService {
                     statement.setInt(7, claim.id());
                 }
             );
+            rebuildClaimChunkIndex();
         }
     }
 
@@ -333,11 +417,12 @@ public final class ClaimService {
 
     public void renameClaim(Claim claim, String name) {
         synchronized (mutationLock) {
-            claim.setName(name);
+            String sanitizedName = validateAvailableClaimName(name, claim.id());
+            claim.setName(sanitizedName);
             databaseManager.update(
                 "UPDATE claims SET name = ? WHERE id = ?",
                 statement -> {
-                    statement.setString(1, name);
+                    statement.setString(1, sanitizedName);
                     statement.setInt(2, claim.id());
                 }
             );
@@ -382,6 +467,7 @@ public final class ClaimService {
                 case EXPLOSION -> "allow_explosion";
                 case BUCKET -> "allow_bucket";
                 case TELEPORT -> "allow_teleport";
+                case FLIGHT -> "allow_flight";
             };
             databaseManager.update(
                 "UPDATE claims SET " + column + " = ? WHERE id = ?",
@@ -401,7 +487,7 @@ public final class ClaimService {
             ClaimMemberSettings settings = createMemberSettings(claim);
             claim.setMemberSettings(memberId, settings);
             databaseManager.update(
-                "INSERT OR IGNORE INTO claim_members (claim_id, player_uuid) VALUES (?, ?)",
+                databaseManager.insertIgnoreSql("claim_members", "claim_id, player_uuid", "?, ?"),
                 statement -> {
                     statement.setInt(1, claim.id());
                     statement.setString(2, memberId.toString());
@@ -458,7 +544,7 @@ public final class ClaimService {
                 }
             );
             databaseManager.update(
-                "INSERT OR IGNORE INTO claim_blacklist (claim_id, player_uuid) VALUES (?, ?)",
+                databaseManager.insertIgnoreSql("claim_blacklist", "claim_id, player_uuid", "?, ?"),
                 statement -> {
                     statement.setInt(1, claim.id());
                     statement.setString(2, memberId.toString());
@@ -505,9 +591,63 @@ public final class ClaimService {
         }
     }
 
+    public boolean transferClaim(Claim claim, UUID newOwner, String newOwnerName) {
+        if (claim == null || newOwner == null) {
+            return false;
+        }
+        synchronized (mutationLock) {
+            Claim targetClaim = claims.get(claim.id());
+            if (targetClaim == null) {
+                return false;
+            }
+            UUID previousOwner = targetClaim.owner();
+            if (previousOwner.equals(newOwner)) {
+                return false;
+            }
+            String targetOwnerName = newOwnerName == null || newOwnerName.isBlank() ? newOwner.toString() : newOwnerName;
+            boolean transferred = databaseManager.transaction(() -> {
+                int updated = databaseManager.update(
+                    "UPDATE claims SET owner_uuid = ?, owner_name = ? WHERE id = ? AND owner_uuid = ?",
+                    statement -> {
+                        statement.setString(1, newOwner.toString());
+                        statement.setString(2, targetOwnerName);
+                        statement.setInt(3, targetClaim.id());
+                        statement.setString(4, previousOwner.toString());
+                    }
+                );
+                if (updated <= 0) {
+                    return false;
+                }
+                clearClaimRelations(targetClaim.id());
+                cancelSaleListing(targetClaim.id());
+                return true;
+            });
+            if (!transferred) {
+                if (databaseManager.isMySql()) {
+                    refreshClaimFromDatabase(targetClaim.id());
+                }
+                return false;
+            }
+            targetClaim.setOwner(newOwner, targetOwnerName);
+            targetClaim.clearTrustedMembers();
+            targetClaim.clearBlacklistedMembers();
+            targetClaim.clearMemberSettings();
+            return true;
+        }
+    }
+
+    public void cancelSaleListing(int claimId) {
+        databaseManager.update(
+            "DELETE FROM claim_sale_listings WHERE claim_id = ?",
+            statement -> statement.setInt(1, claimId)
+        );
+    }
+
     public void removeClaim(Claim claim) {
         synchronized (mutationLock) {
             claims.remove(claim.id());
+            rebuildClaimChunkIndex();
+            cancelSaleListing(claim.id());
             databaseManager.update(
                 "DELETE FROM claims WHERE id = ?",
                 statement -> statement.setInt(1, claim.id())
@@ -523,46 +663,29 @@ public final class ClaimService {
         }
     }
 
+    private void clearClaimRelations(int claimId) {
+        databaseManager.update(
+            "DELETE FROM claim_members WHERE claim_id = ?",
+            statement -> statement.setInt(1, claimId)
+        );
+        databaseManager.update(
+            "DELETE FROM claim_blacklist WHERE claim_id = ?",
+            statement -> statement.setInt(1, claimId)
+        );
+        databaseManager.update(
+            "DELETE FROM claim_member_permissions WHERE claim_id = ?",
+            statement -> statement.setInt(1, claimId)
+        );
+    }
+
     public void save() {
+        if (databaseManager.isMySql()) {
+            return;
+        }
         synchronized (mutationLock) {
             for (Claim claim : claims.values()) {
                 databaseManager.update(
-                    """
-                    INSERT INTO claims (
-                        id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
-                        min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                        allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        owner_uuid = excluded.owner_uuid,
-                        owner_name = excluded.owner_name,
-                        name = excluded.name,
-                        core_visible = excluded.core_visible,
-                        world = excluded.world,
-                        center_x = excluded.center_x,
-                        center_y = excluded.center_y,
-                        center_z = excluded.center_z,
-                        min_y = excluded.min_y,
-                        max_y = excluded.max_y,
-                        full_height = excluded.full_height,
-                        radius = excluded.radius,
-                        east = excluded.east,
-                        south = excluded.south,
-                        west = excluded.west,
-                        north = excluded.north,
-                        enter_message = excluded.enter_message,
-                        leave_message = excluded.leave_message,
-                        allow_place = excluded.allow_place,
-                        allow_break = excluded.allow_break,
-                        allow_interact = excluded.allow_interact,
-                        allow_container = excluded.allow_container,
-                        allow_redstone = excluded.allow_redstone,
-                        allow_explosion = excluded.allow_explosion,
-                        allow_bucket = excluded.allow_bucket,
-                        allow_teleport = excluded.allow_teleport,
-                        last_expanded_at = excluded.last_expanded_at,
-                        created_at = excluded.created_at
-                    """,
+                    databaseManager.claimUpsertSql(),
                     statement -> {
                         statement.setInt(1, claim.id());
                         statement.setString(2, claim.owner().toString());
@@ -591,8 +714,9 @@ public final class ClaimService {
                         statement.setInt(25, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
                         statement.setInt(26, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
                         statement.setInt(27, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                        statement.setLong(28, claim.lastExpandedAt());
-                        statement.setLong(29, claim.createdAt());
+                        statement.setInt(28, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
+                        statement.setLong(29, claim.lastExpandedAt());
+                        statement.setLong(30, claim.createdAt());
                     }
                 );
                 for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
@@ -607,48 +731,14 @@ public final class ClaimService {
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, last_expanded_at, created_at
+                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
             FROM claims
             """,
             statement -> {
             },
             resultSet -> {
                 while (resultSet.next()) {
-                    int fallbackDistance = resultSet.getInt("radius");
-                    int east = resultSet.getInt("east");
-                    int south = resultSet.getInt("south");
-                    int west = resultSet.getInt("west");
-                    int north = resultSet.getInt("north");
-                    Claim claim = new Claim(
-                        resultSet.getInt("id"),
-                        UUID.fromString(resultSet.getString("owner_uuid")),
-                        resultSet.getString("owner_name"),
-                        resultSet.getString("name"),
-                        resultSet.getString("world"),
-                        resultSet.getInt("center_x"),
-                        resultSet.getInt("center_y"),
-                        resultSet.getInt("center_z"),
-                        resultSet.getInt("min_y"),
-                        resultSet.getInt("max_y"),
-                        resultSet.getInt("full_height") != 0,
-                        east <= 0 ? fallbackDistance : east,
-                        south <= 0 ? fallbackDistance : south,
-                        west <= 0 ? fallbackDistance : west,
-                        north <= 0 ? fallbackDistance : north,
-                        resultSet.getLong("created_at"),
-                        resultSet.getInt("core_visible") == 1,
-                        resultSet.getString("enter_message"),
-                        resultSet.getString("leave_message"),
-                        resultSet.getInt("allow_place") != 0,
-                        resultSet.getInt("allow_break") != 0,
-                        resultSet.getInt("allow_interact") != 0,
-                        resultSet.getInt("allow_container") != 0,
-                        resultSet.getInt("allow_redstone") != 0,
-                        resultSet.getInt("allow_explosion") != 0,
-                        resultSet.getInt("allow_bucket") != 0,
-                        resultSet.getInt("allow_teleport") != 0,
-                        resultSet.getLong("last_expanded_at")
-                    );
+                    Claim claim = claimFromResultSet(resultSet);
                     claims.put(claim.id(), claim);
                 }
                 return null;
@@ -685,7 +775,7 @@ public final class ClaimService {
         );
         databaseManager.query(
             """
-            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport
+            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
             FROM claim_member_permissions
             """,
             statement -> {
@@ -705,7 +795,112 @@ public final class ClaimService {
                         resultSet.getInt("allow_redstone") != 0,
                         resultSet.getInt("allow_explosion") != 0,
                         resultSet.getInt("allow_bucket") != 0,
-                        resultSet.getInt("allow_teleport") != 0
+                        resultSet.getInt("allow_teleport") != 0,
+                        resultSet.getInt("allow_flight") != 0
+                    ));
+                }
+                return null;
+            }
+        );
+        rebuildClaimChunkIndex();
+    }
+
+    private Optional<Claim> loadClaimFromDatabase(int id) {
+        Optional<Claim> loadedClaim = databaseManager.query(
+            """
+            SELECT id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
+                   min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
+                   allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
+            FROM claims
+            WHERE id = ?
+            """,
+            statement -> statement.setInt(1, id),
+            resultSet -> resultSet.next() ? Optional.of(claimFromResultSet(resultSet)) : Optional.empty()
+        );
+        loadedClaim.ifPresent(this::loadClaimRelationsFromDatabase);
+        return loadedClaim;
+    }
+
+    private Claim claimFromResultSet(ResultSet resultSet) throws SQLException {
+        int fallbackDistance = resultSet.getInt("radius");
+        int east = resultSet.getInt("east");
+        int south = resultSet.getInt("south");
+        int west = resultSet.getInt("west");
+        int north = resultSet.getInt("north");
+        return new Claim(
+            resultSet.getInt("id"),
+            UUID.fromString(resultSet.getString("owner_uuid")),
+            resultSet.getString("owner_name"),
+            resultSet.getString("name"),
+            resultSet.getString("world"),
+            resultSet.getInt("center_x"),
+            resultSet.getInt("center_y"),
+            resultSet.getInt("center_z"),
+            resultSet.getInt("min_y"),
+            resultSet.getInt("max_y"),
+            resultSet.getInt("full_height") != 0,
+            east <= 0 ? fallbackDistance : east,
+            south <= 0 ? fallbackDistance : south,
+            west <= 0 ? fallbackDistance : west,
+            north <= 0 ? fallbackDistance : north,
+            resultSet.getLong("created_at"),
+            resultSet.getInt("core_visible") == 1,
+            resultSet.getString("enter_message"),
+            resultSet.getString("leave_message"),
+            resultSet.getInt("allow_place") != 0,
+            resultSet.getInt("allow_break") != 0,
+            resultSet.getInt("allow_interact") != 0,
+            resultSet.getInt("allow_container") != 0,
+            resultSet.getInt("allow_redstone") != 0,
+            resultSet.getInt("allow_explosion") != 0,
+            resultSet.getInt("allow_bucket") != 0,
+            resultSet.getInt("allow_teleport") != 0,
+            resultSet.getInt("allow_flight") != 0,
+            resultSet.getLong("last_expanded_at")
+        );
+    }
+
+    private void loadClaimRelationsFromDatabase(Claim claim) {
+        databaseManager.query(
+            "SELECT player_uuid FROM claim_members WHERE claim_id = ?",
+            statement -> statement.setInt(1, claim.id()),
+            resultSet -> {
+                while (resultSet.next()) {
+                    claim.addTrustedMember(UUID.fromString(resultSet.getString("player_uuid")));
+                }
+                return null;
+            }
+        );
+        databaseManager.query(
+            "SELECT player_uuid FROM claim_blacklist WHERE claim_id = ?",
+            statement -> statement.setInt(1, claim.id()),
+            resultSet -> {
+                while (resultSet.next()) {
+                    claim.addBlacklistedMember(UUID.fromString(resultSet.getString("player_uuid")));
+                }
+                return null;
+            }
+        );
+        databaseManager.query(
+            """
+            SELECT player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
+            FROM claim_member_permissions
+            WHERE claim_id = ?
+            """,
+            statement -> statement.setInt(1, claim.id()),
+            resultSet -> {
+                while (resultSet.next()) {
+                    UUID playerId = UUID.fromString(resultSet.getString("player_uuid"));
+                    claim.setMemberSettings(playerId, new ClaimMemberSettings(
+                        resultSet.getInt("allow_place") != 0,
+                        resultSet.getInt("allow_break") != 0,
+                        resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_container") != 0,
+                        resultSet.getInt("allow_redstone") != 0,
+                        resultSet.getInt("allow_explosion") != 0,
+                        resultSet.getInt("allow_bucket") != 0,
+                        resultSet.getInt("allow_teleport") != 0,
+                        resultSet.getInt("allow_flight") != 0
                     ));
                 }
                 return null;
@@ -722,26 +917,14 @@ public final class ClaimService {
             claim.permission(ClaimPermission.REDSTONE),
             claim.permission(ClaimPermission.EXPLOSION),
             claim.permission(ClaimPermission.BUCKET),
-            claim.permission(ClaimPermission.TELEPORT)
+            claim.permission(ClaimPermission.TELEPORT),
+            claim.permission(ClaimPermission.FLIGHT)
         );
     }
 
     private void saveMemberSettings(int claimId, UUID memberId, ClaimMemberSettings settings) {
         databaseManager.update(
-            """
-            INSERT INTO claim_member_permissions (
-                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
-                allow_place = excluded.allow_place,
-                allow_break = excluded.allow_break,
-                allow_interact = excluded.allow_interact,
-                allow_container = excluded.allow_container,
-                allow_redstone = excluded.allow_redstone,
-                allow_explosion = excluded.allow_explosion,
-                allow_bucket = excluded.allow_bucket,
-                allow_teleport = excluded.allow_teleport
-            """,
+            databaseManager.memberSettingsUpsertSql(),
             statement -> {
                 statement.setInt(1, claimId);
                 statement.setString(2, memberId.toString());
@@ -753,7 +936,71 @@ public final class ClaimService {
                 statement.setInt(8, settings.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
                 statement.setInt(9, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
                 statement.setInt(10, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                statement.setInt(11, settings.permission(ClaimPermission.FLIGHT) ? 1 : 0);
             }
         );
+    }
+
+    private String validateAvailableClaimName(String rawName, Integer excludedClaimId) {
+        String sanitizedName = sanitizeClaimName(rawName);
+        String normalizedName = normalizeClaimName(sanitizedName);
+        if (normalizedName == null) {
+            throw new IllegalArgumentException("claim-name-empty");
+        }
+        if (isClaimNameTaken(normalizedName, excludedClaimId)) {
+            throw new IllegalArgumentException("claim-name-exists");
+        }
+        return sanitizedName;
+    }
+
+    private String normalizeClaimName(String rawName) {
+        String sanitizedName = sanitizeClaimName(rawName);
+        if (sanitizedName == null) {
+            return null;
+        }
+        return sanitizedName.toLowerCase(Locale.ROOT);
+    }
+
+    private String sanitizeClaimName(String rawName) {
+        if (rawName == null) {
+            return null;
+        }
+        String trimmed = rawName.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.replaceAll("\\s+", " ");
+    }
+
+    private void rebuildClaimChunkIndex() {
+        Map<String, Map<Long, List<Claim>>> rebuilt = new HashMap<>();
+        for (Claim claim : claims.values()) {
+            Map<Long, List<Claim>> worldIndex = rebuilt.computeIfAbsent(claim.world(), ignored -> new HashMap<>());
+            int minChunkX = claim.minX() >> 4;
+            int maxChunkX = claim.maxX() >> 4;
+            int minChunkZ = claim.minZ() >> 4;
+            int maxChunkZ = claim.maxZ() >> 4;
+            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+                for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                    worldIndex.computeIfAbsent(chunkKey(chunkX, chunkZ), ignored -> new ArrayList<>()).add(claim);
+                }
+            }
+        }
+
+        Map<String, Map<Long, List<Claim>>> finalized = new HashMap<>();
+        for (Map.Entry<String, Map<Long, List<Claim>>> worldEntry : rebuilt.entrySet()) {
+            Map<Long, List<Claim>> buckets = new HashMap<>();
+            for (Map.Entry<Long, List<Claim>> bucketEntry : worldEntry.getValue().entrySet()) {
+                List<Claim> candidates = bucketEntry.getValue();
+                candidates.sort(Comparator.comparingLong(Claim::area));
+                buckets.put(bucketEntry.getKey(), List.copyOf(candidates));
+            }
+            finalized.put(worldEntry.getKey(), Map.copyOf(buckets));
+        }
+        claimChunkIndex = Map.copyOf(finalized);
+    }
+
+    private long chunkKey(int chunkX, int chunkZ) {
+        return (((long) chunkX) << 32) ^ (chunkZ & 0xffffffffL);
     }
 }

@@ -3,7 +3,7 @@ GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "FEFLFTFPF"
-  - "FFRFQFNFF"
+  - "FFRSQFNFF"
   - "FFFFFFFFF"
   - "FFFHFXFFF"
 
@@ -109,7 +109,7 @@ items:
       - ''
       - ' &8▪ &7左键编辑进入提示'
       - ' &8▪ &7右键编辑离开提示'
-      - ' &8▪ &7可用写法: &f{claim_name} &7/ &f{owner}'
+      - ' &8▪ &7可用写法: &f{claim_name} &7/ &f{owner} &7/ &f{name}'
       - ' &8▪ &7也支持: &f%claim_name% &7/ &f%owner%'
       - ''
       - ' &6&l» &e左键/右键进行设置'
@@ -138,6 +138,23 @@ items:
       - ''
       - ' &6&l» &e点击传送到核心位置'
     sound: ENTITY_ENDERMAN_TELEPORT
+
+  sell:
+    char: "S"
+    material: EMERALD
+    custom-model-data: 1512
+    glow: true
+    name: '&a&l出售 / 市场'
+    lore:
+      - ''
+      - ' &f当前领地: &b{name}'
+      - ' &f挂牌状态: {sale_status}'
+      - ' &f挂牌价格: &6{sale_price}'
+      - ''
+      - ' &e左键打开玩家市场'
+      - ' &e右键取消当前领地挂牌'
+      - ' &7上架命令: &f/claim sell {name} <价格>'
+    sound: UI_BUTTON_CLICK
 
   close:
     char: "X"

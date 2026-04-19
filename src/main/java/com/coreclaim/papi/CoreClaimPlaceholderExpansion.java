@@ -56,7 +56,7 @@ public final class CoreClaimPlaceholderExpansion extends PlaceholderExpansion {
             case "activity" -> String.valueOf(profile.activityPoints());
             case "online_minutes" -> String.valueOf(profile.onlineMinutes());
             case "claim_count" -> String.valueOf(claimService.countClaims(player.getUniqueId()));
-            case "claim_limit" -> String.valueOf(plugin.groups().resolve(player).claimSlotsForActivity(profile.activityPoints()));
+            case "claim_limit" -> String.valueOf(plugin.groups().resolve(player).maxClaims());
             case "starter_core_granted" -> String.valueOf(profile.starterCoreGranted());
             case "next_reward_minutes" -> String.valueOf(Math.max(0, plugin.settings().starterRewardMinutes() - profile.onlineMinutes()));
             case "current_claim_id" -> claim == null ? "" : String.valueOf(claim.id());

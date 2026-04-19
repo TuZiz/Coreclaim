@@ -1,7 +1,5 @@
 package com.coreclaim.config;
 
-import java.util.Map;
-import java.util.TreeMap;
 import org.bukkit.permissions.Permissible;
 
 public record ClaimGroup(
@@ -14,14 +12,11 @@ public record ClaimGroup(
     double coreCreatePricePerBlock,
     double selectionCreatePricePerBlock,
     double expandPricePerBlock,
-    TreeMap<Integer, Integer> claimSlots
+    int maxClaims
 ) {
 
     public ClaimGroup {
-        claimSlots = new TreeMap<>(claimSlots);
-        if (claimSlots.isEmpty()) {
-            claimSlots.put(0, 1);
-        }
+        maxClaims = Math.max(1, maxClaims);
     }
 
     public boolean matches(Permissible permissible) {
@@ -29,7 +24,6 @@ public record ClaimGroup(
     }
 
     public int claimSlotsForActivity(int activityPoints) {
-        Map.Entry<Integer, Integer> entry = claimSlots.floorEntry(Math.max(0, activityPoints));
-        return entry == null ? claimSlots.firstEntry().getValue() : entry.getValue();
+        return maxClaims;
     }
 }

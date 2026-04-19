@@ -20,6 +20,7 @@ public final class HologramService {
 
     private final CoreClaimPlugin plugin;
     private final Map<Integer, UUID> claimHolograms = new HashMap<>();
+    private final Map<Integer, LocationKey> claimCoreBlocks = new HashMap<>();
     private final Map<UUID, List<UUID>> pendingHolograms = new HashMap<>();
 
     public HologramService(CoreClaimPlugin plugin) {
@@ -29,12 +30,33 @@ public final class HologramService {
     public void refreshAll(ClaimService claimService) {
         clearAllLoadedHolograms();
         claimHolograms.clear();
+        claimCoreBlocks.clear();
         for (Claim claim : claimService.allClaims()) {
-            if (claim.coreVisible()) {
+            if (claim.coreVisible() && claimService.isLocalClaim(claim)) {
                 ensureCoreBlock(claim);
                 spawnClaimHologram(claim);
             }
         }
+    }
+
+    public void reconcileLocalClaimArtifacts(Claim previousClaim, Claim currentClaim, ClaimService claimService) {
+        boolean wasLocal = previousClaim != null && claimService.isLocalClaim(previousClaim);
+        boolean isLocal = currentClaim != null && claimService.isLocalClaim(currentClaim);
+
+        if (wasLocal && (!isLocal || currentClaim == null || !currentClaim.coreVisible())) {
+            removeClaimHologram(previousClaim.id());
+            clearCoreBlock(previousClaim);
+        }
+        if (!isLocal) {
+            return;
+        }
+        if (!currentClaim.coreVisible()) {
+            removeClaimHologram(currentClaim.id());
+            clearCoreBlock(currentClaim);
+            return;
+        }
+        ensureCoreBlock(currentClaim);
+        spawnClaimHologram(currentClaim);
     }
 
     public void spawnClaimHologram(Claim claim) {
@@ -49,7 +71,7 @@ public final class HologramService {
             new Location(
                 world,
                 claim.centerX() + 0.5D,
-                claim.centerY() + plugin.settings().centerCoreHologramHeight(),
+                claim.centerY() + plugin.settings().centerCoreHologramHeight() - 0.4D,
                 claim.centerZ() + 0.5D
             ),
             plugin.color(hologramText),
@@ -139,5 +161,21 @@ public final class HologramService {
         if (location.getBlock().getType().isAir()) {
             location.getBlock().setType(plugin.settings().coreMaterial(), false);
         }
+        claimCoreBlocks.put(claim.id(), new LocationKey(claim.world(), claim.centerX(), claim.centerY(), claim.centerZ()));
+    }
+
+    private void clearCoreBlock(Claim claim) {
+        claimCoreBlocks.remove(claim.id());
+        World world = Bukkit.getWorld(claim.world());
+        if (world == null) {
+            return;
+        }
+        Location location = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
+        if (location.getBlock().getType() == plugin.settings().coreMaterial()) {
+            location.getBlock().setType(org.bukkit.Material.AIR, false);
+        }
+    }
+
+    private record LocationKey(String world, int x, int y, int z) {
     }
 }

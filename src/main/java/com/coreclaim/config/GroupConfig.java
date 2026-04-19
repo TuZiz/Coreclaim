@@ -3,7 +3,6 @@ package com.coreclaim.config;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.TreeMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.permissions.Permissible;
@@ -20,18 +19,7 @@ public final class GroupConfig {
             if (section == null) {
                 continue;
             }
-            TreeMap<Integer, Integer> claimSlots = new TreeMap<>();
-            ConfigurationSection slotsSection = section.getConfigurationSection("claim-slots");
-            if (slotsSection != null) {
-                for (String slotKey : slotsSection.getKeys(false)) {
-                    try {
-                        int activity = Integer.parseInt(slotKey);
-                        int amount = Math.max(1, slotsSection.getInt(slotKey, 1));
-                        claimSlots.put(activity, amount);
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-            }
+            int maxClaims = resolveMaxClaims(section);
             loadedGroups.add(new ClaimGroup(
                 key,
                 section.getString("display-name", key),
@@ -42,12 +30,12 @@ public final class GroupConfig {
                 Math.max(0D, section.getDouble("core-create-price-per-block", 0D)),
                 Math.max(0D, section.getDouble("selection-create-price-per-block", section.getDouble("expand-price-per-block", 50D))),
                 Math.max(0D, section.getDouble("expand-price-per-block", 50D)),
-                claimSlots
+                maxClaims
             ));
         }
 
         if (loadedGroups.isEmpty()) {
-            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 50, 0D, 50D, 50D, new TreeMap<>()));
+            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 50, 0D, 50D, 50D, 3));
         }
 
         loadedGroups.sort(Comparator.comparingInt(ClaimGroup::priority).reversed());
@@ -70,5 +58,21 @@ public final class GroupConfig {
 
     public List<ClaimGroup> groups() {
         return groups;
+    }
+
+    private int resolveMaxClaims(ConfigurationSection section) {
+        int configuredMax = section.getInt("max-claims", -1);
+        if (configuredMax > 0) {
+            return configuredMax;
+        }
+
+        int migratedMax = 0;
+        ConfigurationSection slotsSection = section.getConfigurationSection("claim-slots");
+        if (slotsSection != null) {
+            for (String slotKey : slotsSection.getKeys(false)) {
+                migratedMax = Math.max(migratedMax, Math.max(1, slotsSection.getInt(slotKey, 1)));
+            }
+        }
+        return migratedMax > 0 ? migratedMax : 3;
     }
 }

@@ -24,19 +24,22 @@ public final class ClaimActionService {
     private final HologramService hologramService;
     private final ClaimVisualService claimVisualService;
     private final EconomyHook economyHook;
+    private final CrossServerTeleportService crossServerTeleportService;
 
     public ClaimActionService(
         CoreClaimPlugin plugin,
         ClaimService claimService,
         HologramService hologramService,
         ClaimVisualService claimVisualService,
-        EconomyHook economyHook
+        EconomyHook economyHook,
+        CrossServerTeleportService crossServerTeleportService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.hologramService = hologramService;
         this.claimVisualService = claimVisualService;
         this.economyHook = economyHook;
+        this.crossServerTeleportService = crossServerTeleportService;
     }
 
     public Claim findOwnedClaim(Player player) {
@@ -144,7 +147,7 @@ public final class ClaimActionService {
     }
 
     public boolean hideClaimCore(Player player, Claim claim) {
-        if (!claim.owner().equals(player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
+        if (!claim.owner().equals(player.getUniqueId()) && !hasAdminForcePermission(player)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -154,7 +157,7 @@ public final class ClaimActionService {
         }
         hologramService.removeClaimHologram(claim.id());
         claimService.updateCoreVisibility(claim, false);
-        World world = Bukkit.getWorld(claim.world());
+        World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
         if (world != null) {
             Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
             if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
@@ -169,7 +172,7 @@ public final class ClaimActionService {
         if (claim == null || !claim.coreVisible()) {
             return;
         }
-        World world = Bukkit.getWorld(claim.world());
+        World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
         if (world == null) {
             return;
         }
@@ -242,16 +245,26 @@ public final class ClaimActionService {
     }
 
     public boolean teleportToClaim(Player player, Claim claim) {
-        if (!player.hasPermission("coreclaim.admin") && !claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)) {
+        Claim freshClaim = claimService.findClaimByIdFresh(claim.id()).orElse(null);
+        if (freshClaim == null) {
+            player.sendMessage(plugin.message("claim-not-found"));
+            return false;
+        }
+        claim = freshClaim;
+        if (!hasAdminForcePermission(player) && !claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
-        World world = Bukkit.getWorld(claim.world());
+        World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
         if (world == null) {
+            if (crossServerTeleportService != null && crossServerTeleportService.transferToRemoteClaim(player, claim)) {
+                return true;
+            }
             player.sendMessage(plugin.message("world-missing"));
             return false;
         }
-        Location destination = new Location(world, claim.centerX() + 0.5D, claim.centerY() + 1D, claim.centerZ() + 0.5D);
+        ClaimService.TeleportTarget target = claimService.teleportTarget(claim, player.getLocation().getYaw(), player.getLocation().getPitch());
+        Location destination = new Location(world, target.x(), target.y(), target.z(), target.yaw(), target.pitch());
         player.teleport(destination);
         claimVisualService.showClaim(player, claim);
         player.sendMessage(plugin.message("claim-teleported", "{name}", claim.name()));
@@ -298,7 +311,16 @@ public final class ClaimActionService {
     }
 
     public boolean canEditClaim(Player player, Claim claim) {
-        return claim.owner().equals(player.getUniqueId()) || player.hasPermission("coreclaim.admin");
+        return claim.owner().equals(player.getUniqueId())
+            || hasAdminForcePermission(player)
+            || player.hasPermission("coreclaim.admin.claim.manage")
+            || player.hasPermission("coreclaim.admin.member.manage")
+            || player.hasPermission("coreclaim.admin.permission.manage")
+            || player.hasPermission("coreclaim.admin.flag.manage");
+    }
+
+    private boolean hasAdminForcePermission(Player player) {
+        return player.hasPermission("coreclaim.admin") || player.hasPermission("coreclaim.admin.force");
     }
 
     public static String formatMoney(double value) {

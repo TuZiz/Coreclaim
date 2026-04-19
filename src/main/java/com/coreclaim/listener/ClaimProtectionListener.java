@@ -3,6 +3,8 @@ package com.coreclaim.listener;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimFlag;
+import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
@@ -133,6 +135,21 @@ public final class ClaimProtectionListener implements Listener {
         }
         Material clickedType = event.getClickedBlock().getType();
         ClaimPermission requiredPermission = requiredPermissionForBlockInteract(clickedType, event.getItem());
+        ClaimFlag interactionFlag = ClaimFlag.fromInteraction(clickedType);
+        if (claim.isPresent() && interactionFlag != null && !isBypassing(event.getPlayer())) {
+            ClaimFlagState flagState = claimService.flagState(claim.get(), interactionFlag);
+            if (flagState != ClaimFlagState.UNSET) {
+                if (requiredPermission == ClaimPermission.EXPLOSION
+                    && claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.EXPLOSION)) {
+                    explosionAuthorizationService.authorize(event.getClickedBlock().getLocation());
+                }
+                if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), interactionFlag)) {
+                    event.setCancelled(true);
+                    sendProtectionDeny(event.getPlayer(), claim.get());
+                }
+                return;
+            }
+        }
         boolean allowListed = plugin.settings().isAllowedInteract(clickedType)
             && !(plugin.settings().strictRedstoneInteract() && plugin.settings().isAlwaysProtectedInteract(clickedType));
         if (claim.isPresent() && allowListed) {
@@ -170,12 +187,32 @@ public final class ClaimProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntityInteract(PlayerInteractEntityEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
+        if (claim.isPresent()
+            && event.getRightClicked() instanceof InventoryHolder
+            && !isBypassing(event.getPlayer())
+            && claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
+            if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+                event.setCancelled(true);
+                sendProtectionDeny(event.getPlayer(), claim.get());
+            }
+            return;
+        }
         denyIfNeeded(event.getPlayer(), claim, requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked()), event);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityInteractAt(PlayerInteractAtEntityEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
+        if (claim.isPresent()
+            && event.getRightClicked() instanceof InventoryHolder
+            && !isBypassing(event.getPlayer())
+            && claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
+            if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+                event.setCancelled(true);
+                sendProtectionDeny(event.getPlayer(), claim.get());
+            }
+            return;
+        }
         denyIfNeeded(event.getPlayer(), claim, requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked()), event);
     }
 
@@ -388,6 +425,15 @@ public final class ClaimProtectionListener implements Listener {
         if (event.getHitBlock() != null) {
             Optional<Claim> claim = claimService.findClaim(event.getHitBlock().getLocation());
             if (claim.isPresent()) {
+                ClaimFlag flag = ClaimFlag.fromInteraction(event.getHitBlock().getType());
+                if (flag != null
+                    && claimService.flagState(claim.get(), flag) != ClaimFlagState.UNSET
+                    && !claimService.hasFlagPermission(claim.get(), shooter.getUniqueId(), flag)) {
+                    event.setCancelled(true);
+                    event.getEntity().remove();
+                    sendProtectionDeny(shooter, claim.get());
+                    return;
+                }
                 boolean projectileProtected = isProjectileSensitiveBlock(event.getHitBlock().getType())
                     && (plugin.settings().strictRedstoneInteract()
                     || !plugin.settings().isAllowedInteract(event.getHitBlock().getType()));
@@ -716,18 +762,6 @@ public final class ClaimProtectionListener implements Listener {
     }
 
     private boolean isContainerMaterial(Material material) {
-        String name = material.name();
-        return name.endsWith("CHEST")
-            || name.endsWith("BARREL")
-            || name.endsWith("SHULKER_BOX")
-            || material == Material.HOPPER
-            || material == Material.DISPENSER
-            || material == Material.DROPPER
-            || material == Material.FURNACE
-            || material == Material.BLAST_FURNACE
-            || material == Material.SMOKER
-            || material == Material.BREWING_STAND
-            || material == Material.CHISELED_BOOKSHELF
-            || material == Material.LECTERN;
+        return ClaimFlag.fromInteraction(material) == ClaimFlag.CONTAINER;
     }
 }

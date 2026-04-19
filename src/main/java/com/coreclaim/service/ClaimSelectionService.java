@@ -5,7 +5,6 @@ import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
-import com.coreclaim.model.PlayerProfile;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +34,7 @@ public final class ClaimSelectionService {
     private final ClaimVisualService claimVisualService;
     private final HologramService hologramService;
     private final EconomyHook economyHook;
+    private final OnlineRewardService onlineRewardService;
     private final NamespacedKey selectionToolMarkerKey;
     private final Map<UUID, SelectionSession> sessions = new ConcurrentHashMap<>();
 
@@ -44,7 +44,8 @@ public final class ClaimSelectionService {
         ProfileService profileService,
         ClaimVisualService claimVisualService,
         HologramService hologramService,
-        EconomyHook economyHook
+        EconomyHook economyHook,
+        OnlineRewardService onlineRewardService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -52,18 +53,8 @@ public final class ClaimSelectionService {
         this.claimVisualService = claimVisualService;
         this.hologramService = hologramService;
         this.economyHook = economyHook;
+        this.onlineRewardService = onlineRewardService;
         this.selectionToolMarkerKey = new NamespacedKey(plugin, "claim_selection_tool_marker");
-    }
-
-    public boolean activate(Player player) {
-        if (player == null) {
-            return false;
-        }
-        sessions.putIfAbsent(player.getUniqueId(), new SelectionSession());
-        ensureSelectionTool(player);
-        player.sendMessage(chatMessage("selection-wand-received", "&a&l选区模式: &7已进入圈地工具选区模式，左键设置点 1，右键设置点 2。"));
-        sendActionBar(player, plainMessage("selection-actionbar-start", "&e圈地工具已启用 &8| &7左键点 1 右键点 2"));
-        return true;
     }
 
     public boolean isSelectionTool(ItemStack item) {
@@ -80,17 +71,17 @@ public final class ClaimSelectionService {
         return isLegacySelectionTool(item, meta);
     }
 
-    public boolean isSelectionToolCandidate(ItemStack item) {
+    public boolean canUseSelectionTool(ItemStack item) {
         return item != null
             && !item.getType().isAir()
-            && (isSelectionTool(item) || item.getType() == plugin.settings().selectionToolMaterial());
+            && item.getType() == plugin.settings().selectionToolMaterial();
     }
 
     public ItemStack normalizeSelectionTool(ItemStack item) {
         if (item == null || item.getType().isAir()) {
             return item;
         }
-        if (!isSelectionToolCandidate(item)) {
+        if (!canUseSelectionTool(item)) {
             return item;
         }
         ItemStack clone = item.clone();
@@ -116,30 +107,6 @@ public final class ClaimSelectionService {
         meta.getPersistentDataContainer().set(selectionToolMarkerKey, PersistentDataType.STRING, "true");
         clone.setItemMeta(meta);
         return clone;
-    }
-
-    public void normalizePlayerInventory(Player player) {
-        if (player == null) {
-            return;
-        }
-        ItemStack[] contents = player.getInventory().getContents();
-        for (int index = 0; index < contents.length; index++) {
-            ItemStack current = contents[index];
-            if (isSelectionToolCandidate(current)) {
-                player.getInventory().setItem(index, normalizeSelectionTool(current));
-            }
-        }
-    }
-
-    public void normalizePlayerInventoryAndCursor(Player player) {
-        if (player == null) {
-            return;
-        }
-        normalizePlayerInventory(player);
-        ItemStack cursor = player.getOpenInventory().getCursor();
-        if (isSelectionToolCandidate(cursor)) {
-            player.getOpenInventory().setCursor(normalizeSelectionTool(cursor));
-        }
     }
 
     public void clear(UUID playerId) {
@@ -239,6 +206,7 @@ public final class ClaimSelectionService {
             }
         }
 
+        boolean firstOrdinaryClaim = claimService.countClaims(player.getUniqueId()) == 0;
         Claim claim;
         try {
             claim = claimService.createClaimFromBounds(
@@ -264,6 +232,7 @@ public final class ClaimSelectionService {
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);
         clear(player.getUniqueId());
+        onlineRewardService.markOrdinaryClaimCreated(player);
 
         String configured = plugin.messagesConfig().getString("selection-create-success", "");
         if (configured != null && configured.contains("{height}")) {
@@ -284,10 +253,79 @@ public final class ClaimSelectionService {
                 + " &7，体积 &f" + preview.volume()
                 + " &7，花费 &6" + MONEY.format(preview.cost()) + "&7。"));
         }
+        if (firstOrdinaryClaim) {
+            player.sendMessage(chatMessage(
+                "second-claim-selection-tip",
+                "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
+            ));
+        }
+        return true;
+    }
+
+    public boolean createSystemClaim(Player player, String rawName) {
+        SelectionPreview preview = preview(player, true);
+        if (preview == null || !preview.ready()) {
+            player.sendMessage(chatMessage("selection-missing-points", "&c&l! &7请先完成两个对角点的选择。"));
+            return false;
+        }
+        if (!preview.allowed()) {
+            player.sendMessage(preview.failureMessage());
+            return false;
+        }
+
+        String name = rawName == null ? "" : rawName.trim();
+        if (name.isEmpty()) {
+            player.sendMessage(plugin.message("claim-name-empty"));
+            return false;
+        }
+        if (name.length() > plugin.settings().claimNameMaxLength()) {
+            player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
+            return false;
+        }
+        if (claimService.isClaimNameTaken(name)) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return false;
+        }
+
+        Claim claim;
+        try {
+            claim = claimService.createClaimFromBounds(
+                player.getUniqueId(),
+                player.getName(),
+                name,
+                preview.coreLocation(),
+                preview.minY(),
+                preview.maxY(),
+                preview.east(),
+                preview.south(),
+                preview.west(),
+                preview.north(),
+                true
+            );
+        } catch (IllegalArgumentException exception) {
+            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            return false;
+        }
+        preview.coreLocation().getBlock().setType(plugin.settings().coreMaterial(), false);
+        hologramService.spawnClaimHologram(claim);
+        claimVisualService.showClaim(player, claim);
+        clear(player.getUniqueId());
+        player.sendMessage(chatMessage(
+            "selection-create-system-success",
+            "&a&l系统领地: &7已创建 &e{name} &7，大小 &b{width}x{height}x{depth} &7，已标记为 &6[SYSTEM]&7。",
+            "{name}", claim.name(),
+            "{width}", String.valueOf(claim.width()),
+            "{height}", String.valueOf(claim.height()),
+            "{depth}", String.valueOf(claim.depth())
+        ));
         return true;
     }
 
     public SelectionPreview preview(Player player) {
+        return preview(player, false);
+    }
+
+    private SelectionPreview preview(Player player, boolean bypassQuotaAndCost) {
         if (player == null) {
             return null;
         }
@@ -326,12 +364,11 @@ public final class ClaimSelectionService {
         int coreY = resolveCoreY(world, centerX, centerZ);
         Location coreLocation = new Location(world, centerX, coreY, centerZ);
         ClaimGroup group = plugin.groups().resolve(player);
-        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
         int claimCount = claimService.countClaims(player.getUniqueId());
-        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
-        double cost = volume * group.selectionCreatePricePerBlock();
+        int maxClaims = group.maxClaims();
+        double cost = bypassQuotaAndCost ? 0D : volume * group.selectionCreatePricePerBlock();
 
-        if (claimCount >= maxClaims) {
+        if (!bypassQuotaAndCost && claimCount >= maxClaims) {
             return SelectionPreview.denied(
                 width, height, depth, area, volume, cost, minX, maxX, minY, maxY, minZ, maxZ, coreLocation, east, south, west, north,
                 plugin.message("claim-no-slot")
@@ -464,41 +501,6 @@ public final class ClaimSelectionService {
 
     private int resolveCoreY(World world, int centerX, int centerZ) {
         return world.getHighestBlockYAt(centerX, centerZ) + 1;
-    }
-
-    private void ensureSelectionTool(Player player) {
-        normalizePlayerInventoryAndCursor(player);
-
-        ItemStack mainHand = player.getInventory().getItemInMainHand();
-        if (isSelectionToolCandidate(mainHand)) {
-            player.getInventory().setItemInMainHand(normalizeSelectionTool(mainHand));
-            return;
-        }
-
-        ItemStack[] contents = player.getInventory().getContents();
-        for (int index = 0; index < contents.length; index++) {
-            ItemStack current = contents[index];
-            if (!isSelectionToolCandidate(current)) {
-                continue;
-            }
-            ItemStack normalized = normalizeSelectionTool(current);
-            ItemStack previousMainHand = mainHand == null ? null : mainHand.clone();
-            player.getInventory().setItemInMainHand(normalized);
-            player.getInventory().setItem(index, previousMainHand);
-            return;
-        }
-
-        ItemStack createdTool = createSelectionTool();
-        ItemStack previousMainHand = mainHand == null ? null : mainHand.clone();
-        player.getInventory().setItemInMainHand(createdTool);
-        if (previousMainHand != null && !previousMainHand.getType().isAir()) {
-            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(previousMainHand);
-            leftovers.values().forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
-        }
-    }
-
-    private ItemStack createSelectionTool() {
-        return normalizeSelectionTool(new ItemStack(plugin.settings().selectionToolMaterial()));
     }
 
     private boolean hasSelectionToolMarker(ItemMeta meta) {

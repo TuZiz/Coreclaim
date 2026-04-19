@@ -39,7 +39,7 @@ public final class RemovalConfirmationService {
         if (claimId == null) {
             return false;
         }
-        Claim claim = claimService.findClaimById(claimId).orElse(null);
+        Claim claim = claimService.findClaimByIdFresh(claimId).orElse(null);
         if (claim == null) {
             player.sendMessage(plugin.message("claim-not-found"));
             return true;

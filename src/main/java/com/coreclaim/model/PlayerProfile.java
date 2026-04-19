@@ -13,6 +13,7 @@ public final class PlayerProfile {
     private int onlineMinutes;
     private boolean starterCoreGranted;
     private boolean starterCoreReclaimed;
+    private boolean starterCoreUsed;
     private boolean autoShowBorders;
     private final Set<UUID> globalTrustedMembers = new LinkedHashSet<>();
 
@@ -23,6 +24,7 @@ public final class PlayerProfile {
         int onlineMinutes,
         boolean starterCoreGranted,
         boolean starterCoreReclaimed,
+        boolean starterCoreUsed,
         boolean autoShowBorders
     ) {
         this.uuid = uuid;
@@ -31,6 +33,7 @@ public final class PlayerProfile {
         this.onlineMinutes = Math.max(0, onlineMinutes);
         this.starterCoreGranted = starterCoreGranted;
         this.starterCoreReclaimed = starterCoreReclaimed;
+        this.starterCoreUsed = starterCoreUsed;
         this.autoShowBorders = autoShowBorders;
     }
 
@@ -78,6 +81,14 @@ public final class PlayerProfile {
 
     public synchronized void setStarterCoreReclaimed(boolean starterCoreReclaimed) {
         this.starterCoreReclaimed = starterCoreReclaimed;
+    }
+
+    public synchronized boolean starterCoreUsed() {
+        return starterCoreUsed;
+    }
+
+    public synchronized void setStarterCoreUsed(boolean starterCoreUsed) {
+        this.starterCoreUsed = starterCoreUsed;
     }
 
     public synchronized boolean autoShowBorders() {

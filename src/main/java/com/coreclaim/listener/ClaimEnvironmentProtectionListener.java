@@ -1,6 +1,8 @@
 package com.coreclaim.listener;
 
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimFlag;
+import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
@@ -176,8 +178,16 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = claimService.findClaim(location);
-        if (claim.isPresent() && !claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.CONTAINER)) {
-            event.setCancelled(true);
+        if (claim.isPresent()) {
+            if (claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
+                if (!claimService.hasFlagPermission(claim.get(), player.getUniqueId(), ClaimFlag.CONTAINER)) {
+                    event.setCancelled(true);
+                }
+                return;
+            }
+            if (!claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.CONTAINER)) {
+                event.setCancelled(true);
+            }
         }
     }
 

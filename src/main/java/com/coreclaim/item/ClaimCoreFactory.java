@@ -159,7 +159,6 @@ public final class ClaimCoreFactory {
             return "";
         }
         return text
-            .replace("%core-use-min-activity%", String.valueOf(plugin.settings().coreUseMinActivity()))
             .replace("%starter-reward-minutes%", String.valueOf(plugin.settings().starterRewardMinutes()))
             .replace("%claim-world%", plugin.settings().claimWorldsDisplay());
     }

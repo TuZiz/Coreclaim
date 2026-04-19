@@ -1,4 +1,4 @@
-title: '&8» &6&l我的领地列表'
+title: '&8[&6领地&8] &6&l我的领地列表'
 GuiPlain:
   - "FFFFRFFFF"
   - "FEEEEEEEF"
@@ -21,12 +21,14 @@ items:
     glow: true
     name: '&a&l{name}'
     lore:
-      - '&7世界: &f{world}'
-      - '&7核心坐标: &f{x}, {z}'
-      - '&7大小: &e{width}x{depth}'
-      - '&7面积: &e{area}'
-      - '&7授权人数: &e{trusted}'
-      - '&8左键核心管理 | 右键传送'
+      - ' &7世界: &f{world}'
+      - ' &7核心坐标: &f{x}, {z}'
+      - ' &7大小: &e{width}x{depth}'
+      - ' &7面积: &e{area}'
+      - ' &7成员数量: &e{trusted}'
+      - ''
+      - ' &7左键打开核心管理'
+      - ' &7右键直接传送'
     sound: BLOCK_NOTE_BLOCK_HARP
 
   refresh:
@@ -36,16 +38,16 @@ items:
     name: '&e&l刷新列表'
     lore:
       - ''
-      - ' &f▶ &7当前领地总数: &e{total}'
+      - ' &7当前领地总数: &e{total}'
       - ''
-      - ' &6&l» &e点击立即刷新'
+      - ' &e点击立即刷新'
     sound: UI_BUTTON_CLICK
 
   prev-page:
     char: "L"
     material: ARROW
     custom-model-data: 1203
-    name: '&a&l« &f上一页'
+    name: '&a&l上一页'
     sound: UI_BUTTON_CLICK
 
   back:
@@ -55,12 +57,12 @@ items:
     name: '&c&l关闭菜单'
     lore:
       - ''
-      - ' &6&l» &e点击关闭当前界面'
+      - ' &e点击关闭当前界面'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: "N"
     material: ARROW
     custom-model-data: 1205
-    name: '&f下一页 &a&l»'
+    name: '&a&l下一页'
     sound: UI_BUTTON_CLICK

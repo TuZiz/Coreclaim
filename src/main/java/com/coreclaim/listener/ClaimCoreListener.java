@@ -8,6 +8,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -48,6 +52,35 @@ public final class ClaimCoreListener implements Listener {
         consumeCore(player, event.getHand());
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onDrop(PlayerDropItemEvent event) {
+        if (!claimCoreFactory.isStarterCore(event.getItemDrop().getItemStack())) {
+            return;
+        }
+        event.setCancelled(true);
+        notifyStarterCoreProtected(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        if (claimCoreFactory.isStarterCore(event.getCurrentItem())
+            && (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP
+                || event.getAction() == InventoryAction.DROP_ALL_SLOT
+                || event.getAction() == InventoryAction.DROP_ONE_SLOT)) {
+            event.setCancelled(true);
+            notifyStarterCoreProtected(player);
+            return;
+        }
+        if (event.getClickedInventory() == null
+            && claimCoreFactory.isStarterCore(event.getCursor())) {
+            event.setCancelled(true);
+            notifyStarterCoreProtected(player);
+        }
+    }
+
     private void consumeCore(Player player, EquipmentSlot hand) {
         ItemStack stack = hand == EquipmentSlot.OFF_HAND
             ? player.getInventory().getItemInOffHand()
@@ -69,5 +102,12 @@ public final class ClaimCoreListener implements Listener {
         } else {
             player.getInventory().setItemInMainHand(stack);
         }
+    }
+
+    private void notifyStarterCoreProtected(Player player) {
+        player.sendMessage(plugin.message(
+            "starter-core-drop-blocked",
+            "{minutes}", String.valueOf(plugin.settings().starterRewardMinutes())
+        ));
     }
 }

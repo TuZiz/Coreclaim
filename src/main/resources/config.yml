@@ -1,9 +1,7 @@
 # 固定可创建领地的世界
 world: "world"
-claim-worlds:
-  - "world"
-  - "world_nether"
-  - "world_the_end"
+server-id: "local"
+claim-worlds: []
 
 # 玩家在线多少分钟后获得首个领地核心
 starter-reward-minutes: 30
@@ -38,12 +36,14 @@ expand-cooldown-seconds: 0
 # 创建第二块领地时是否提醒玩家确认位置
 warn-on-second-claim: true
 
-# 使用领地核心所需的最低活跃度
-core-use-min-activity: 20
+# 兼容字段：保留活跃值系统，但不再作为圈地门槛
+core-use-min-activity: 0
 
 flight:
   # 离开可飞行领地后保留当前飞行的缓冲刻数
   exit-grace-ticks: 20
+  reconcile-interval-ticks: 10
+  debug: false
 
 database:
   file: coreclaim.db
@@ -64,6 +64,26 @@ database:
     enabled: false
     source-sqlite-file: coreclaim.db
 
+cross-server-teleport:
+  enabled: false
+  pending-timeout-seconds: 30
+  # Optional one-time legacy mapping for old claims without server_id.
+  legacy-world-server-map: {}
+
+claim-sync:
+  enabled: false
+  transport: "redis"
+  redis:
+    host: "127.0.0.1"
+    port: 6379
+    password: ""
+    database: 0
+    channel: "coreclaim:claim-sync"
+    reconnect-seconds: 5
+
+# 领地默认规则已迁移到 rules.yml
+# 旧版 config.yml 中的 permissions.* / flags.* 仍会被兼容读取，但建议迁移后删除
+
 # 领地核心物品
 # 当前项目仍沿用 claim-core 作为主配置节点，同时兼容读取 core-tool.name / core-tool.lore
 claim-core:
@@ -74,7 +94,6 @@ claim-core:
   lore:
     - ""
     - " &f▶ &7用途: &e创建新的领地"
-    - " &f▶ &7要求: &b活跃度 ≥ %core-use-min-activity%"
     - ""
     - " &8▪ &7对着地面右键后开始命名"
     - " &8▪ &7聊天输入领地名字后才会真正放下核心"
@@ -87,13 +106,16 @@ starter-tool:
   name: "&b&l✦ 新人核心 ✦"
   lore:
     - ""
-    - " &b&l专属奖励核心"
-    - " &f▶ &7用途: &e用于创建第一块领地"
+    - " &b&l首块领地推荐核心"
+    - " &f▶ &7用途: &e用于创建第一块默认全格保护领地"
     - " &f▶ &7来源: &b在线 %starter-reward-minutes% 分钟自动发放"
     - ""
-    - " &6▪ &7仅限首块领地使用"
-    - " &6▪ &7对着地面右键后开始命名"
-    - " &6▪ &7聊天输入领地名字后才会真正放下核心"
+    - " &6▶ &7仅限首块领地使用"
+    - " &6▶ &7每个玩家只能成功使用一次"
+    - " &6▶ &7新人核心不能被丢弃"
+    - " &6▶ &7对着地面右键后开始命名"
+    - " &6▶ &7输入领地名字后才会真正放下核心"
+    - " &6▶ &7后续领地也可以直接用普通金锄头选区创建"
 
 center-core:
   material: "AMETHYST_CLUSTER"
@@ -138,18 +160,18 @@ selection-tool:
   material: "GOLDEN_HOE"
   glow: false
   custom-model-data: 0
-  name: "&6&l✦ &e&l专属圈地工具 &6&l✦"
+  name: "&6&l✦ 领地选区金锄头 ✦"
   lore:
     - ""
-    - "&8▸ &7手持此工具选定对角线区域，"
-    - "&8▸ &7即可规划并创建你的私人领地。"
+    - "&8▪ &7拿着普通金锄头也会被识别为领地选区工具"
+    - "&8▪ &7选好两个对角点后即可创建你的领地"
     - ""
     - "&b&l| &3操作指南"
-    - "&8▪ &e[左键点击] &7方块 &0➔ &a设置 点 1"
-    - "&8▪ &e[右键点击] &7方块 &0➔ &a设置 点 2"
+    - "&8▪ &e[左键点击] &7方块 &0➜ &a设置 点 1"
+    - "&8▪ &e[右键点击] &7方块 &0➜ &a设置 点 2"
     - ""
     - "&d&l| &5确认创建"
-    - "&8▪ &7选好对角线的两点后，输入指令："
+    - "&8▪ &7选好两个对角点后，输入指令："
     - "&8▪ &f/claim create <领地名字>"
     - ""
-    - "&7💡 &8提示: 领地大小上限由你的权限组决定"
+    - "&7提示: 领地大小上限由你的权限组决定"

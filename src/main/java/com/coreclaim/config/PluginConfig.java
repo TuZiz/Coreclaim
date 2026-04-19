@@ -1,11 +1,19 @@
 package com.coreclaim.config;
 
+import com.coreclaim.model.ClaimFlag;
+import com.coreclaim.model.ClaimFlagState;
+import com.coreclaim.model.ClaimPermission;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public final class PluginConfig {
@@ -13,6 +21,9 @@ public final class PluginConfig {
     private final String claimWorld;
     private final List<String> claimWorlds;
     private final Set<String> claimWorldNamesLower;
+    private final boolean claimWorldRestrictionEnabled;
+    private final String serverId;
+    private final String normalizedServerId;
     private final int starterRewardMinutes;
     private final int starterReclaimReminderIntervalMinutes;
     private final int directionExpandAmount;
@@ -33,6 +44,8 @@ public final class PluginConfig {
     private final boolean warnOnSecondClaim;
     private final int coreUseMinActivity;
     private final long flightExitGraceTicks;
+    private final long flightReconcileIntervalTicks;
+    private final boolean flightDebug;
     private final Set<Material> allowInteract;
     private final boolean allowEnderPearlEntry;
     private final boolean allowChorusFruitEntry;
@@ -51,22 +64,26 @@ public final class PluginConfig {
     private final int claimVisualRed;
     private final int claimVisualGreen;
     private final int claimVisualBlue;
+    private final boolean crossServerTeleportEnabled;
+    private final int crossServerTeleportPendingTimeoutSeconds;
+    private final Map<String, String> legacyCrossServerWorldServerMap;
+    private final Map<ClaimPermission, Boolean> newClaimPermissionDefaults;
+    private final Map<ClaimPermission, Boolean> systemClaimPermissionDefaults;
+    private final Map<ClaimFlag, ClaimFlagState> newClaimFlagDefaults;
+    private final Map<ClaimFlag, ClaimFlagState> systemClaimFlagDefaults;
+    private final ClaimSyncSettings claimSyncSettings;
 
-    public PluginConfig(FileConfiguration config) {
+    public PluginConfig(FileConfiguration config, FileConfiguration rulesConfig) {
         this.claimWorld = config.getString("world", "world");
+        this.serverId = sanitizeServerId(config.getString("server-id", "local"), "local");
+        this.normalizedServerId = serverId.toLowerCase(Locale.ROOT);
         Set<String> configuredClaimWorlds = new LinkedHashSet<>();
         for (String worldName : config.getStringList("claim-worlds")) {
             if (worldName != null && !worldName.isBlank()) {
                 configuredClaimWorlds.add(worldName);
             }
         }
-        if (configuredClaimWorlds.isEmpty()) {
-            configuredClaimWorlds.add(this.claimWorld);
-            if ("world".equalsIgnoreCase(this.claimWorld)) {
-                configuredClaimWorlds.add("world_nether");
-                configuredClaimWorlds.add("world_the_end");
-            }
-        }
+        this.claimWorldRestrictionEnabled = !configuredClaimWorlds.isEmpty();
         this.claimWorlds = List.copyOf(configuredClaimWorlds);
         this.claimWorldNamesLower = new HashSet<>();
         for (String worldName : configuredClaimWorlds) {
@@ -96,6 +113,8 @@ public final class PluginConfig {
         this.warnOnSecondClaim = config.getBoolean("warn-on-second-claim", false);
         this.coreUseMinActivity = Math.max(0, config.getInt("core-use-min-activity", 0));
         this.flightExitGraceTicks = Math.max(0L, config.getLong("flight.exit-grace-ticks", 20L));
+        this.flightReconcileIntervalTicks = Math.max(1L, config.getLong("flight.reconcile-interval-ticks", 10L));
+        this.flightDebug = config.getBoolean("flight.debug", false);
         this.allowInteract = resolveMaterials(config.getStringList("allow-interact"));
         this.allowEnderPearlEntry = config.getBoolean("protection.allow-ender-pearl-entry", false);
         this.allowChorusFruitEntry = config.getBoolean("protection.allow-chorus-fruit-entry", false);
@@ -114,6 +133,33 @@ public final class PluginConfig {
         this.claimVisualRed = clampColor(config.getInt("claim-visual.color.red", 80));
         this.claimVisualGreen = clampColor(config.getInt("claim-visual.color.green", 255));
         this.claimVisualBlue = clampColor(config.getInt("claim-visual.color.blue", 140));
+        this.crossServerTeleportEnabled = config.getBoolean("cross-server-teleport.enabled", false);
+        this.crossServerTeleportPendingTimeoutSeconds = Math.max(10, config.getInt("cross-server-teleport.pending-timeout-seconds", 30));
+        this.legacyCrossServerWorldServerMap = loadLegacyWorldServerMap(config);
+        this.newClaimPermissionDefaults = loadPermissionDefaults(
+            rulesConfig,
+            config,
+            "new-claim-defaults.permissions",
+            "permissions.new-claim-defaults",
+            false
+        );
+        this.systemClaimPermissionDefaults = loadPermissionDefaults(
+            rulesConfig,
+            config,
+            "system-claim-defaults.permissions",
+            "permissions.system-claim-defaults",
+            true
+        );
+        this.newClaimFlagDefaults = loadNewClaimFlagDefaults(rulesConfig, config);
+        this.systemClaimFlagDefaults = loadFlagDefaults(
+            rulesConfig,
+            config,
+            "system-claim-defaults.flags",
+            "system-claim-defaults",
+            "flags.system-claim-defaults",
+            true
+        );
+        this.claimSyncSettings = loadClaimSyncSettings(config);
     }
 
     private Material resolveMaterial(String name) {
@@ -129,6 +175,11 @@ public final class PluginConfig {
         return Math.max(0, Math.min(255, value));
     }
 
+    private String sanitizeServerId(String rawValue, String fallback) {
+        String trimmed = rawValue == null ? "" : rawValue.trim();
+        return trimmed.isEmpty() ? fallback : trimmed;
+    }
+
     private Set<Material> resolveMaterials(List<String> names) {
         Set<Material> materials = new HashSet<>();
         for (String name : names) {
@@ -140,6 +191,144 @@ public final class PluginConfig {
         return materials;
     }
 
+    private Map<String, String> loadLegacyWorldServerMap(FileConfiguration config) {
+        Map<String, String> mappings = new HashMap<>();
+        String path = config.getConfigurationSection("cross-server-teleport.legacy-world-server-map") != null
+            ? "cross-server-teleport.legacy-world-server-map"
+            : "cross-server-teleport.world-server-map";
+        if (config.getConfigurationSection(path) == null) {
+            return Collections.emptyMap();
+        }
+        for (String worldName : config.getConfigurationSection(path).getKeys(false)) {
+            String targetServer = sanitizeServerId(config.getString(path + "." + worldName, ""), "");
+            if (worldName == null || worldName.isBlank() || targetServer.isBlank()) {
+                continue;
+            }
+            mappings.put(worldName.toLowerCase(Locale.ROOT), targetServer);
+        }
+        return Collections.unmodifiableMap(mappings);
+    }
+
+    private ClaimSyncSettings loadClaimSyncSettings(FileConfiguration config) {
+        String transport = sanitizeServerId(config.getString("claim-sync.transport", "redis"), "redis").toLowerCase(Locale.ROOT);
+        return new ClaimSyncSettings(
+            config.getBoolean("claim-sync.enabled", false),
+            transport,
+            sanitizeServerId(config.getString("claim-sync.redis.host", "127.0.0.1"), "127.0.0.1"),
+            Math.max(1, config.getInt("claim-sync.redis.port", 6379)),
+            config.getString("claim-sync.redis.password", ""),
+            Math.max(0, config.getInt("claim-sync.redis.database", 0)),
+            sanitizeServerId(config.getString("claim-sync.redis.channel", "coreclaim:claim-sync"), "coreclaim:claim-sync"),
+            Math.max(1, config.getInt("claim-sync.redis.reconnect-seconds", 5))
+        );
+    }
+
+    private Map<ClaimPermission, Boolean> loadPermissionDefaults(
+        FileConfiguration primaryConfig,
+        FileConfiguration legacyConfig,
+        String primaryPath,
+        String legacyPath,
+        boolean systemDefaults
+    ) {
+        EnumMap<ClaimPermission, Boolean> defaults = new EnumMap<>(ClaimPermission.class);
+        for (ClaimPermission permission : ClaimPermission.values()) {
+            defaults.put(permission, readBoolean(
+                primaryConfig,
+                primaryPath + "." + permissionKey(permission),
+                legacyConfig,
+                legacyPath + "." + permissionKey(permission),
+                defaultPermissionValue(permission, systemDefaults)
+            ));
+        }
+        return Collections.unmodifiableMap(defaults);
+    }
+
+    private Map<ClaimFlag, ClaimFlagState> loadNewClaimFlagDefaults(FileConfiguration rulesConfig, FileConfiguration legacyConfig) {
+        return loadFlagDefaults(rulesConfig, legacyConfig, "new-claim-defaults.flags", "new-claim-defaults", "flags.new-claim-defaults", false);
+    }
+
+    private Map<ClaimFlag, ClaimFlagState> loadFlagDefaults(
+        FileConfiguration primaryConfig,
+        FileConfiguration legacyConfig,
+        String primaryPath,
+        String legacyFilePath,
+        String legacyPath,
+        boolean systemDefaults
+    ) {
+        EnumMap<ClaimFlag, ClaimFlagState> defaults = new EnumMap<>(ClaimFlag.class);
+        for (ClaimFlag flag : ClaimFlag.values()) {
+            ClaimFlagState state = ClaimFlagState.fromInput(
+                readString(
+                    primaryConfig,
+                    primaryPath + "." + flag.key(),
+                    legacyConfig,
+                    legacyFilePath + "." + flag.key(),
+                    legacyPath + "." + flag.key(),
+                    defaultFlagValue(flag, systemDefaults)
+                )
+            );
+            defaults.put(flag, state == null ? ClaimFlagState.UNSET : state);
+        }
+        return Collections.unmodifiableMap(defaults);
+    }
+
+    private String readString(
+        FileConfiguration primaryConfig,
+        String primaryPath,
+        FileConfiguration fallbackConfig,
+        String fallbackPrimaryPath,
+        String fallbackSecondaryPath,
+        String defaultValue
+    ) {
+        if (primaryConfig != null && primaryConfig.isSet(primaryPath)) {
+            return primaryConfig.getString(primaryPath, defaultValue);
+        }
+        if (fallbackConfig != null && fallbackConfig.isSet(fallbackPrimaryPath)) {
+            return fallbackConfig.getString(fallbackPrimaryPath, defaultValue);
+        }
+        if (fallbackConfig != null && fallbackConfig.isSet(fallbackSecondaryPath)) {
+            return fallbackConfig.getString(fallbackSecondaryPath, defaultValue);
+        }
+        return defaultValue;
+    }
+
+    private boolean readBoolean(
+        FileConfiguration primaryConfig,
+        String primaryPath,
+        FileConfiguration fallbackConfig,
+        String fallbackPath,
+        boolean defaultValue
+    ) {
+        if (primaryConfig != null && primaryConfig.isSet(primaryPath)) {
+            return primaryConfig.getBoolean(primaryPath, defaultValue);
+        }
+        if (fallbackConfig != null && fallbackConfig.isSet(fallbackPath)) {
+            return fallbackConfig.getBoolean(fallbackPath, defaultValue);
+        }
+        return defaultValue;
+    }
+
+    private boolean defaultPermissionValue(ClaimPermission permission, boolean systemDefaults) {
+        if (!systemDefaults) {
+            return permission == ClaimPermission.FLIGHT;
+        }
+        return switch (permission) {
+            case INTERACT, TELEPORT -> true;
+            default -> false;
+        };
+    }
+
+    private String permissionKey(ClaimPermission permission) {
+        return permission.name().toLowerCase(Locale.ROOT);
+    }
+
+    private String defaultFlagValue(ClaimFlag flag, boolean systemDefaults) {
+        return switch (flag) {
+            case CONTAINER, USE_BUTTON, USE_LEVER, USE_PRESSURE_PLATE -> "deny";
+            case USE_DOOR, USE_TRAPDOOR, USE_FENCE_GATE, USE_BED -> "allow";
+        };
+    }
+
     public String claimWorld() {
         return claimWorld;
     }
@@ -149,11 +338,28 @@ public final class PluginConfig {
     }
 
     public String claimWorldsDisplay() {
-        return String.join(", ", claimWorlds);
+        return claimWorldRestrictionEnabled ? String.join(", ", claimWorlds) : "全部世界";
     }
 
     public boolean isClaimWorld(String worldName) {
-        return worldName != null && claimWorldNamesLower.contains(worldName.toLowerCase(java.util.Locale.ROOT));
+        if (worldName == null) {
+            return false;
+        }
+        if (!claimWorldRestrictionEnabled) {
+            return true;
+        }
+        return claimWorldNamesLower.contains(worldName.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    public String serverId() {
+        return serverId;
+    }
+
+    public boolean isCurrentServer(String targetServerId) {
+        if (targetServerId == null || targetServerId.isBlank()) {
+            return false;
+        }
+        return normalizedServerId.equals(targetServerId.trim().toLowerCase(Locale.ROOT));
     }
 
     public int starterRewardMinutes() {
@@ -234,6 +440,14 @@ public final class PluginConfig {
 
     public long flightExitGraceTicks() {
         return flightExitGraceTicks;
+    }
+
+    public long flightReconcileIntervalTicks() {
+        return flightReconcileIntervalTicks;
+    }
+
+    public boolean flightDebug() {
+        return flightDebug;
     }
 
     public boolean isAllowedInteract(Material material) {
@@ -319,5 +533,73 @@ public final class PluginConfig {
 
     public int claimVisualBlue() {
         return claimVisualBlue;
+    }
+
+    public boolean crossServerTeleportEnabled() {
+        return crossServerTeleportEnabled;
+    }
+
+    public int crossServerTeleportPendingTimeoutSeconds() {
+        return crossServerTeleportPendingTimeoutSeconds;
+    }
+
+    public ClaimFlagState newClaimFlagDefault(ClaimFlag flag) {
+        return newClaimFlagDefaults.getOrDefault(flag, ClaimFlagState.UNSET);
+    }
+
+    public Map<ClaimFlag, ClaimFlagState> newClaimFlagDefaults() {
+        return newClaimFlagDefaults;
+    }
+
+    public Map<ClaimFlag, ClaimFlagState> systemClaimFlagDefaults() {
+        return systemClaimFlagDefaults;
+    }
+
+    public Map<ClaimPermission, Boolean> newClaimPermissionDefaults() {
+        return newClaimPermissionDefaults;
+    }
+
+    public Map<ClaimPermission, Boolean> systemClaimPermissionDefaults() {
+        return systemClaimPermissionDefaults;
+    }
+
+    public boolean claimPermissionDefault(ClaimPermission permission, boolean systemManaged) {
+        Map<ClaimPermission, Boolean> defaults = systemManaged ? systemClaimPermissionDefaults : newClaimPermissionDefaults;
+        return defaults.getOrDefault(permission, defaultPermissionValue(permission, systemManaged));
+    }
+
+    public ClaimFlagState claimFlagDefault(ClaimFlag flag, boolean systemManaged) {
+        Map<ClaimFlag, ClaimFlagState> defaults = systemManaged ? systemClaimFlagDefaults : newClaimFlagDefaults;
+        return defaults.getOrDefault(flag, ClaimFlagState.UNSET);
+    }
+
+    public ClaimSyncSettings claimSync() {
+        return claimSyncSettings;
+    }
+
+    public String resolveLegacyCrossServerTargetServer(String worldName) {
+        if (worldName == null || worldName.isBlank()) {
+            return null;
+        }
+        return legacyCrossServerWorldServerMap.get(worldName.toLowerCase(Locale.ROOT));
+    }
+
+    public record ClaimSyncSettings(
+        boolean enabled,
+        String transport,
+        String redisHost,
+        int redisPort,
+        String redisPassword,
+        int redisDatabase,
+        String redisChannel,
+        int reconnectSeconds
+    ) {
+        public boolean usesRedis() {
+            return "redis".equalsIgnoreCase(transport);
+        }
+
+        public boolean hasRedisPassword() {
+            return redisPassword != null && !redisPassword.isBlank();
+        }
     }
 }

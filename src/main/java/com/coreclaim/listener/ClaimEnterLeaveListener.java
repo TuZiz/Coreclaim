@@ -12,11 +12,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -33,6 +35,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private final ProfileService profileService;
     private final ClaimVisualService claimVisualService;
     private final Map<UUID, PlayerFlightSession> flightSessions = new ConcurrentHashMap<>();
+    private final PlatformScheduler.TaskHandle reconcileTask;
 
     public ClaimEnterLeaveListener(
         CoreClaimPlugin plugin,
@@ -44,12 +47,15 @@ public final class ClaimEnterLeaveListener implements Listener {
         this.claimService = claimService;
         this.profileService = profileService;
         this.claimVisualService = claimVisualService;
+        long intervalTicks = plugin.settings().flightReconcileIntervalTicks();
+        this.reconcileTask = intervalTicks > 0L
+            ? plugin.platformScheduler().runRepeating(this::reconcileAllPlayers, intervalTicks, intervalTicks)
+            : null;
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        Claim claim = claimService.findClaim(event.getPlayer().getLocation()).orElse(null);
-        synchronizePlayer(event.getPlayer(), claim);
+        synchronizePlayer(event.getPlayer(), "join");
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -57,13 +63,10 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (event.getTo() == null) {
             return;
         }
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
-            && event.getFrom().getBlockY() == event.getTo().getBlockY()
-            && event.getFrom().getBlockZ() == event.getTo().getBlockZ()
-            && event.getFrom().getWorld() == event.getTo().getWorld()) {
+        if (sameBlock(event.getFrom(), event.getTo())) {
             return;
         }
-        if (handleLocationChange(event.getPlayer(), event.getFrom(), event.getTo())) {
+        if (handleLocationChange(event.getPlayer(), event.getFrom(), event.getTo(), "move")) {
             event.setTo(event.getFrom());
         }
     }
@@ -73,15 +76,14 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (event.getTo() == null) {
             return;
         }
-        if (handleLocationChange(event.getPlayer(), event.getFrom(), event.getTo())) {
+        if (handleLocationChange(event.getPlayer(), event.getFrom(), event.getTo(), "teleport")) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onChangedWorld(PlayerChangedWorldEvent event) {
-        Claim claim = claimService.findClaim(event.getPlayer().getLocation()).orElse(null);
-        synchronizePlayer(event.getPlayer(), claim);
+        synchronizePlayer(event.getPlayer(), "world-change");
     }
 
     @EventHandler
@@ -89,42 +91,42 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (event.getRespawnLocation() == null) {
             return;
         }
-        plugin.platformScheduler().runPlayerTask(event.getPlayer(), () -> {
-            Claim claim = claimService.findClaim(event.getPlayer().getLocation()).orElse(null);
-            synchronizePlayer(event.getPlayer(), claim);
-        });
+        plugin.platformScheduler().runPlayerTask(event.getPlayer(), () -> synchronizePlayer(event.getPlayer(), "respawn"));
     }
 
     @EventHandler
     public void onGameModeChange(PlayerGameModeChangeEvent event) {
-        plugin.platformScheduler().runPlayerTask(event.getPlayer(), () -> {
-            Claim claim = claimService.findClaim(event.getPlayer().getLocation()).orElse(null);
-            synchronizePlayer(event.getPlayer(), claim);
-        });
+        plugin.platformScheduler().runPlayerTask(event.getPlayer(), () -> synchronizePlayer(event.getPlayer(), "gamemode"));
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        PlayerFlightSession session = flightSessions.get(player.getUniqueId());
+        if (session != null) {
+            revokeManagedFlight(player, session, "death");
+            cleanupSession(player.getUniqueId(), session);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onToggleFlight(PlayerToggleFlightEvent event) {
-        if (!event.isFlying()) {
-            return;
-        }
         Player player = event.getPlayer();
         PlayerFlightSession session = flightSessions.get(player.getUniqueId());
         if (session == null || !session.managingClaimFlight) {
             return;
         }
 
-        Claim currentClaim = resolveCurrentClaim(session, player.getLocation());
-        if (canUseClaimFlight(player, currentClaim)) {
-            if (session.graceActive) {
-                cancelGrace(session);
-            }
-            cleanupSession(player.getUniqueId(), session);
+        Claim claim = claimService.findPlayerPresenceClaim(player.getLocation()).orElse(null);
+        session.currentClaimId = claim == null ? null : claim.id();
+        if (canUseClaimFlight(player, claim)) {
+            cancelGrace(session);
+            debugFlight(player, "toggle-allowed", claim, session);
             return;
         }
 
         event.setCancelled(true);
-        revokeManagedFlight(player, session);
+        revokeManagedFlight(player, session, "toggle-denied");
         cleanupSession(player.getUniqueId(), session);
     }
 
@@ -133,6 +135,12 @@ public final class ClaimEnterLeaveListener implements Listener {
         PlayerFlightSession session = flightSessions.remove(event.getPlayer().getUniqueId());
         if (session != null) {
             cancelGrace(session);
+        }
+    }
+
+    private void reconcileAllPlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            plugin.platformScheduler().runPlayerTask(player, () -> synchronizePlayer(player, "periodic"));
         }
     }
 
@@ -168,7 +176,7 @@ public final class ClaimEnterLeaveListener implements Listener {
             .replace("{owner}", claim.ownerName()));
     }
 
-    private boolean handleLocationChange(Player player, Location from, Location to) {
+    private boolean handleLocationChange(Player player, Location from, Location to, String reason) {
         UUID playerId = player.getUniqueId();
         PlayerFlightSession session = flightSessions.computeIfAbsent(playerId, ignored -> new PlayerFlightSession());
         Claim fromClaim = resolveCurrentClaim(session, from);
@@ -177,13 +185,14 @@ public final class ClaimEnterLeaveListener implements Listener {
         int toId = toClaim == null ? -1 : toClaim.id();
 
         if (fromId != toId && isBlockedEntry(player, toClaim)) {
-            player.sendMessage(plugin.message("blacklist-deny-enter", "{name}", toClaim.name()));
+            player.sendMessage(plugin.color("&6[Claim] &c你被这块领地 deny，无法进入 &e" + toClaim.name() + "&c。"));
+            debugFlight(player, "blocked-entry", toClaim, session);
             cleanupSession(playerId, session);
             return true;
         }
 
         session.currentClaimId = toClaim == null ? null : toClaim.id();
-        updateFlightState(player, session, toClaim);
+        updateFlightState(player, session, toClaim, reason + (fromId == toId ? "-same-claim" : "-claim-change"));
 
         if (fromId == toId) {
             cleanupSession(playerId, session);
@@ -207,20 +216,22 @@ public final class ClaimEnterLeaveListener implements Listener {
         return false;
     }
 
-    private void synchronizePlayer(Player player, Claim claim) {
+    private void synchronizePlayer(Player player, String reason) {
         if (player == null || !player.isOnline()) {
             return;
         }
+        Claim claim = claimService.findPlayerPresenceClaim(player.getLocation()).orElse(null);
         UUID playerId = player.getUniqueId();
         PlayerFlightSession session = flightSessions.computeIfAbsent(playerId, ignored -> new PlayerFlightSession());
         session.currentClaimId = claim == null ? null : claim.id();
-        updateFlightState(player, session, claim);
+        updateFlightState(player, session, claim, reason);
         cleanupSession(playerId, session);
     }
 
-    private void updateFlightState(Player player, PlayerFlightSession session, Claim claim) {
+    private void updateFlightState(Player player, PlayerFlightSession session, Claim claim, String reason) {
         if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
             clearManagedFlight(session);
+            debugFlight(player, reason + "-native-flight-mode", claim, session);
             return;
         }
 
@@ -228,46 +239,51 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (shouldAllow) {
             cancelGrace(session);
             if (!session.managingClaimFlight) {
-                if (!player.getAllowFlight()) {
-                    session.beginManagedFlight(player.getAllowFlight(), player.isFlying());
-                    player.setAllowFlight(true);
-                    player.setFallDistance(0F);
+                if (player.getAllowFlight()) {
+                    debugFlight(player, reason + "-already-allowed", claim, session);
+                    return;
                 }
+                session.beginManagedFlight(player.getAllowFlight(), player.isFlying());
+                player.setAllowFlight(true);
+                player.setFallDistance(0F);
+                debugFlight(player, reason + "-grant", claim, session);
                 return;
             }
             if (!player.getAllowFlight()) {
                 player.setAllowFlight(true);
             }
+            debugFlight(player, reason + "-keep", claim, session);
             return;
         }
 
         if (!session.managingClaimFlight) {
             cancelGrace(session);
+            debugFlight(player, reason + "-no-managed-flight", claim, session);
             return;
         }
 
         if (session.graceActive) {
             if (!player.isFlying()) {
-                revokeManagedFlight(player, session);
+                revokeManagedFlight(player, session, reason + "-grace-landed");
+            } else {
+                debugFlight(player, reason + "-grace-active", claim, session);
             }
             return;
         }
 
         long graceTicks = plugin.settings().flightExitGraceTicks();
         if (player.isFlying() && graceTicks > 0L) {
-            startGrace(player, session, graceTicks);
+            startGrace(player, session, graceTicks, claim, reason);
             return;
         }
 
-        revokeManagedFlight(player, session);
+        revokeManagedFlight(player, session, reason + "-revoke");
     }
 
-    private void startGrace(Player player, PlayerFlightSession session, long graceTicks) {
-        if (session.graceActive) {
-            return;
-        }
+    private void startGrace(Player player, PlayerFlightSession session, long graceTicks, Claim claim, String reason) {
         cancelGrace(session);
         session.graceActive = true;
+        debugFlight(player, reason + "-start-grace", claim, session);
         session.graceTask = plugin.platformScheduler().runPlayerLater(player, () -> expireGrace(player), graceTicks);
     }
 
@@ -284,18 +300,23 @@ public final class ClaimEnterLeaveListener implements Listener {
         session.graceActive = false;
         session.graceTask = null;
 
-        Claim claim = claimService.findClaim(player.getLocation()).orElse(null);
+        Claim claim = claimService.findPlayerPresenceClaim(player.getLocation()).orElse(null);
         session.currentClaimId = claim == null ? null : claim.id();
         if (canUseClaimFlight(player, claim)) {
+            debugFlight(player, "grace-expired-but-still-allowed", claim, session);
             cleanupSession(playerId, session);
             return;
         }
 
-        revokeManagedFlight(player, session);
+        revokeManagedFlight(player, session, "grace-expired");
         cleanupSession(playerId, session);
     }
 
-    private void revokeManagedFlight(Player player, PlayerFlightSession session) {
+    private void revokeManagedFlight(Player player, PlayerFlightSession session, String reason) {
+        if (!session.managingClaimFlight) {
+            cancelGrace(session);
+            return;
+        }
         cancelGrace(session);
         if (player.isFlying() && !(session.baselineAllowFlight && session.baselineFlying)) {
             player.setFlying(false);
@@ -306,6 +327,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         } else {
             player.setFallDistance(0F);
         }
+        debugFlight(player, reason, resolveCurrentClaim(session, player.getLocation()), session);
         clearManagedFlight(session);
     }
 
@@ -332,13 +354,13 @@ public final class ClaimEnterLeaveListener implements Listener {
     private boolean isBlockedEntry(Player player, Claim claim) {
         return claim != null
             && !claim.owner().equals(player.getUniqueId())
-            && claim.isBlacklisted(player.getUniqueId())
-            && !player.hasPermission("coreclaim.admin");
+            && !player.hasPermission("coreclaim.admin")
+            && (claim.isDenied(player.getUniqueId()) || (claim.denyAll() && !claim.isTrusted(player.getUniqueId())));
     }
 
     private Claim resolveCurrentClaim(PlayerFlightSession session, Location location) {
         if (session.currentClaimId == null) {
-            return null;
+            return location == null ? null : claimService.findPlayerPresenceClaim(location).orElse(null);
         }
         Claim currentClaim = claimService.findClaimById(session.currentClaimId).orElse(null);
         if (currentClaim != null && (location == null || currentClaim.contains(location))) {
@@ -348,7 +370,7 @@ public final class ClaimEnterLeaveListener implements Listener {
             session.currentClaimId = null;
             return null;
         }
-        Claim resolved = claimService.findClaim(location).orElse(null);
+        Claim resolved = claimService.findPlayerPresenceClaim(location).orElse(null);
         session.currentClaimId = resolved == null ? null : resolved.id();
         return resolved;
     }
@@ -360,7 +382,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (currentClaim != null && currentClaim.contains(to)) {
             return currentClaim;
         }
-        Claim resolved = claimService.findClaim(to).orElse(null);
+        Claim resolved = claimService.findPlayerPresenceClaim(to).orElse(null);
         if (resolved != null) {
             session.currentClaimId = resolved.id();
         }
@@ -371,6 +393,28 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (session.currentClaimId == null && !session.managingClaimFlight && !session.graceActive) {
             flightSessions.remove(playerId, session);
         }
+    }
+
+    private boolean sameBlock(Location from, Location to) {
+        return from.getWorld() == to.getWorld()
+            && from.getBlockX() == to.getBlockX()
+            && from.getBlockY() == to.getBlockY()
+            && from.getBlockZ() == to.getBlockZ();
+    }
+
+    private void debugFlight(Player player, String reason, Claim claim, PlayerFlightSession session) {
+        if (!plugin.settings().flightDebug()) {
+            return;
+        }
+        plugin.getLogger().info("[ClaimFlight] player=" + player.getName()
+            + " reason=" + reason
+            + " claim=" + (claim == null ? "none" : "#" + claim.id() + ":" + claim.name())
+            + " allowFlight=" + player.getAllowFlight()
+            + " flying=" + player.isFlying()
+            + " managed=" + session.managingClaimFlight
+            + " grace=" + session.graceActive
+            + " baselineAllowFlight=" + session.baselineAllowFlight
+            + " baselineFlying=" + session.baselineFlying);
     }
 
     private static final class PlayerFlightSession {

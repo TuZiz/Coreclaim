@@ -1,4 +1,4 @@
-title: '&8» &3&l扩建控制盘 - {name}'
+title: '&8[&3扩建&8] &3&l扩建控制台 - {name}'
 GuiPlain:
   - "FFFFNFFFF"
   - "FFFFFFFFF"
@@ -18,30 +18,30 @@ items:
     char: "I"
     material: COMPASS
     custom-model-data: 1301
-    name: '&e&l扩建控制盘'
+    name: '&e&l扩建控制台'
     lore:
       - ''
-      - '&7领地名称: &f{name}'
-      - '&7世界: &f{world}'
-      - '&7核心坐标: &f{x}, {z}'
-      - '&7当前大小: &e{width}x{depth}'
-      - '&7当前面积: &e{area}'
+      - ' &7领地名称: &f{name}'
+      - ' &7世界: &f{world}'
+      - ' &7核心坐标: &f{x}, {z}'
+      - ' &7当前大小: &e{width}x{depth}'
+      - ' &7当前面积: &e{area}'
       - ''
-      - '&8▪ &7点击四个方向按钮扩建领地'
+      - ' &7点击四个方向按钮扩建领地'
 
   expand-north:
     char: "N"
     material: ARROW
     custom-model-data: 1302
     glow: true
-    name: '&3&l北向扩建 +{amount}'
+    name: '&3&l向北扩建 +{amount}'
     lore:
       - ''
-      - '&7当前北侧: &e{current}'
-      - '&7扩建后: &e{target}'
-      - '&7价格: &6{price}'
+      - ' &7当前北侧: &e{current}'
+      - ' &7扩建后: &e{target}'
+      - ' &7价格: &6{price}'
       - ''
-      - '&6&l» &e点击向北扩建'
+      - ' &e点击向北扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-west:
@@ -49,14 +49,14 @@ items:
     material: ARROW
     custom-model-data: 1303
     glow: true
-    name: '&3&l西向扩建 +{amount}'
+    name: '&3&l向西扩建 +{amount}'
     lore:
       - ''
-      - '&7当前西侧: &e{current}'
-      - '&7扩建后: &e{target}'
-      - '&7价格: &6{price}'
+      - ' &7当前西侧: &e{current}'
+      - ' &7扩建后: &e{target}'
+      - ' &7价格: &6{price}'
       - ''
-      - '&6&l» &e点击向西扩建'
+      - ' &e点击向西扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-east:
@@ -64,14 +64,14 @@ items:
     material: ARROW
     custom-model-data: 1304
     glow: true
-    name: '&3&l东向扩建 +{amount}'
+    name: '&3&l向东扩建 +{amount}'
     lore:
       - ''
-      - '&7当前东侧: &e{current}'
-      - '&7扩建后: &e{target}'
-      - '&7价格: &6{price}'
+      - ' &7当前东侧: &e{current}'
+      - ' &7扩建后: &e{target}'
+      - ' &7价格: &6{price}'
       - ''
-      - '&6&l» &e点击向东扩建'
+      - ' &e点击向东扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   expand-south:
@@ -79,14 +79,14 @@ items:
     material: ARROW
     custom-model-data: 1305
     glow: true
-    name: '&3&l南向扩建 +{amount}'
+    name: '&3&l向南扩建 +{amount}'
     lore:
       - ''
-      - '&7当前南侧: &e{current}'
-      - '&7扩建后: &e{target}'
-      - '&7价格: &6{price}'
+      - ' &7当前南侧: &e{current}'
+      - ' &7扩建后: &e{target}'
+      - ' &7价格: &6{price}'
       - ''
-      - '&6&l» &e点击向南扩建'
+      - ' &e点击向南扩建'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   back:
@@ -102,6 +102,7 @@ items:
     custom-model-data: 1308
     name: '&c&l删除领地'
     lore:
-      - '&7点击后需要在聊天栏输入'
-      - '&a确认删除 &7才会真的删除'
+      - ''
+      - ' &7点击后需要在聊天栏输入'
+      - ' &a确认删除 &7才会真正删除'
     sound: BLOCK_ANVIL_PLACE

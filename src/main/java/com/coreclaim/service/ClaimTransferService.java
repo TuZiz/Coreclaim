@@ -3,7 +3,6 @@ package com.coreclaim.service;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.platform.PlatformScheduler;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +27,10 @@ public final class ClaimTransferService {
     public boolean requestTransfer(Player sender, Claim claim, Player target) {
         if (claim == null) {
             sender.sendMessage(plugin.message("claim-not-found"));
+            return false;
+        }
+        if (claim.systemManaged()) {
+            sender.sendMessage(chatMessage("system-claim-transfer-denied", "&c&l! &7系统领地不能被普通转让。"));
             return false;
         }
         if (!claim.owner().equals(sender.getUniqueId())) {
@@ -86,7 +89,7 @@ public final class ClaimTransferService {
             return false;
         }
 
-        Claim claim = claimService.findClaimById(request.claimId).orElse(null);
+        Claim claim = claimService.findClaimByIdFresh(request.claimId).orElse(null);
         if (claim == null || !claim.owner().equals(request.originalOwner)) {
             target.sendMessage(plugin.message("transfer-expired"));
             return false;
@@ -117,7 +120,7 @@ public final class ClaimTransferService {
             return false;
         }
         request.cancel();
-        Claim claim = claimService.findClaimById(request.claimId).orElse(null);
+        Claim claim = claimService.findClaimByIdFresh(request.claimId).orElse(null);
         String claimName = claim == null ? String.valueOf(request.claimId) : claim.name();
         target.sendMessage(plugin.message("transfer-denied-target", "{name}", claimName));
         notifySender(request, plugin.message("transfer-denied-owner", "{player}", target.getName(), "{name}", claimName));
@@ -127,6 +130,10 @@ public final class ClaimTransferService {
     public boolean forceTransfer(CommandSender sender, Claim claim, Player target) {
         if (claim == null) {
             sender.sendMessage(plugin.message("claim-not-found"));
+            return false;
+        }
+        if (claim.systemManaged()) {
+            sender.sendMessage(chatMessage("system-claim-transfer-denied", "&c&l! &7系统领地不能被转让。"));
             return false;
         }
         if (target == null || !target.isOnline()) {
@@ -165,10 +172,19 @@ public final class ClaimTransferService {
     }
 
     private boolean hasClaimSlot(Player target) {
-        PlayerProfile profile = profileService.getOrCreate(target.getUniqueId(), target.getName());
         ClaimGroup group = plugin.groups().resolve(target);
-        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
+        int maxClaims = group.maxClaims();
         return claimService.countClaims(target.getUniqueId()) < maxClaims;
+    }
+
+    private String chatMessage(String path, String fallback, String... replacements) {
+        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
+        String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
+        String message = plugin.color(prefix + body);
+        for (int index = 0; index + 1 < replacements.length; index += 2) {
+            message = message.replace(replacements[index], replacements[index + 1]);
+        }
+        return message;
     }
 
     private void expire(PendingTransfer request) {

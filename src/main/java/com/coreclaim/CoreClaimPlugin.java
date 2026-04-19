@@ -15,6 +15,7 @@ import com.coreclaim.listener.ClaimCoreInteractionListener;
 import com.coreclaim.listener.ClaimNamingListener;
 import com.coreclaim.listener.ClaimProtectionListener;
 import com.coreclaim.listener.ClaimSelectionListener;
+import com.coreclaim.listener.CrossServerTeleportListener;
 import com.coreclaim.listener.MenuListener;
 import com.coreclaim.listener.RemovalConfirmListener;
 import com.coreclaim.listener.SelectionToolListener;
@@ -24,9 +25,11 @@ import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimMarketService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.service.ClaimSyncService;
 import com.coreclaim.service.ClaimTransferService;
 import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimVisualService;
+import com.coreclaim.service.CrossServerTeleportService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import com.coreclaim.service.HologramService;
 import com.coreclaim.service.OnlineRewardService;
@@ -34,10 +37,19 @@ import com.coreclaim.service.PendingClaimService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
 import com.coreclaim.storage.DatabaseManager;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CoreClaimPlugin extends JavaPlugin {
@@ -46,6 +58,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private GroupConfig groupConfig;
     private ResourceConfig messageResource;
     private ResourceConfig groupsResource;
+    private ResourceConfig rulesResource;
     private final Map<String, ResourceConfig> menuResources = new HashMap<>();
     private PlatformScheduler platformScheduler;
     private DatabaseManager databaseManager;
@@ -57,6 +70,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private PendingClaimService pendingClaimService;
     private ClaimActionService claimActionService;
     private ClaimVisualService claimVisualService;
+    private CrossServerTeleportService crossServerTeleportService;
+    private ClaimSyncService claimSyncService;
     private ClaimSelectionService claimSelectionService;
     private ClaimInputService claimInputService;
     private ClaimTransferService claimTransferService;
@@ -69,11 +84,15 @@ public final class CoreClaimPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        ensureConfigDefaults();
+        ensureRulesDefaults();
+        ensureHealthyGuiResources();
         this.messageResource = new ResourceConfig(this, "messages.yml");
         this.groupsResource = new ResourceConfig(this, "groups.yml");
+        this.rulesResource = new ResourceConfig(this, "rules.yml");
         loadMenuResources();
 
-        this.pluginConfig = new PluginConfig(getConfig());
+        this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
         this.groupConfig = new GroupConfig(groupsResource.config());
         this.platformScheduler = new PlatformScheduler(this);
         this.databaseManager = new DatabaseManager(this);
@@ -83,10 +102,31 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.economyHook = new EconomyHook(this);
         this.hologramService = new HologramService(this);
         this.claimVisualService = new ClaimVisualService(this);
-        this.pendingClaimService = new PendingClaimService(this, claimService, profileService, claimCoreFactory, hologramService, claimVisualService, economyHook);
-        this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook);
-        this.claimSelectionService = new ClaimSelectionService(this, claimService, profileService, claimVisualService, hologramService, economyHook);
-        this.claimInputService = new ClaimInputService(this, claimService);
+        this.claimSyncService = new ClaimSyncService(this, databaseManager, claimService, hologramService);
+        this.claimService.setClaimSyncPublisher(claimSyncService);
+        this.crossServerTeleportService = new CrossServerTeleportService(this, databaseManager, claimService, claimVisualService);
+        this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory);
+        this.pendingClaimService = new PendingClaimService(
+            this,
+            claimService,
+            profileService,
+            claimCoreFactory,
+            hologramService,
+            claimVisualService,
+            economyHook,
+            onlineRewardService
+        );
+        this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook, crossServerTeleportService);
+        this.claimSelectionService = new ClaimSelectionService(
+            this,
+            claimService,
+            profileService,
+            claimVisualService,
+            hologramService,
+            economyHook,
+            onlineRewardService
+        );
+        this.claimInputService = new ClaimInputService(this, claimService, profileService);
         this.claimTransferService = new ClaimTransferService(this, claimService, profileService);
         this.claimMarketService = new ClaimMarketService(this, databaseManager, claimService, profileService, economyHook);
         this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
@@ -101,8 +141,6 @@ public final class CoreClaimPlugin extends JavaPlugin {
             claimSelectionService,
             claimMarketService
         );
-        this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory);
-
         getServer().getPluginManager().registerEvents(
             new ClaimCoreListener(this, claimCoreFactory, pendingClaimService),
             this
@@ -112,7 +150,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
             this
         );
         getServer().getPluginManager().registerEvents(new ClaimSelectionListener(claimSelectionService), this);
-        getServer().getPluginManager().registerEvents(new SelectionToolListener(this, claimSelectionService), this);
+        getServer().getPluginManager().registerEvents(new SelectionToolListener(claimSelectionService, onlineRewardService), this);
         getServer().getPluginManager().registerEvents(
             new ClaimEnvironmentProtectionListener(claimService, explosionAuthorizationService),
             this
@@ -128,7 +166,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
             new ClaimEnterLeaveListener(this, claimService, profileService, claimVisualService),
             this
         );
+        getServer().getPluginManager().registerEvents(new CrossServerTeleportListener(this, crossServerTeleportService), this);
         getServer().getPluginManager().registerEvents(new RemovalConfirmListener(this, removalConfirmationService), this);
+
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
 
         PluginCommand command = getCommand("claim");
         if (command != null) {
@@ -141,8 +182,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
                 claimSelectionService,
                 menuService,
                 removalConfirmationService,
-                claimTransferService,
-                claimMarketService
+                claimTransferService
             );
             command.setExecutor(executor);
             command.setTabCompleter(executor);
@@ -153,7 +193,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
 
         hologramService.refreshAll(claimService);
+        claimSyncService.start();
         onlineRewardService.start();
+        logSharedModeWarnings();
+        logLegacyRuleConfigWarnings();
         getLogger().info(message("database-ready", "{file}", databaseManager.displayName()));
         getLogger().info("CoreClaim enabled in " + (platformScheduler.isFolia() ? "Folia" : "Spigot/Bukkit") + " mode.");
     }
@@ -165,6 +208,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
         if (claimTransferService != null) {
             claimTransferService.clear();
+        }
+        if (claimSyncService != null) {
+            claimSyncService.stop();
         }
         if (profileService != null) {
             profileService.save();
@@ -178,6 +224,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         if (databaseManager != null) {
             databaseManager.close();
         }
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
     }
 
     public PluginConfig settings() {
@@ -194,6 +241,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     public FileConfiguration messagesConfig() {
         return messageResource.config();
+    }
+
+    public FileConfiguration rulesConfig() {
+        return rulesResource.config();
     }
 
     public GroupConfig groups() {
@@ -238,28 +289,228 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return message;
     }
 
-    public void reloadPluginResources() {
+    public int reloadPluginResources() {
+        reloadConfig();
+        ensureConfigDefaults();
+        ensureRulesDefaults();
+        ensureHealthyGuiResources();
         reloadConfig();
         messageResource.reload();
         groupsResource.reload();
+        rulesResource.reload();
         menuResources.values().forEach(ResourceConfig::reload);
-        this.pluginConfig = new PluginConfig(getConfig());
+        this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
         this.groupConfig = new GroupConfig(groupsResource.config());
+        int claimCount = claimService == null ? 0 : claimService.reloadClaims();
+        if (claimSyncService != null) {
+            claimSyncService.reloadSettings();
+        }
+        if (crossServerTeleportService != null) {
+            crossServerTeleportService.reloadSettings();
+        }
         if (hologramService != null && claimService != null) {
             hologramService.refreshAll(claimService);
         }
+        if (claimSyncService != null) {
+            claimSyncService.publishClaimsReloaded();
+        }
+        logSharedModeWarnings();
+        logLegacyRuleConfigWarnings();
+        return claimCount;
+    }
+
+    private void ensureConfigDefaults() {
+        try (InputStream inputStream = getResource("config.yml")) {
+            if (inputStream == null) {
+                return;
+            }
+            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            FileConfiguration config = getConfig();
+            List<String> missingPaths = new ArrayList<>();
+            collectMissingConfigPaths(defaults, config, "", missingPaths);
+            if (missingPaths.isEmpty()) {
+                return;
+            }
+            config.setDefaults(defaults);
+            config.options().copyDefaults(true);
+            saveConfig();
+            getLogger().info("Added missing config defaults: " + String.join(", ", missingPaths));
+        } catch (Exception exception) {
+            getLogger().warning("Failed to merge config defaults: " + exception.getMessage());
+        }
+    }
+
+    private void collectMissingConfigPaths(ConfigurationSection defaults, FileConfiguration config, String prefix, List<String> missingPaths) {
+        for (String key : defaults.getKeys(false)) {
+            String path = prefix.isEmpty() ? key : prefix + "." + key;
+            Object value = defaults.get(key);
+            if (value instanceof ConfigurationSection section) {
+                collectMissingConfigPaths(section, config, path, missingPaths);
+                continue;
+            }
+            if (!config.contains(path)) {
+                missingPaths.add(path);
+            }
+        }
+    }
+
+    private void logSharedModeWarnings() {
+        if (databaseManager == null || !databaseManager.isMySql() || pluginConfig == null) {
+            return;
+        }
+        if (pluginConfig.serverId() == null
+            || pluginConfig.serverId().isBlank()
+            || "local".equalsIgnoreCase(pluginConfig.serverId().trim())) {
+            getLogger().warning("database.type=mysql is enabled, but server-id is still 'local'. Set a unique server-id on every backend.");
+        }
+        if (!pluginConfig.claimSync().enabled()) {
+            getLogger().warning("database.type=mysql is enabled, but claim-sync.enabled=false. Shared claim cache updates require Redis or manual /claim reload.");
+        } else if (!pluginConfig.claimSync().usesRedis()) {
+            getLogger().warning("claim-sync.enabled=true, but claim-sync.transport is not redis. Shared claim cache sync will not start.");
+        }
+        if (!pluginConfig.crossServerTeleportEnabled()) {
+            getLogger().warning("cross-server-teleport.enabled=false. Remote claim menus can show, but cross-server teleport is disabled.");
+        }
+    }
+
+    private void logLegacyRuleConfigWarnings() {
+        File legacyFlagsFile = new File(getDataFolder(), "flags.yml");
+        if (legacyFlagsFile.exists()) {
+            getLogger().warning("Legacy flags.yml was found. CoreClaim now uses rules.yml; flags.yml is only kept as compatibility fallback.");
+        }
+        if (getConfig().getConfigurationSection("flags") != null) {
+            getLogger().warning("Legacy flags config was found in config.yml. CoreClaim now uses rules.yml; config.yml.flags is only kept as compatibility fallback.");
+        }
+        if (getConfig().getConfigurationSection("permissions.new-claim-defaults") != null
+            || getConfig().getConfigurationSection("permissions.system-claim-defaults") != null) {
+            getLogger().warning("Legacy permission defaults were found in config.yml. CoreClaim now uses rules.yml; config.yml.permissions is only kept as compatibility fallback.");
+        }
+    }
+
+    private void ensureRulesDefaults() {
+        try (InputStream inputStream = getResource("rules.yml")) {
+            if (inputStream == null) {
+                return;
+            }
+            if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
+                throw new IllegalStateException("无法创建插件数据目录。");
+            }
+            File file = new File(getDataFolder(), "rules.yml");
+            boolean existed = file.exists();
+            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            FileConfiguration rulesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
+            boolean changed = false;
+            File legacyFlagsFile = new File(getDataFolder(), "flags.yml");
+            if (legacyFlagsFile.exists()) {
+                FileConfiguration legacyFlags = YamlConfiguration.loadConfiguration(legacyFlagsFile);
+                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
+                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
+                if (changed) {
+                    getLogger().info("Migrated legacy flag defaults from flags.yml to rules.yml");
+                }
+            }
+            changed |= migrateLegacySection(getConfig().getConfigurationSection("flags.new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
+            changed |= migrateLegacySection(getConfig().getConfigurationSection("flags.system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
+            changed |= migrateLegacySection(getConfig().getConfigurationSection("permissions.new-claim-defaults"), rulesConfig, "new-claim-defaults.permissions");
+            changed |= migrateLegacySection(getConfig().getConfigurationSection("permissions.system-claim-defaults"), rulesConfig, "system-claim-defaults.permissions");
+            List<String> missingPaths = new ArrayList<>();
+            collectMissingConfigPaths(defaults, rulesConfig, "", missingPaths);
+            if (!missingPaths.isEmpty()) {
+                rulesConfig.setDefaults(defaults);
+                rulesConfig.options().copyDefaults(true);
+                changed = true;
+            }
+            if (!existed || changed) {
+                rulesConfig.save(file);
+                if (!missingPaths.isEmpty()) {
+                    getLogger().info("Added missing rules defaults: " + String.join(", ", missingPaths));
+                }
+            }
+        } catch (Exception exception) {
+            getLogger().warning("Failed to prepare rules defaults: " + exception.getMessage());
+        }
+    }
+
+    private boolean migrateLegacySection(ConfigurationSection source, FileConfiguration target, String prefix) {
+        if (source == null) {
+            return false;
+        }
+        return migrateLegacyValues(source, target, prefix);
+    }
+
+    private boolean migrateLegacyValues(ConfigurationSection source, FileConfiguration target, String prefix) {
+        boolean changed = false;
+        for (String key : source.getKeys(false)) {
+            String path = prefix.isEmpty() ? key : prefix + "." + key;
+            Object value = source.get(key);
+            if (value instanceof ConfigurationSection section) {
+                changed |= migrateLegacyValues(section, target, path);
+            } else if (!target.isSet(path)) {
+                target.set(path, value);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     private void loadMenuResources() {
         menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
         menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
         menuResources.put("trust", new ResourceConfig(this, "gui/trust.yml"));
-        menuResources.put("trust-online", new ResourceConfig(this, "gui/trust-online.yml"));
         menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
-        menuResources.put("trust-member-permissions", new ResourceConfig(this, "gui/trust-member-permissions.yml"));
         menuResources.put("selection-create", new ResourceConfig(this, "gui/selection-create.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
-        menuResources.put("claim-market", new ResourceConfig(this, "gui/claim-market.yml"));
-        menuResources.put("claim-sale-confirm", new ResourceConfig(this, "gui/claim-sale-confirm.yml"));
+    }
+
+    private void ensureHealthyGuiResources() {
+        for (String resource : List.of(
+            "gui/claim-list.yml",
+            "gui/claim-manage.yml",
+            "gui/trust.yml",
+            "gui/claim-permissions.yml",
+            "gui/selection-create.yml",
+            "gui/core.yml"
+        )) {
+            repairCorruptedGuiResource(resource);
+        }
+    }
+
+    private void repairCorruptedGuiResource(String fileName) {
+        try {
+            File file = new File(getDataFolder(), fileName);
+            if (!file.exists()) {
+                return;
+            }
+            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            if (!looksLikeGuiMojibake(content) && !looksLikeOutdatedGuiLayout(fileName, content)) {
+                return;
+            }
+            saveResource(fileName, true);
+            getLogger().warning("Detected outdated or corrupted GUI content in " + fileName + ". Replaced it with the bundled resource.");
+        } catch (Exception exception) {
+            getLogger().warning("Failed to verify GUI resource " + fileName + ": " + exception.getMessage());
+        }
+    }
+
+    private boolean looksLikeGuiMojibake(String content) {
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+        return content.contains("GuiPlain:")
+            && content.contains("custom-model-data:")
+            && java.util.regex.Pattern.compile("[\\u4E00-\\u9FFF]{3,}\\?").matcher(content).find();
+    }
+
+    private boolean looksLikeOutdatedGuiLayout(String fileName, String content) {
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+        return switch (fileName) {
+            case "gui/core.yml",
+                 "gui/claim-permissions.yml" -> !content.contains("layout-version: 4");
+            case "gui/trust.yml",
+                 "gui/selection-create.yml" -> !content.contains("layout-version: 3");
+            default -> false;
+        };
     }
 }

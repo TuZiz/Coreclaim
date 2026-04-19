@@ -24,6 +24,7 @@ public final class PendingClaimService {
     private final HologramService hologramService;
     private final ClaimVisualService claimVisualService;
     private final EconomyHook economyHook;
+    private final OnlineRewardService onlineRewardService;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
     private final Map<UUID, com.coreclaim.platform.PlatformScheduler.TaskHandle> timeoutTasks = new ConcurrentHashMap<>();
 
@@ -34,7 +35,8 @@ public final class PendingClaimService {
         ClaimCoreFactory claimCoreFactory,
         HologramService hologramService,
         ClaimVisualService claimVisualService,
-        EconomyHook economyHook
+        EconomyHook economyHook,
+        OnlineRewardService onlineRewardService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -43,6 +45,7 @@ public final class PendingClaimService {
         this.hologramService = hologramService;
         this.claimVisualService = claimVisualService;
         this.economyHook = economyHook;
+        this.onlineRewardService = onlineRewardService;
     }
 
     public boolean beginClaimCreation(Player player, Location coreLocation, boolean starterCore) {
@@ -125,12 +128,21 @@ public final class PendingClaimService {
                 return null;
             }
         }
+        boolean firstOrdinaryClaim = validation.claimCount() == 0;
         Claim claim = null;
         coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
         try {
             claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
             hologramService.spawnClaimHologram(claim);
             claimVisualService.showClaim(player, claim);
+            if (pending.starterCore()) {
+                PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+                if (!profile.starterCoreUsed()) {
+                    profile.setStarterCoreUsed(true);
+                    profileService.saveProfile(profile);
+                }
+            }
+            onlineRewardService.markOrdinaryClaimCreated(player);
             player.sendMessage(plugin.message(
                 "claim-name-created",
                 "{name}", claim.name(),
@@ -138,6 +150,12 @@ public final class PendingClaimService {
                 "{depth}", String.valueOf(claim.depth()),
                 "{cost}", ClaimActionService.formatMoney(createCost)
             ));
+            if (firstOrdinaryClaim) {
+                player.sendMessage(chatMessage(
+                    "second-claim-selection-tip",
+                    "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
+                ));
+            }
             return claim;
         } catch (RuntimeException exception) {
             rollbackFailedClaimCreation(claim, coreLocation, pending, player, createCost);
@@ -224,11 +242,10 @@ public final class PendingClaimService {
         if (starterCore && claimCount > 0) {
             return ValidationResult.denied(plugin.message("starter-core-first-only"));
         }
-        if (!starterCore && profile.activityPoints() < plugin.settings().coreUseMinActivity()) {
-            return ValidationResult.denied(plugin.message(
-                "claim-core-activity-low",
-                "{value}",
-                String.valueOf(plugin.settings().coreUseMinActivity())
+        if (starterCore && profile.starterCoreUsed()) {
+            return ValidationResult.denied(chatMessage(
+                "starter-core-already-used",
+                "&c&l! &7你已经成功使用过一次新人核心了，后续请直接用普通金锄头选区创建领地。"
             ));
         }
         World world = coreLocation.getWorld();
@@ -236,7 +253,7 @@ public final class PendingClaimService {
             return ValidationResult.denied(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorldsDisplay()));
         }
         ClaimGroup group = plugin.groups().resolve(player);
-        int maxClaims = group.claimSlotsForActivity(profile.activityPoints());
+        int maxClaims = group.maxClaims();
         if (claimCount >= maxClaims) {
             return ValidationResult.denied(plugin.message("claim-no-slot"));
         }
@@ -294,5 +311,15 @@ public final class PendingClaimService {
     private long claimArea(int initialDistance) {
         int edge = initialDistance * 2 + 1;
         return (long) edge * edge;
+    }
+
+    private String chatMessage(String path, String fallback, String... replacements) {
+        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
+        String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
+        String message = plugin.color(prefix + body);
+        for (int index = 0; index + 1 < replacements.length; index += 2) {
+            message = message.replace(replacements[index], replacements[index + 1]);
+        }
+        return message;
     }
 }

@@ -1,6 +1,7 @@
 package com.coreclaim.model;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -13,6 +14,7 @@ public final class Claim {
     private final int id;
     private volatile UUID owner;
     private volatile String ownerName;
+    private final String serverId;
     private final String world;
     private final int centerX;
     private final int centerY;
@@ -24,6 +26,7 @@ public final class Claim {
     private final Set<UUID> trustedMembers = new LinkedHashSet<>();
     private final Set<UUID> blacklistedMembers = new LinkedHashSet<>();
     private final Map<UUID, ClaimMemberSettings> memberSettings = new LinkedHashMap<>();
+    private final EnumMap<ClaimFlag, ClaimFlagState> flagStates = new EnumMap<>(ClaimFlag.class);
     private String name;
     private boolean coreVisible;
     private int east;
@@ -41,6 +44,13 @@ public final class Claim {
     private boolean allowBucket;
     private boolean allowTeleport;
     private boolean allowFlight;
+    private final boolean systemManaged;
+    private boolean denyAll;
+    private Double teleportX;
+    private Double teleportY;
+    private Double teleportZ;
+    private Float teleportYaw;
+    private Float teleportPitch;
     private long lastExpandedAt;
 
     public Claim(
@@ -48,6 +58,7 @@ public final class Claim {
         UUID owner,
         String ownerName,
         String name,
+        String serverId,
         String world,
         int centerX,
         int centerY,
@@ -72,12 +83,20 @@ public final class Claim {
         boolean allowBucket,
         boolean allowTeleport,
         boolean allowFlight,
+        boolean systemManaged,
+        boolean denyAll,
+        Double teleportX,
+        Double teleportY,
+        Double teleportZ,
+        Float teleportYaw,
+        Float teleportPitch,
         long lastExpandedAt
     ) {
         this.id = id;
         this.owner = owner;
         this.ownerName = ownerName;
         this.name = name;
+        this.serverId = serverId == null ? "" : serverId;
         this.world = world;
         this.centerX = centerX;
         this.centerY = centerY;
@@ -102,6 +121,13 @@ public final class Claim {
         this.allowBucket = allowBucket;
         this.allowTeleport = allowTeleport;
         this.allowFlight = allowFlight;
+        this.systemManaged = systemManaged;
+        this.denyAll = denyAll;
+        this.teleportX = teleportX;
+        this.teleportY = teleportY;
+        this.teleportZ = teleportZ;
+        this.teleportYaw = teleportYaw;
+        this.teleportPitch = teleportPitch;
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
     }
 
@@ -143,6 +169,10 @@ public final class Claim {
 
     public String world() {
         return world;
+    }
+
+    public String serverId() {
+        return serverId;
     }
 
     public int centerX() {
@@ -235,27 +265,105 @@ public final class Claim {
         return trustedMembers.size();
     }
 
-    public synchronized boolean addBlacklistedMember(UUID playerId) {
+    public synchronized boolean addDeniedMember(UUID playerId) {
         if (owner.equals(playerId)) {
             return false;
         }
         return blacklistedMembers.add(playerId);
     }
 
-    public synchronized boolean removeBlacklistedMember(UUID playerId) {
+    public synchronized boolean removeDeniedMember(UUID playerId) {
         return blacklistedMembers.remove(playerId);
     }
 
-    public synchronized boolean isBlacklisted(UUID playerId) {
+    public synchronized boolean isDenied(UUID playerId) {
         return blacklistedMembers.contains(playerId);
     }
 
-    public synchronized Set<UUID> blacklistedMembers() {
+    public synchronized Set<UUID> deniedMembers() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(blacklistedMembers));
     }
 
-    public synchronized void clearBlacklistedMembers() {
+    public synchronized void clearDeniedMembers() {
         blacklistedMembers.clear();
+    }
+
+    public synchronized boolean denyAll() {
+        return denyAll;
+    }
+
+    public boolean systemManaged() {
+        return systemManaged;
+    }
+
+    public synchronized void setDenyAll(boolean denyAll) {
+        this.denyAll = denyAll;
+    }
+
+    public synchronized boolean hasTeleportPoint() {
+        return teleportX != null && teleportY != null && teleportZ != null;
+    }
+
+    public synchronized Double teleportX() {
+        return teleportX;
+    }
+
+    public synchronized Double teleportY() {
+        return teleportY;
+    }
+
+    public synchronized Double teleportZ() {
+        return teleportZ;
+    }
+
+    public synchronized Float teleportYaw() {
+        return teleportYaw;
+    }
+
+    public synchronized Float teleportPitch() {
+        return teleportPitch;
+    }
+
+    public synchronized void setTeleportPoint(double x, double y, double z, float yaw, float pitch) {
+        this.teleportX = x;
+        this.teleportY = y;
+        this.teleportZ = z;
+        this.teleportYaw = yaw;
+        this.teleportPitch = pitch;
+    }
+
+    public synchronized void clearTeleportPoint() {
+        teleportX = null;
+        teleportY = null;
+        teleportZ = null;
+        teleportYaw = null;
+        teleportPitch = null;
+    }
+
+    public synchronized ClaimFlagState flagState(ClaimFlag flag) {
+        return flagStates.getOrDefault(flag, ClaimFlagState.UNSET);
+    }
+
+    public synchronized void setFlagState(ClaimFlag flag, ClaimFlagState state) {
+        if (flag == null) {
+            return;
+        }
+        if (state == null || state == ClaimFlagState.UNSET) {
+            flagStates.remove(flag);
+            return;
+        }
+        flagStates.put(flag, state);
+    }
+
+    public synchronized void clearFlagState(ClaimFlag flag) {
+        if (flag == null) {
+            return;
+        }
+        flagStates.remove(flag);
+    }
+
+    public synchronized Map<ClaimFlag, ClaimFlagState> flagStates() {
+        return Collections.unmodifiableMap(new EnumMap<>(flagStates));
     }
 
     public synchronized ClaimMemberSettings memberSettings(UUID playerId) {
@@ -423,18 +531,27 @@ public final class Claim {
         if (location == null || location.getWorld() == null) {
             return false;
         }
+        if (!containsHorizontally(location)) {
+            return false;
+        }
+        int blockX = location.getBlockX();
+        int blockZ = location.getBlockZ();
+        if (blockX == centerX && location.getBlockY() == centerY && blockZ == centerZ) {
+            return true;
+        }
+        return fullHeight || (location.getBlockY() >= minY && location.getBlockY() <= maxY);
+    }
+
+    public boolean containsHorizontally(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
         if (!world.equals(location.getWorld().getName())) {
             return false;
         }
         int blockX = location.getBlockX();
         int blockZ = location.getBlockZ();
-        if (blockX < minX() || blockX > maxX() || blockZ < minZ() || blockZ > maxZ()) {
-            return false;
-        }
-        if (blockX == centerX && location.getBlockY() == centerY && blockZ == centerZ) {
-            return true;
-        }
-        return fullHeight || (location.getBlockY() >= minY && location.getBlockY() <= maxY);
+        return blockX >= minX() && blockX <= maxX() && blockZ >= minZ() && blockZ <= maxZ();
     }
 
     public boolean overlaps(

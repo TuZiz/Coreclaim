@@ -1,7 +1,7 @@
 name: CoreClaim
 main: com.coreclaim.CoreClaimPlugin
 version: ${version}
-api-version: '1.20'
+api-version: "1.20"
 folia-supported: true
 authors:
   - Codex
@@ -10,22 +10,64 @@ softdepend:
   - PlaceholderAPI
 commands:
   claim:
-    description: Claim 主命令
+    description: CoreClaim main command
     usage: /claim
     aliases: [lingdi, coreclaim, cc]
 permissions:
   coreclaim.use:
-    description: 使用 Claim 基础命令
+    description: Use player claim commands
+    default: true
+  coreclaim.manage.deny:
+    description: Manage deny access on the current claim
+    default: true
+  coreclaim.manage.tpset:
+    description: Set the teleport point for the current claim
+    default: true
+  coreclaim.manage.flags:
+    description: Manage interaction flags on the current claim
     default: true
   coreclaim.admin:
-    description: 管理 Claim
+    description: Full CoreClaim administrator access
+    default: op
+  coreclaim.admin.view:
+    description: View administrator-level claim details
+    default: op
+  coreclaim.admin.force:
+    description: Force-edit and override claim restrictions
+    default: op
+  coreclaim.admin.ops:
+    description: Use reload and operational commands
+    default: op
+  coreclaim.admin.create.system:
+    description: Create system-managed claims from a selection
+    default: op
+  coreclaim.admin.member.manage:
+    description: Force-manage claim members and denied players
+    default: op
+  coreclaim.admin.permission.manage:
+    description: Force-manage default claim permissions
+    default: op
+  coreclaim.admin.flag.manage:
+    description: Force-manage claim interaction flags
+    default: op
+  coreclaim.admin.claim.manage:
+    description: Force-manage claim ownership, server, deletion, and system claims
+    default: op
+  coreclaim.admin.market.manage:
+    description: Manage claim market behavior as an administrator
+    default: op
+  coreclaim.admin.activity.manage:
+    description: Manage player activity values
+    default: op
+  coreclaim.admin.reward.givecore:
+    description: Give claim cores manually
     default: op
   coreclaim.transfer:
-    description: 转让自己的领地
+    description: Transfer your own claims
     default: true
   coreclaim.sell:
-    description: 挂牌出售自己的领地
+    description: List your own claims for sale
     default: true
   coreclaim.market:
-    description: 打开领地出售市场
+    description: Open the claim market
     default: true

@@ -17,7 +17,7 @@ import java.util.Locale;
 
 public final class DatabaseManager {
 
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 4;
     private static final String SCHEMA_VERSION_KEY = "schema_version";
     private static final String MIGRATION_COMPLETED_KEY = "sqlite_migration_completed";
     private static final DateTimeFormatter BACKUP_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -37,6 +37,7 @@ public final class DatabaseManager {
             "claim_id", "player_uuid", "allow_place", "allow_break", "allow_interact", "allow_container",
             "allow_redstone", "allow_explosion", "allow_bucket", "allow_teleport", "allow_flight"
         }),
+        new TableCopy("claim_flags", new String[] {"claim_id", "flag_key", "state"}),
         new TableCopy("profile_global_members", new String[] {"owner_uuid", "member_uuid"}),
         new TableCopy("claim_sale_listings", new String[] {
             "claim_id", "seller_uuid", "seller_name", "price", "created_at"
@@ -95,15 +96,17 @@ public final class DatabaseManager {
                     online_minutes,
                     starter_core_granted,
                     starter_core_reclaimed,
+                    starter_core_used,
                     auto_show_borders
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     name = VALUES(name),
                     activity_points = VALUES(activity_points),
                     online_minutes = VALUES(online_minutes),
                     starter_core_granted = VALUES(starter_core_granted),
                     starter_core_reclaimed = VALUES(starter_core_reclaimed),
+                    starter_core_used = VALUES(starter_core_used),
                     auto_show_borders = VALUES(auto_show_borders)
                 """;
         }
@@ -115,15 +118,17 @@ public final class DatabaseManager {
                 online_minutes,
                 starter_core_granted,
                 starter_core_reclaimed,
+                starter_core_used,
                 auto_show_borders
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 name = excluded.name,
                 activity_points = excluded.activity_points,
                 online_minutes = excluded.online_minutes,
                 starter_core_granted = excluded.starter_core_granted,
                 starter_core_reclaimed = excluded.starter_core_reclaimed,
+                starter_core_used = excluded.starter_core_used,
                 auto_show_borders = excluded.auto_show_borders
             """;
     }
@@ -132,17 +137,18 @@ public final class DatabaseManager {
         if (databaseType == DatabaseType.MYSQL) {
             return """
                 INSERT INTO claims (
-                    id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
+                    id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                     allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion,
-                    allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     owner_uuid = VALUES(owner_uuid),
                     owner_name = VALUES(owner_name),
                     name = VALUES(name),
                     core_visible = VALUES(core_visible),
                     world = VALUES(world),
+                    server_id = VALUES(server_id),
                     center_x = VALUES(center_x),
                     center_y = VALUES(center_y),
                     center_z = VALUES(center_z),
@@ -165,22 +171,30 @@ public final class DatabaseManager {
                     allow_bucket = VALUES(allow_bucket),
                     allow_teleport = VALUES(allow_teleport),
                     allow_flight = VALUES(allow_flight),
+                    system_managed = VALUES(system_managed),
+                    deny_all = VALUES(deny_all),
+                    tp_x = VALUES(tp_x),
+                    tp_y = VALUES(tp_y),
+                    tp_z = VALUES(tp_z),
+                    tp_yaw = VALUES(tp_yaw),
+                    tp_pitch = VALUES(tp_pitch),
                     last_expanded_at = VALUES(last_expanded_at),
                     created_at = VALUES(created_at)
                 """;
         }
         return """
             INSERT INTO claims (
-                id, owner_uuid, owner_name, name, core_visible, world, center_x, center_y, center_z,
+                id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 owner_uuid = excluded.owner_uuid,
                 owner_name = excluded.owner_name,
                 name = excluded.name,
                 core_visible = excluded.core_visible,
                 world = excluded.world,
+                server_id = excluded.server_id,
                 center_x = excluded.center_x,
                 center_y = excluded.center_y,
                 center_z = excluded.center_z,
@@ -203,6 +217,13 @@ public final class DatabaseManager {
                 allow_bucket = excluded.allow_bucket,
                 allow_teleport = excluded.allow_teleport,
                 allow_flight = excluded.allow_flight,
+                system_managed = excluded.system_managed,
+                deny_all = excluded.deny_all,
+                tp_x = excluded.tp_x,
+                tp_y = excluded.tp_y,
+                tp_z = excluded.tp_z,
+                tp_yaw = excluded.tp_yaw,
+                tp_pitch = excluded.tp_pitch,
                 last_expanded_at = excluded.last_expanded_at,
                 created_at = excluded.created_at
             """;
@@ -366,9 +387,10 @@ public final class DatabaseManager {
                 online_minutes %s NOT NULL,
                 starter_core_granted %s NOT NULL,
                 starter_core_reclaimed %s NOT NULL DEFAULT 0,
+                starter_core_used %s NOT NULL DEFAULT 0,
                 auto_show_borders %s NOT NULL DEFAULT 0
             )%s
-            """.formatted(uuidType(), shortTextType(), integerType(), integerType(), booleanType(), booleanType(), booleanType(), tableOptions()),
+            """.formatted(uuidType(), shortTextType(), integerType(), integerType(), booleanType(), booleanType(), booleanType(), booleanType(), tableOptions()),
             statement -> {
             }
         );
@@ -381,6 +403,7 @@ public final class DatabaseManager {
                 name %s NOT NULL DEFAULT '',
                 core_visible %s NOT NULL DEFAULT 1,
                 world %s NOT NULL,
+                server_id %s NOT NULL DEFAULT '',
                 center_x %s NOT NULL,
                 center_y %s NOT NULL,
                 center_z %s NOT NULL,
@@ -403,21 +426,29 @@ public final class DatabaseManager {
                 allow_bucket %s NOT NULL DEFAULT 1,
                 allow_teleport %s NOT NULL DEFAULT 1,
                 allow_flight %s NOT NULL DEFAULT 1,
+                system_managed %s NOT NULL DEFAULT 0,
+                deny_all %s NOT NULL DEFAULT 0,
+                tp_x %s,
+                tp_y %s,
+                tp_z %s,
+                tp_yaw %s,
+                tp_pitch %s,
                 last_expanded_at %s NOT NULL DEFAULT 0,
                 created_at %s NOT NULL
             )%s
             """.formatted(
-                autoIncrementPrimaryKey(), uuidType(), shortTextType(), shortTextType(), booleanType(), worldType(),
+                autoIncrementPrimaryKey(), uuidType(), shortTextType(), shortTextType(), booleanType(), worldType(), shortTextType(),
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
-                booleanType(), longType(), longType(), tableOptions()
+                booleanType(), booleanType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
             ),
             statement -> {
             }
         );
         ensureColumn("claims", "name", shortTextType() + " NOT NULL DEFAULT ''");
         ensureColumn("claims", "core_visible", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "server_id", shortTextType() + " NOT NULL DEFAULT ''");
         ensureColumn("claims", "min_y", integerType() + " NOT NULL DEFAULT -64");
         ensureColumn("claims", "max_y", integerType() + " NOT NULL DEFAULT 319");
         ensureColumn("claims", "full_height", booleanType() + " NOT NULL DEFAULT 1");
@@ -436,6 +467,13 @@ public final class DatabaseManager {
         ensureColumn("claims", "allow_bucket", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_teleport", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_flight", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "system_managed", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "deny_all", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "tp_x", doubleType());
+        ensureColumn("claims", "tp_y", doubleType());
+        ensureColumn("claims", "tp_z", doubleType());
+        ensureColumn("claims", "tp_yaw", doubleType());
+        ensureColumn("claims", "tp_pitch", doubleType());
         ensureColumn("claims", "last_expanded_at", longType() + " NOT NULL DEFAULT 0");
         update(
             """
@@ -444,6 +482,8 @@ public final class DatabaseManager {
                 south = CASE WHEN south <= 0 THEN radius ELSE south END,
                 west = CASE WHEN west <= 0 THEN radius ELSE west END,
                 north = CASE WHEN north <= 0 THEN radius ELSE north END,
+                server_id = CASE WHEN server_id IS NULL THEN '' ELSE server_id END,
+                system_managed = CASE WHEN system_managed IS NULL THEN 0 ELSE system_managed END,
                 enter_message = CASE WHEN enter_message IS NULL THEN '' ELSE enter_message END,
                 leave_message = CASE WHEN leave_message IS NULL THEN '' ELSE leave_message END
             """,
@@ -498,7 +538,21 @@ public final class DatabaseManager {
             statement -> {
             }
         );
+        update(
+            """
+            CREATE TABLE IF NOT EXISTS claim_flags (
+                claim_id %s NOT NULL,
+                flag_key %s NOT NULL,
+                state %s NOT NULL DEFAULT 0,
+                PRIMARY KEY (claim_id, flag_key),
+                FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
+            )%s
+            """.formatted(integerType(), shortTextType(), integerType(), tableOptions()),
+            statement -> {
+            }
+        );
         ensureColumn("profiles", "starter_core_reclaimed", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("profiles", "starter_core_used", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("profiles", "auto_show_borders", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
@@ -716,7 +770,7 @@ public final class DatabaseManager {
             """;
     }
 
-    private void ensureColumn(String table, String column, String definition) {
+    public void ensureColumn(String table, String column, String definition) {
         synchronized (lock) {
             ensureConnection();
             try {

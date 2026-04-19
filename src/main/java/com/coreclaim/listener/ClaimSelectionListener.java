@@ -8,6 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 
 public final class ClaimSelectionListener implements Listener {
 
@@ -22,8 +23,10 @@ public final class ClaimSelectionListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
             return;
         }
+
         Player player = event.getPlayer();
-        if (!claimSelectionService.isSelectionTool(player.getInventory().getItemInMainHand())) {
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (!claimSelectionService.canUseSelectionTool(mainHand)) {
             return;
         }
 

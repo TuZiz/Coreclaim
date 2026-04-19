@@ -1,0 +1,43 @@
+# 新建普通领地默认规则
+new-claim-defaults:
+  permissions:
+    place: false
+    break: false
+    interact: false
+    container: false
+    redstone: false
+    explosion: false
+    bucket: false
+    teleport: false
+    flight: true
+  flags:
+    container: deny
+    use-button: deny
+    use-lever: deny
+    use-pressure-plate: deny
+    use-door: allow
+    use-trapdoor: allow
+    use-fence-gate: allow
+    use-bed: allow
+
+# 新建系统领地默认公共规则
+system-claim-defaults:
+  permissions:
+    place: false
+    break: false
+    interact: true
+    container: false
+    redstone: false
+    explosion: false
+    bucket: false
+    teleport: true
+    flight: false
+  flags:
+    container: deny
+    use-button: deny
+    use-lever: deny
+    use-pressure-plate: deny
+    use-door: allow
+    use-trapdoor: allow
+    use-fence-gate: allow
+    use-bed: allow

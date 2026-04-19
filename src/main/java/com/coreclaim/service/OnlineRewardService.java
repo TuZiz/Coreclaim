@@ -4,19 +4,22 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.platform.PlatformScheduler;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.entity.Player;
 
 public final class OnlineRewardService {
+
+    private static final Set<Integer> STARTER_COUNTDOWN_REMINDERS = Set.of(20, 10, 5, 1);
 
     private final CoreClaimPlugin plugin;
     private final PlatformScheduler platformScheduler;
     private final ProfileService profileService;
     private final ClaimService claimService;
     private final ClaimCoreFactory claimCoreFactory;
+    private final Map<UUID, StarterRewardSession> sessions = new ConcurrentHashMap<>();
     private PlatformScheduler.TaskHandle taskHandle;
     private int saveCounter;
 
@@ -44,6 +47,66 @@ public final class OnlineRewardService {
             taskHandle.cancel();
             taskHandle = null;
         }
+        sessions.clear();
+    }
+
+    public void handleJoin(Player player) {
+        if (player == null) {
+            return;
+        }
+
+        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        boolean hasOrdinaryClaim = claimService.countClaims(player.getUniqueId()) > 0;
+        if (hasOrdinaryClaim) {
+            sessions.remove(player.getUniqueId());
+            return;
+        }
+
+        sessions.put(player.getUniqueId(), new StarterRewardSession());
+        int current = profile.onlineMinutes();
+        int requiredMinutes = plugin.settings().starterRewardMinutes();
+
+        if (!profile.starterCoreGranted()) {
+            if (current >= requiredMinutes) {
+                grantStarterCore(player, profile, requiredMinutes);
+                return;
+            }
+
+            int remaining = Math.max(1, requiredMinutes - current);
+            player.sendMessage(chatMessage(
+                "starter-core-join-reminder",
+                "&b&l领地: &7累计在线满 &e{minutes} &7分钟可获得第一块领地核心，当前还差 &e{remaining} &7分钟。",
+                "{minutes}", String.valueOf(requiredMinutes),
+                "{remaining}", String.valueOf(remaining)
+            ));
+            return;
+        }
+
+        if (claimCoreFactory.hasStarterCore(player)) {
+            player.sendMessage(chatMessage(
+                "starter-core-login-guidance",
+                "&a&l首块领地: &7你已经拿到新人核心了，手持它对地面右键就能开始创建第一块领地。&f新人核心创建的是默认全格保护领地。"
+            ));
+            return;
+        }
+
+        player.sendMessage(chatMessage(
+            "starter-core-missing-guidance",
+            "&e&l提示: &7新人核心不会自动补发了；如果你已经丢失它，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7也能完成第一块领地。"
+        ));
+    }
+
+    public void markOrdinaryClaimCreated(Player player) {
+        if (player == null) {
+            return;
+        }
+        sessions.remove(player.getUniqueId());
+    }
+
+    public void clearSession(UUID playerId) {
+        if (playerId != null) {
+            sessions.remove(playerId);
+        }
     }
 
     private void tickOnlinePlayers() {
@@ -64,13 +127,19 @@ public final class OnlineRewardService {
         if (profileService.usesSharedDatabase()) {
             profileService.saveProfile(profile);
         }
+
+        StarterRewardSession session = sessions.get(player.getUniqueId());
+        if (session == null) {
+            return;
+        }
+
         int current = profile.onlineMinutes();
         int requiredMinutes = plugin.settings().starterRewardMinutes();
+        if (profile.starterCoreGranted()) {
+            return;
+        }
 
-        if (!profile.starterCoreGranted()
-            && current < requiredMinutes
-            && current > 0
-            && current % 5 == 0) {
+        if (shouldSendStarterCountdownReminder(current, requiredMinutes)) {
             int remaining = requiredMinutes - current;
             player.sendMessage(plugin.message(
                 "starter-core-reminder",
@@ -79,57 +148,28 @@ public final class OnlineRewardService {
             ));
         }
 
-        if (!profile.starterCoreGranted() && current >= requiredMinutes) {
-            profile.setStarterCoreGranted(true);
-            claimCoreFactory.giveStarterCore(player, 1);
-            player.sendMessage(plugin.message("claim-core-rewarded", "{minutes}", String.valueOf(requiredMinutes)));
-            profileService.saveProfile(profile);
-            return;
-        }
-
-        if (shouldSendStarterReclaimReminder(player, profile, current, requiredMinutes)) {
-            sendStarterReclaimReminder(player);
+        if (current >= requiredMinutes) {
+            grantStarterCore(player, profile, requiredMinutes);
         }
     }
 
-    private boolean shouldSendStarterReclaimReminder(Player player, PlayerProfile profile, int current, int requiredMinutes) {
-        if (player == null || profile == null) {
+    private boolean shouldSendStarterCountdownReminder(int currentMinutes, int requiredMinutes) {
+        if (currentMinutes <= 0 || currentMinutes >= requiredMinutes) {
             return false;
         }
-        if (!profile.starterCoreGranted()) {
-            return false;
-        }
-        if (profile.starterCoreReclaimed()) {
-            return false;
-        }
-        if (claimService.countClaims(player.getUniqueId()) > 0) {
-            return false;
-        }
-        if (claimCoreFactory.hasStarterCore(player)) {
-            return false;
-        }
-        int interval = plugin.settings().starterReclaimReminderIntervalMinutes();
-        return current > requiredMinutes && interval > 0 && (current - requiredMinutes) % interval == 0;
+        int remaining = requiredMinutes - currentMinutes;
+        return STARTER_COUNTDOWN_REMINDERS.contains(remaining);
     }
 
-    private void sendStarterReclaimReminder(Player player) {
-        TextComponent message = new TextComponent(chatMessage(
-            "starter-core-reclaim-reminder",
-            "&6&l提醒: &7你还没有创建第一块领地，新人核心丢失的话可以点击后面的按钮补领。"
+    private void grantStarterCore(Player player, PlayerProfile profile, int requiredMinutes) {
+        profile.setStarterCoreGranted(true);
+        claimCoreFactory.giveStarterCore(player, 1);
+        player.sendMessage(plugin.message("claim-core-rewarded", "{minutes}", String.valueOf(requiredMinutes)));
+        player.sendMessage(chatMessage(
+            "starter-core-guidance",
+            "&e&l下一步: &7手持新人核心对地面右键，输入领地名字后就能创建第一块领地。&f新人核心创建的是默认全格保护领地。"
         ));
-        TextComponent button = new TextComponent(plainMessage(
-            "starter-core-reclaim-button",
-            "&a[点击补领]"
-        ));
-        button.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/claim reclaimstarter"));
-        button.setHoverEvent(new HoverEvent(
-            HoverEvent.Action.SHOW_TEXT,
-            new ComponentBuilder(plainMessage(
-                "starter-core-reclaim-hover",
-                "&e点击补领你的新人核心"
-            )).create()
-        ));
-        player.spigot().sendMessage(message, button);
+        profileService.saveProfile(profile);
     }
 
     private String chatMessage(String path, String fallback, String... replacements) {
@@ -142,13 +182,6 @@ public final class OnlineRewardService {
         return message;
     }
 
-    private String plainMessage(String path, String fallback, String... replacements) {
-        String message = plugin.color(plugin.messagesConfig().contains(path)
-            ? plugin.messagesConfig().getString(path, fallback)
-            : fallback);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-        }
-        return message;
+    private record StarterRewardSession() {
     }
 }

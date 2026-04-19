@@ -28,7 +28,7 @@ public final class ProfileService {
     }
 
     public PlayerProfile getOrCreate(UUID uuid, String name) {
-        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(uuid, name, 0, 0, false, false, false));
+        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(uuid, name, 0, 0, false, false, false, false));
         if (name != null && !name.isBlank()) {
             profile.setLastKnownName(name);
             refreshKnownName(profile);
@@ -47,7 +47,8 @@ public final class ProfileService {
                 statement.setInt(4, profile.onlineMinutes());
                 statement.setInt(5, profile.starterCoreGranted() ? 1 : 0);
                 statement.setInt(6, profile.starterCoreReclaimed() ? 1 : 0);
-                statement.setInt(7, profile.autoShowBorders() ? 1 : 0);
+                statement.setInt(7, profile.starterCoreUsed() ? 1 : 0);
+                statement.setInt(8, profile.autoShowBorders() ? 1 : 0);
             }
         );
     }
@@ -130,7 +131,7 @@ public final class ProfileService {
 
     private void load() {
         databaseManager.query(
-            "SELECT uuid, name, activity_points, online_minutes, starter_core_granted, starter_core_reclaimed, auto_show_borders FROM profiles",
+            "SELECT uuid, name, activity_points, online_minutes, starter_core_granted, starter_core_reclaimed, starter_core_used, auto_show_borders FROM profiles",
             statement -> {
             },
             resultSet -> {
@@ -143,6 +144,7 @@ public final class ProfileService {
                         resultSet.getInt("online_minutes"),
                         resultSet.getInt("starter_core_granted") == 1,
                         resultSet.getInt("starter_core_reclaimed") == 1,
+                        resultSet.getInt("starter_core_used") == 1,
                         resultSet.getInt("auto_show_borders") == 1
                     );
                     profiles.put(uuid, profile);

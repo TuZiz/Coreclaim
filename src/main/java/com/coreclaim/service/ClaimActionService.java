@@ -52,6 +52,10 @@ public final class ClaimActionService {
         return claimService.findClaim(player.getLocation()).orElse(null);
     }
 
+    public Claim findCurrentPresenceClaim(Player player) {
+        return claimService.findPlayerPresenceClaim(player.getLocation()).orElse(null);
+    }
+
     public ExpansionPreview previewExpansion(Player player, Claim claim, ClaimDirection direction) {
         return buildExpansionPreview(player, claim, direction, plugin.settings().directionExpandAmount());
     }
@@ -103,7 +107,7 @@ public final class ClaimActionService {
             }
         }
 
-        claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north());
+        claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north(), player.getUniqueId());
         player.sendMessage(plugin.message(
             "claim-expand-success",
             "{direction}", direction.displayName(),
@@ -156,7 +160,7 @@ public final class ClaimActionService {
             return false;
         }
         hologramService.removeClaimHologram(claim.id());
-        claimService.updateCoreVisibility(claim, false);
+        claimService.updateCoreVisibility(claim, false, player.getUniqueId());
         World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
         if (world != null) {
             Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
@@ -206,7 +210,7 @@ public final class ClaimActionService {
             player.sendMessage(plugin.message("trust-self"));
             return false;
         }
-        if (!claimService.addTrustedMember(claim, target.getUniqueId())) {
+        if (!claimService.addTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             player.sendMessage(plugin.message("trust-already", "{player}", displayName(target)));
             return false;
         }
@@ -236,7 +240,7 @@ public final class ClaimActionService {
             player.sendMessage(plugin.message("trust-no-target"));
             return false;
         }
-        if (!claimService.removeTrustedMember(claim, target.getUniqueId())) {
+        if (!claimService.removeTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             player.sendMessage(plugin.message("trust-missing", "{player}", displayName(target)));
             return false;
         }

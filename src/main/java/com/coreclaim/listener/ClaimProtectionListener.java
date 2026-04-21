@@ -6,6 +6,7 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
+import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import java.util.Iterator;
@@ -56,6 +57,7 @@ import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.entity.Vehicle;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.projectiles.ProjectileSource;
@@ -66,17 +68,20 @@ public final class ClaimProtectionListener implements Listener {
     private final ClaimService claimService;
     private final ClaimCoreFactory claimCoreFactory;
     private final ExplosionAuthorizationService explosionAuthorizationService;
+    private final ClaimCleanupService claimCleanupService;
 
     public ClaimProtectionListener(
         CoreClaimPlugin plugin,
         ClaimService claimService,
         ClaimCoreFactory claimCoreFactory,
-        ExplosionAuthorizationService explosionAuthorizationService
+        ExplosionAuthorizationService explosionAuthorizationService,
+        ClaimCleanupService claimCleanupService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
         this.claimCoreFactory = claimCoreFactory;
         this.explosionAuthorizationService = explosionAuthorizationService;
+        this.claimCleanupService = claimCleanupService;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -104,6 +109,7 @@ public final class ClaimProtectionListener implements Listener {
         if (isCoreBlock(event.getBlock(), claim.get())) {
             return;
         }
+        claimCleanupService.recordBuildActivity(claim.get(), player.getUniqueId());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -117,6 +123,10 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.PLACE)) {
             event.setCancelled(true);
             sendProtectionDeny(event.getPlayer(), claim.get());
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordBuildActivity(claim.get(), event.getPlayer().getUniqueId());
         }
     }
 
@@ -128,6 +138,9 @@ public final class ClaimProtectionListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK && event.getAction() != Action.PHYSICAL) {
             return;
         }
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
 
         Optional<Claim> claim = claimService.findClaim(event.getClickedBlock().getLocation());
         if (claim.isPresent() && isCoreBlock(event.getClickedBlock(), claim.get())) {
@@ -136,6 +149,18 @@ public final class ClaimProtectionListener implements Listener {
         Material clickedType = event.getClickedBlock().getType();
         ClaimPermission requiredPermission = requiredPermissionForBlockInteract(clickedType, event.getItem());
         ClaimFlag interactionFlag = ClaimFlag.fromInteraction(clickedType);
+        if (claim.isPresent() && interactionFlag == ClaimFlag.CONTAINER) {
+            if (!isBypassing(event.getPlayer())
+                && !claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+                event.setCancelled(true);
+                sendProtectionDeny(event.getPlayer(), claim.get());
+                return;
+            }
+            if (!isBypassing(event.getPlayer())) {
+                claimCleanupService.recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
+            }
+            return;
+        }
         if (claim.isPresent() && interactionFlag != null && !isBypassing(event.getPlayer())) {
             ClaimFlagState flagState = claimService.flagState(claim.get(), interactionFlag);
             if (flagState != ClaimFlagState.UNSET) {
@@ -146,13 +171,18 @@ public final class ClaimProtectionListener implements Listener {
                 if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), interactionFlag)) {
                     event.setCancelled(true);
                     sendProtectionDeny(event.getPlayer(), claim.get());
+                    return;
                 }
+                recordBlockInteraction(claim.get(), event.getPlayer(), requiredPermission);
                 return;
             }
         }
         boolean allowListed = plugin.settings().isAllowedInteract(clickedType)
             && !(plugin.settings().strictRedstoneInteract() && plugin.settings().isAlwaysProtectedInteract(clickedType));
         if (claim.isPresent() && allowListed) {
+            if (!isBypassing(event.getPlayer())) {
+                recordBlockInteraction(claim.get(), event.getPlayer(), requiredPermission);
+            }
             return;
         }
         if (claim.isPresent() && requiredPermission == ClaimPermission.EXPLOSION && !isBypassing(event.getPlayer())
@@ -162,6 +192,10 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), requiredPermission)) {
             event.setCancelled(true);
             sendProtectionDeny(event.getPlayer(), claim.get());
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            recordBlockInteraction(claim.get(), event.getPlayer(), requiredPermission);
         }
     }
 
@@ -172,6 +206,10 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
             sendProtectionDeny(event.getPlayer(), claim.get());
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordBuildActivity(claim.get(), event.getPlayer().getUniqueId());
         }
     }
 
@@ -181,6 +219,10 @@ public final class ClaimProtectionListener implements Listener {
         if (claim.isPresent() && !isBypassing(event.getPlayer()) && !claimService.hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BUCKET)) {
             event.setCancelled(true);
             sendProtectionDeny(event.getPlayer(), claim.get());
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordBuildActivity(claim.get(), event.getPlayer().getUniqueId());
         }
     }
 
@@ -189,15 +231,22 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
-            && !isBypassing(event.getPlayer())
-            && claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
+            && !isBypassing(event.getPlayer())) {
             if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
                 event.setCancelled(true);
                 sendProtectionDeny(event.getPlayer(), claim.get());
+                return;
             }
+            claimCleanupService.recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
             return;
         }
-        denyIfNeeded(event.getPlayer(), claim, requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked()), event);
+        ClaimPermission permission = requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked());
+        if (denyIfNeeded(event.getPlayer(), claim, permission, event)) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            recordEntityInteraction(claim.get(), event.getPlayer(), permission);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -205,33 +254,55 @@ public final class ClaimProtectionListener implements Listener {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
-            && !isBypassing(event.getPlayer())
-            && claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
+            && !isBypassing(event.getPlayer())) {
             if (!claimService.hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
                 event.setCancelled(true);
                 sendProtectionDeny(event.getPlayer(), claim.get());
+                return;
             }
+            claimCleanupService.recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
             return;
         }
-        denyIfNeeded(event.getPlayer(), claim, requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked()), event);
+        ClaimPermission permission = requiredPermissionForEntityInteract(event.getPlayer(), event.getRightClicked());
+        if (denyIfNeeded(event.getPlayer(), claim, permission, event)) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            recordEntityInteraction(claim.get(), event.getPlayer(), permission);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getRightClicked().getLocation());
-        denyIfNeeded(event.getPlayer(), claim, ClaimPermission.BREAK, event);
+        if (denyIfNeeded(event.getPlayer(), claim, ClaimPermission.BREAK, event)) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordBuildActivity(claim.get(), event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onLeash(PlayerLeashEntityEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
-        denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event);
+        if (denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event)) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onUnleash(PlayerUnleashEntityEvent event) {
         Optional<Claim> claim = claimService.findClaim(event.getEntity().getLocation());
-        denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event);
+        if (denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event)) {
+            return;
+        }
+        if (claim.isPresent() && !isBypassing(event.getPlayer())) {
+            claimCleanupService.recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -580,12 +651,35 @@ public final class ClaimProtectionListener implements Listener {
         return claim.map(Claim::id).orElse(-1);
     }
 
-    private void denyIfNeeded(Player player, Optional<Claim> claim, ClaimPermission permission, Cancellable cancellable) {
+    private boolean denyIfNeeded(Player player, Optional<Claim> claim, ClaimPermission permission, Cancellable cancellable) {
         if (claim.isEmpty() || isBypassing(player) || claimService.hasPermission(claim.get(), player.getUniqueId(), permission)) {
-            return;
+            return false;
         }
         cancellable.setCancelled(true);
         sendProtectionDeny(player, claim.get());
+        return true;
+    }
+
+    private void recordBlockInteraction(Claim claim, Player player, ClaimPermission permission) {
+        if (claim == null || player == null) {
+            return;
+        }
+        if (permission == ClaimPermission.BREAK || permission == ClaimPermission.BUCKET || permission == ClaimPermission.PLACE) {
+            claimCleanupService.recordBuildActivity(claim, player.getUniqueId());
+            return;
+        }
+        claimCleanupService.recordInteractionActivity(claim, player.getUniqueId());
+    }
+
+    private void recordEntityInteraction(Claim claim, Player player, ClaimPermission permission) {
+        if (claim == null || player == null) {
+            return;
+        }
+        if (permission == ClaimPermission.BREAK) {
+            claimCleanupService.recordBuildActivity(claim, player.getUniqueId());
+            return;
+        }
+        claimCleanupService.recordInteractionActivity(claim, player.getUniqueId());
     }
 
     private void sendProtectionDeny(Player player, Claim claim) {

@@ -36,6 +36,7 @@ public final class ClaimService {
     private volatile Map<String, Map<Long, List<Claim>>> claimChunkIndex = Map.of();
     private final Object mutationLock = new Object();
     private volatile ClaimSyncPublisher claimSyncPublisher = ClaimSyncPublisher.NO_OP;
+    private volatile ClaimCleanupService claimCleanupService;
 
     public ClaimService(CoreClaimPlugin plugin, DatabaseManager databaseManager, ProfileService profileService) {
         this.plugin = plugin;
@@ -51,6 +52,10 @@ public final class ClaimService {
 
     public void setClaimSyncPublisher(ClaimSyncPublisher claimSyncPublisher) {
         this.claimSyncPublisher = claimSyncPublisher == null ? ClaimSyncPublisher.NO_OP : claimSyncPublisher;
+    }
+
+    public void setClaimCleanupService(ClaimCleanupService claimCleanupService) {
+        this.claimCleanupService = claimCleanupService;
     }
 
     public String effectiveServerId(Claim claim) {
@@ -305,6 +310,86 @@ public final class ClaimService {
         return claimsOfFresh(owner, includeSystem).size();
     }
 
+    public List<ClaimListEntry> visibleClaimsOf(UUID playerId) {
+        return visibleClaimsOf(playerId, false);
+    }
+
+    public List<ClaimListEntry> visibleClaimsOf(UUID playerId, boolean includeSystem) {
+        if (playerId == null) {
+            return List.of();
+        }
+        Map<Integer, ClaimListEntry> entries = new HashMap<>();
+        for (Claim claim : claims.values()) {
+            toClaimListEntry(claim, playerId, includeSystem)
+                .ifPresent(entry -> entries.put(entry.claim().id(), entry));
+        }
+        return sortClaimListEntries(new ArrayList<>(entries.values()));
+    }
+
+    public List<ClaimListEntry> visibleClaimsOfFresh(UUID playerId) {
+        return visibleClaimsOfFresh(playerId, false);
+    }
+
+    public List<ClaimListEntry> visibleClaimsOfFresh(UUID playerId, boolean includeSystem) {
+        if (playerId == null) {
+            return List.of();
+        }
+        if (!databaseManager.isMySql()) {
+            return visibleClaimsOf(playerId, includeSystem);
+        }
+        String ownerFilter = includeSystem ? "" : " AND system_managed = 0";
+        String trustedFilter = includeSystem ? "" : " AND c.system_managed = 0";
+        List<ClaimListRow> rows = databaseManager.query(
+            """
+            SELECT id, relation_order FROM (
+                SELECT id, 0 AS relation_order
+                FROM claims
+                WHERE owner_uuid = ?%s
+                UNION ALL
+                SELECT c.id, 1 AS relation_order
+                FROM claims c
+                INNER JOIN claim_members m ON c.id = m.claim_id
+                WHERE m.player_uuid = ? AND c.owner_uuid <> ?%s
+            ) visible_claims
+            ORDER BY relation_order, id
+            """.formatted(ownerFilter, trustedFilter),
+            statement -> {
+                statement.setString(1, playerId.toString());
+                statement.setString(2, playerId.toString());
+                statement.setString(3, playerId.toString());
+            },
+            resultSet -> {
+                List<ClaimListRow> entries = new ArrayList<>();
+                while (resultSet.next()) {
+                    entries.add(new ClaimListRow(
+                        resultSet.getInt("id"),
+                        resultSet.getInt("relation_order") == 0 ? ClaimListRelation.OWNER : ClaimListRelation.TRUSTED_MEMBER
+                    ));
+                }
+                return entries;
+            }
+        );
+        Map<Integer, ClaimListEntry> refreshedEntries = new HashMap<>();
+        for (ClaimListRow row : rows) {
+            findClaimByIdFresh(row.claimId())
+                .flatMap(claim -> toClaimListEntry(claim, playerId, includeSystem))
+                .ifPresent(entry -> refreshedEntries.put(entry.claim().id(), entry));
+        }
+        return sortClaimListEntries(new ArrayList<>(refreshedEntries.values()));
+    }
+
+    public Optional<ClaimListEntry> visibleClaimEntryFresh(UUID playerId, int claimId) {
+        return visibleClaimEntryFresh(playerId, claimId, false);
+    }
+
+    public Optional<ClaimListEntry> visibleClaimEntryFresh(UUID playerId, int claimId, boolean includeSystem) {
+        if (playerId == null || claimId <= 0) {
+            return Optional.empty();
+        }
+        return findClaimByIdFresh(claimId)
+            .flatMap(claim -> toClaimListEntry(claim, playerId, includeSystem));
+    }
+
     private List<Claim> claimCandidates(Location location) {
         if (location == null || location.getWorld() == null) {
             return List.of();
@@ -491,6 +576,32 @@ public final class ClaimService {
         return profileService.isGloballyTrusted(claim.owner(), playerId);
     }
 
+    private Optional<ClaimListEntry> toClaimListEntry(Claim claim, UUID playerId, boolean includeSystem) {
+        if (claim == null || playerId == null) {
+            return Optional.empty();
+        }
+        if (!includeSystem && !countsTowardQuota(claim)) {
+            return Optional.empty();
+        }
+        if (claim.owner().equals(playerId)) {
+            return Optional.of(new ClaimListEntry(claim, ClaimListRelation.OWNER));
+        }
+        if (claim.isDenied(playerId)) {
+            return Optional.empty();
+        }
+        if (claim.isTrusted(playerId)) {
+            return Optional.of(new ClaimListEntry(claim, ClaimListRelation.TRUSTED_MEMBER));
+        }
+        return Optional.empty();
+    }
+
+    private List<ClaimListEntry> sortClaimListEntries(List<ClaimListEntry> entries) {
+        entries.sort(Comparator
+            .comparingInt((ClaimListEntry entry) -> entry.relation() == ClaimListRelation.OWNER ? 0 : 1)
+            .thenComparingInt(entry -> entry.claim().id()));
+        return entries;
+    }
+
     public boolean hasPermission(Claim claim, UUID playerId, ClaimPermission permission) {
         if (claim.owner().equals(playerId)) {
             return true;
@@ -514,6 +625,10 @@ public final class ClaimService {
     }
 
     public void updateFlagState(Claim claim, ClaimFlag flag, ClaimFlagState state) {
+        updateFlagState(claim, flag, state, null);
+    }
+
+    public void updateFlagState(Claim claim, ClaimFlag flag, ClaimFlagState state, UUID actorId) {
         if (claim == null || flag == null) {
             return;
         }
@@ -548,6 +663,7 @@ public final class ClaimService {
             }
         }
         publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+        recordInteractionActivity(claim, actorId);
     }
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
@@ -643,6 +759,7 @@ public final class ClaimService {
             claims.put(claim.id(), claim);
             rebuildClaimChunkIndex();
             publishClaimSync(ClaimSyncEventType.CLAIM_CREATED, claim.id());
+            trackNewClaim(claim);
             return claim;
         }
     }
@@ -754,11 +871,16 @@ public final class ClaimService {
             claims.put(claim.id(), claim);
             rebuildClaimChunkIndex();
             publishClaimSync(ClaimSyncEventType.CLAIM_CREATED, claim.id());
+            trackNewClaim(claim);
             return claim;
         }
     }
 
     public void updateBounds(Claim claim, int east, int south, int west, int north) {
+        updateBounds(claim, east, south, west, north, null);
+    }
+
+    public void updateBounds(Claim claim, int east, int south, int west, int north, UUID actorId) {
         synchronized (mutationLock) {
             claim.setBounds(east, south, west, north);
             claim.setLastExpandedAt(Instant.now().getEpochSecond());
@@ -777,9 +899,14 @@ public final class ClaimService {
             rebuildClaimChunkIndex();
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordBuildActivity(claim, actorId);
     }
 
     public void updateCoreVisibility(Claim claim, boolean coreVisible) {
+        updateCoreVisibility(claim, coreVisible, null);
+    }
+
+    public void updateCoreVisibility(Claim claim, boolean coreVisible, UUID actorId) {
         synchronized (mutationLock) {
             claim.setCoreVisible(coreVisible);
             databaseManager.update(
@@ -791,9 +918,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void renameClaim(Claim claim, String name) {
+        renameClaim(claim, name, null);
+    }
+
+    public void renameClaim(Claim claim, String name, UUID actorId) {
         synchronized (mutationLock) {
             String sanitizedName = validateAvailableClaimName(name, claim.id());
             claim.setName(sanitizedName);
@@ -806,9 +938,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void updateEnterMessage(Claim claim, String message) {
+        updateEnterMessage(claim, message, null);
+    }
+
+    public void updateEnterMessage(Claim claim, String message, UUID actorId) {
         synchronized (mutationLock) {
             claim.setEnterMessage(message);
             databaseManager.update(
@@ -820,9 +957,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void updateLeaveMessage(Claim claim, String message) {
+        updateLeaveMessage(claim, message, null);
+    }
+
+    public void updateLeaveMessage(Claim claim, String message, UUID actorId) {
         synchronized (mutationLock) {
             claim.setLeaveMessage(message);
             databaseManager.update(
@@ -834,9 +976,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void updateDenyAll(Claim claim, boolean denyAll) {
+        updateDenyAll(claim, denyAll, null);
+    }
+
+    public void updateDenyAll(Claim claim, boolean denyAll, UUID actorId) {
         synchronized (mutationLock) {
             claim.setDenyAll(denyAll);
             databaseManager.update(
@@ -848,9 +995,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void updateTeleportPoint(Claim claim, Location location) {
+        updateTeleportPoint(claim, location, null);
+    }
+
+    public void updateTeleportPoint(Claim claim, Location location, UUID actorId) {
         synchronized (mutationLock) {
             if (location == null) {
                 claim.clearTeleportPoint();
@@ -878,9 +1030,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public void updatePermission(Claim claim, ClaimPermission permission, boolean allowed) {
+        updatePermission(claim, permission, allowed, null);
+    }
+
+    public void updatePermission(Claim claim, ClaimPermission permission, boolean allowed, UUID actorId) {
         synchronized (mutationLock) {
             claim.setPermission(permission, allowed);
             String column = switch (permission) {
@@ -903,9 +1060,14 @@ public final class ClaimService {
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
+        recordInteractionActivity(claim, actorId);
     }
 
     public boolean addTrustedMember(Claim claim, UUID memberId) {
+        return addTrustedMember(claim, memberId, null);
+    }
+
+    public boolean addTrustedMember(Claim claim, UUID memberId, UUID actorId) {
         synchronized (mutationLock) {
             if (!claim.addTrustedMember(memberId)) {
                 return false;
@@ -934,11 +1096,16 @@ public final class ClaimService {
                 }
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+            recordInteractionActivity(claim, actorId);
             return true;
         }
     }
 
     public boolean removeTrustedMember(Claim claim, UUID memberId) {
+        return removeTrustedMember(claim, memberId, null);
+    }
+
+    public boolean removeTrustedMember(Claim claim, UUID memberId, UUID actorId) {
         synchronized (mutationLock) {
             if (!claim.removeTrustedMember(memberId)) {
                 return false;
@@ -959,11 +1126,16 @@ public final class ClaimService {
                 }
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+            recordInteractionActivity(claim, actorId);
             return true;
         }
     }
 
     public boolean addDeniedMember(Claim claim, UUID memberId) {
+        return addDeniedMember(claim, memberId, null);
+    }
+
+    public boolean addDeniedMember(Claim claim, UUID memberId, UUID actorId) {
         synchronized (mutationLock) {
             if (!claim.addDeniedMember(memberId)) {
                 return false;
@@ -992,11 +1164,16 @@ public final class ClaimService {
                 }
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+            recordInteractionActivity(claim, actorId);
             return true;
         }
     }
 
     public boolean removeDeniedMember(Claim claim, UUID memberId) {
+        return removeDeniedMember(claim, memberId, null);
+    }
+
+    public boolean removeDeniedMember(Claim claim, UUID memberId, UUID actorId) {
         synchronized (mutationLock) {
             if (!claim.removeDeniedMember(memberId)) {
                 return false;
@@ -1009,6 +1186,7 @@ public final class ClaimService {
                 }
             );
             publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+            recordInteractionActivity(claim, actorId);
             return true;
         }
     }
@@ -1088,6 +1266,7 @@ public final class ClaimService {
             targetClaim.clearDeniedMembers();
             targetClaim.clearMemberSettings();
             publishClaimSync(ClaimSyncEventType.CLAIM_OWNER_CHANGED, targetClaim.id());
+            recordInteractionActivity(targetClaim, newOwner);
             return true;
         }
     }
@@ -1117,6 +1296,35 @@ public final class ClaimService {
                 }
             }
             publishClaimSync(ClaimSyncEventType.CLAIM_DELETED, claim.id());
+            untrackClaim(claim.id());
+        }
+    }
+
+    private void trackNewClaim(Claim claim) {
+        ClaimCleanupService cleanupService = claimCleanupService;
+        if (cleanupService != null) {
+            cleanupService.trackNewClaim(claim);
+        }
+    }
+
+    private void untrackClaim(int claimId) {
+        ClaimCleanupService cleanupService = claimCleanupService;
+        if (cleanupService != null) {
+            cleanupService.removeTracking(claimId);
+        }
+    }
+
+    private void recordBuildActivity(Claim claim, UUID actorId) {
+        ClaimCleanupService cleanupService = claimCleanupService;
+        if (cleanupService != null) {
+            cleanupService.recordBuildActivity(claim, actorId);
+        }
+    }
+
+    private void recordInteractionActivity(Claim claim, UUID actorId) {
+        ClaimCleanupService cleanupService = claimCleanupService;
+        if (cleanupService != null) {
+            cleanupService.recordInteractionActivity(claim, actorId);
         }
     }
 
@@ -1717,6 +1925,17 @@ public final class ClaimService {
     }
 
     public record ClaimRefreshResult(Claim previousClaim, Claim currentClaim) {
+    }
+
+    private record ClaimListRow(int claimId, ClaimListRelation relation) {
+    }
+
+    public enum ClaimListRelation {
+        OWNER,
+        TRUSTED_MEMBER
+    }
+
+    public record ClaimListEntry(Claim claim, ClaimListRelation relation) {
     }
 
     public record TeleportTarget(

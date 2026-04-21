@@ -1,4 +1,4 @@
-layout-version: 3
+layout-version: 4
 title: '&8[&d成员&8] &d&l成员管理 - {name}'
 GuiPlain:
   - "FFFFIFFFF"
@@ -6,7 +6,7 @@ GuiPlain:
   - "FTTTTTTTF"
   - "FTTTTTTTF"
   - "FTTTTTTTF"
-  - "LFFFXFFFN"
+  - "LFAFXFFFN"
 
 items:
   filler:
@@ -25,7 +25,9 @@ items:
       - ' &7当前领地: &b{name}'
       - ' &7成员数量: &e{trusted_count}'
       - ''
-      - ' &7使用命令添加成员:'
+      - ' &7左侧成员头像可直接移除授权'
+      - ' &7底部按钮可快速添加在线玩家'
+      - ' &7也可以继续使用命令:'
       - ' &f/claim add <玩家>'
       - ''
       - ' &7成员默认拥有全部权限'
@@ -43,6 +45,20 @@ items:
       - ' &c点击移除该成员'
     sound: BLOCK_NOTE_BLOCK_BASS
 
+  add-online:
+    char: "A"
+    material: LIME_DYE
+    custom-model-data: 1408
+    glow: true
+    name: '&a&l添加在线玩家'
+    lore:
+      - ''
+      - ' &7打开在线玩家列表'
+      - ' &7点击头像后立即授权到当前领地'
+      - ''
+      - ' &e点击打开'
+    sound: UI_BUTTON_CLICK
+
   empty:
     slot: 22
     material: PAPER
@@ -53,7 +69,7 @@ items:
       - ' &7使用命令添加成员:'
       - ' &f/claim add <玩家>'
       - ''
-      - ' &7添加后的成员默认全权限'
+      - ' &7也可以点击底部按钮添加在线玩家'
 
   prev-page:
     char: "L"

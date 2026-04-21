@@ -12,7 +12,7 @@ commands:
   claim:
     description: CoreClaim main command
     usage: /claim
-    aliases: [lingdi, coreclaim, cc]
+    aliases: [lingdi, res, "领地", coreclaim, cc]
 permissions:
   coreclaim.use:
     description: Use player claim commands

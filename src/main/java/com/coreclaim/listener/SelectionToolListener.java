@@ -30,7 +30,7 @@ public final class SelectionToolListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         claimSelectionService.clear(event.getPlayer());
-        onlineRewardService.clearSession(event.getPlayer().getUniqueId());
+        onlineRewardService.handleQuit(event.getPlayer());
     }
 
     @EventHandler

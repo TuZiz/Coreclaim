@@ -22,6 +22,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -132,10 +133,22 @@ public final class ClaimEnterLeaveListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        PlayerFlightSession session = flightSessions.remove(event.getPlayer().getUniqueId());
-        if (session != null) {
-            cancelGrace(session);
+        handleDisconnect(event.getPlayer(), "quit-revoke");
+    }
+
+    @EventHandler
+    public void onKick(PlayerKickEvent event) {
+        handleDisconnect(event.getPlayer(), "kick-revoke");
+    }
+
+    public void shutdown() {
+        if (reconcileTask != null) {
+            reconcileTask.cancel();
         }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            handleDisconnect(player, "disable-revoke");
+        }
+        flightSessions.clear();
     }
 
     private void reconcileAllPlayers() {
@@ -226,6 +239,24 @@ public final class ClaimEnterLeaveListener implements Listener {
         session.currentClaimId = claim == null ? null : claim.id();
         updateFlightState(player, session, claim, reason);
         cleanupSession(playerId, session);
+    }
+
+    private void handleDisconnect(Player player, String reason) {
+        if (player == null) {
+            return;
+        }
+        UUID playerId = player.getUniqueId();
+        PlayerFlightSession session = flightSessions.get(playerId);
+        if (session == null) {
+            return;
+        }
+        if (session.managingClaimFlight) {
+            revokeManagedFlight(player, session, reason);
+        } else {
+            cancelGrace(session);
+        }
+        cleanupSession(playerId, session);
+        flightSessions.remove(playerId, session);
     }
 
     private void updateFlightState(Player player, PlayerFlightSession session, Claim claim, String reason) {

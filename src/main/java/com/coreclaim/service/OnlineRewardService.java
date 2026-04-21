@@ -19,6 +19,7 @@ public final class OnlineRewardService {
     private final ProfileService profileService;
     private final ClaimService claimService;
     private final ClaimCoreFactory claimCoreFactory;
+    private final ClaimCleanupService claimCleanupService;
     private final Map<UUID, StarterRewardSession> sessions = new ConcurrentHashMap<>();
     private PlatformScheduler.TaskHandle taskHandle;
     private int saveCounter;
@@ -28,13 +29,15 @@ public final class OnlineRewardService {
         PlatformScheduler platformScheduler,
         ProfileService profileService,
         ClaimService claimService,
-        ClaimCoreFactory claimCoreFactory
+        ClaimCoreFactory claimCoreFactory,
+        ClaimCleanupService claimCleanupService
     ) {
         this.plugin = plugin;
         this.platformScheduler = platformScheduler;
         this.profileService = profileService;
         this.claimService = claimService;
         this.claimCoreFactory = claimCoreFactory;
+        this.claimCleanupService = claimCleanupService;
     }
 
     public void start() {
@@ -54,6 +57,12 @@ public final class OnlineRewardService {
         if (player == null) {
             return;
         }
+
+        long now = System.currentTimeMillis();
+        String groupKey = plugin.groups().resolve(player).key();
+        boolean permissionExempt = plugin.settings().isInactiveClaimCleanupPermissionExempt(player);
+        profileService.updatePresence(player.getUniqueId(), player.getName(), now, groupKey, permissionExempt);
+        claimCleanupService.revokeGraceForOwner(player.getUniqueId());
 
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
         boolean hasOrdinaryClaim = claimService.countClaims(player.getUniqueId()) > 0;
@@ -109,6 +118,17 @@ public final class OnlineRewardService {
         }
     }
 
+    public void handleQuit(Player player) {
+        if (player == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        String groupKey = plugin.groups().resolve(player).key();
+        boolean permissionExempt = plugin.settings().isInactiveClaimCleanupPermissionExempt(player);
+        profileService.updatePresence(player.getUniqueId(), player.getName(), now, groupKey, permissionExempt);
+        clearSession(player.getUniqueId());
+    }
+
     private void tickOnlinePlayers() {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             platformScheduler.runPlayerTask(player, () -> tickPlayer(player));
@@ -123,6 +143,7 @@ public final class OnlineRewardService {
 
     private void tickPlayer(Player player) {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        profile.setLastSeenAt(System.currentTimeMillis());
         profile.addOnlineMinutes(1);
         if (profileService.usesSharedDatabase()) {
             profileService.saveProfile(profile);

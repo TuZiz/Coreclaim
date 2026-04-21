@@ -1,0 +1,82 @@
+layout-version: 1
+title: '&8[&6领地&8] &6&l只读详情 - {name}'
+GuiPlain:
+  - "FFFFFFFFF"
+  - "FFFFIFFFF"
+  - "FFFDTFFFF"
+  - "FFFFFFFFF"
+  - "FFFFBFFFF"
+  - "FFFFXFFFF"
+
+items:
+  filler:
+    char: "F"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1600
+
+  info:
+    char: "I"
+    material: BOOK
+    custom-model-data: 1601
+    name: '&e&l授权领地详情'
+    lore:
+      - ''
+      - ' &7领地名称: &b{name}'
+      - ' &7领地主人: &e{owner}'
+      - ' &7所属区服: &f{server}'
+      - ' &7所在世界: &f{world}'
+      - ''
+      - ' &7核心坐标: &f({center_x}, {center_z})'
+      - ' &7领地大小: &e{width}x{depth}'
+      - ' &7领地面积: &e{area}'
+      - ' &7成员数量: &e{trusted_count}'
+      - ''
+      - ' &7当前界面为只读查看'
+
+  details:
+    char: "D"
+    material: PAPER
+    custom-model-data: 1602
+    name: '&b&l查看详细'
+    lore:
+      - ''
+      - ' &7把这块领地的详细信息发到聊天栏'
+      - ' &7方便你对照坐标和主人信息'
+      - ''
+      - ' &e点击查看'
+    sound: UI_BUTTON_CLICK
+
+  teleport:
+    char: "T"
+    material: ENDER_PEARL
+    custom-model-data: 1603
+    glow: true
+    name: '&d&l传送到领地'
+    lore:
+      - ''
+      - ' &7传送到这块已授权领地的传送点'
+      - ' &7没有传送点时会回到领地核心'
+      - ''
+      - ' &e点击传送'
+    sound: ENTITY_ENDERMAN_TELEPORT
+
+  back:
+    char: "B"
+    material: ARROW
+    custom-model-data: 1604
+    name: '&a&l返回列表'
+    lore:
+      - ''
+      - ' &7回到上一页领地列表'
+    sound: UI_BUTTON_CLICK
+
+  close:
+    char: "X"
+    material: BARRIER
+    custom-model-data: 1605
+    name: '&c&l关闭菜单'
+    lore:
+      - ''
+      - ' &7关闭当前只读详情界面'
+    sound: UI_BUTTON_CLICK

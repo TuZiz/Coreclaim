@@ -10,8 +10,8 @@ starter-reward-minutes: 30
 direction-expand-amount: 10
 
 # 领地核心之间的最小间隔
-# 当前版本会保证 100x100 内只能存在一个领地核心
-minimum-gap: 100
+# 当前版本会保证 50x50 内只能存在一个领地核心
+minimum-gap: 50
 
 # 锄头选区创建领地之间的最小边界间隔
 # 只检查领地边界，不再沿用核心的 100 格限制
@@ -38,6 +38,15 @@ warn-on-second-claim: true
 
 # 兼容字段：保留活跃值系统，但不再作为圈地门槛
 core-use-min-activity: 0
+
+inactive-claim-cleanup:
+  enabled: false
+  inactive-days: 90
+  grace-days: 14
+  scan-interval-minutes: 30
+  exempt-groups: []
+  exempt-permissions: []
+  ignore-system-claims: true
 
 flight:
   # 离开可飞行领地后保留当前飞行的缓冲刻数

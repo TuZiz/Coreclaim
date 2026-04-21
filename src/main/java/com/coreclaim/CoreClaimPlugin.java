@@ -22,7 +22,7 @@ import com.coreclaim.listener.SelectionToolListener;
 import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
-import com.coreclaim.service.ClaimMarketService;
+import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimSelectionService;
 import com.coreclaim.service.ClaimSyncService;
@@ -46,6 +46,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -53,6 +56,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CoreClaimPlugin extends JavaPlugin {
+
+    private static final Pattern AMPERSAND_HEX_PATTERN = Pattern.compile("(?i)&#([0-9A-F]{6})");
+    private static final Pattern MINI_HEX_PATTERN = Pattern.compile("(?i)<#([0-9A-F]{6})>");
 
     private PluginConfig pluginConfig;
     private GroupConfig groupConfig;
@@ -67,6 +73,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private ClaimService claimService;
     private EconomyHook economyHook;
     private HologramService hologramService;
+    private ClaimCleanupService claimCleanupService;
     private PendingClaimService pendingClaimService;
     private ClaimActionService claimActionService;
     private ClaimVisualService claimVisualService;
@@ -75,11 +82,11 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private ClaimSelectionService claimSelectionService;
     private ClaimInputService claimInputService;
     private ClaimTransferService claimTransferService;
-    private ClaimMarketService claimMarketService;
     private MenuService menuService;
     private OnlineRewardService onlineRewardService;
     private RemovalConfirmationService removalConfirmationService;
     private ExplosionAuthorizationService explosionAuthorizationService;
+    private ClaimEnterLeaveListener claimEnterLeaveListener;
 
     @Override
     public void onEnable() {
@@ -101,11 +108,13 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.claimService = new ClaimService(this, databaseManager, profileService);
         this.economyHook = new EconomyHook(this);
         this.hologramService = new HologramService(this);
+        this.claimCleanupService = new ClaimCleanupService(this, databaseManager, claimService, profileService, hologramService, platformScheduler);
+        this.claimService.setClaimCleanupService(claimCleanupService);
         this.claimVisualService = new ClaimVisualService(this);
         this.claimSyncService = new ClaimSyncService(this, databaseManager, claimService, hologramService);
         this.claimService.setClaimSyncPublisher(claimSyncService);
         this.crossServerTeleportService = new CrossServerTeleportService(this, databaseManager, claimService, claimVisualService);
-        this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory);
+        this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory, claimCleanupService);
         this.pendingClaimService = new PendingClaimService(
             this,
             claimService,
@@ -128,7 +137,6 @@ public final class CoreClaimPlugin extends JavaPlugin {
         );
         this.claimInputService = new ClaimInputService(this, claimService, profileService);
         this.claimTransferService = new ClaimTransferService(this, claimService, profileService);
-        this.claimMarketService = new ClaimMarketService(this, databaseManager, claimService, profileService, economyHook);
         this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
         this.explosionAuthorizationService = new ExplosionAuthorizationService();
         this.menuService = new MenuService(
@@ -138,21 +146,20 @@ public final class CoreClaimPlugin extends JavaPlugin {
             claimActionService,
             removalConfirmationService,
             claimInputService,
-            claimSelectionService,
-            claimMarketService
+            claimSelectionService
         );
         getServer().getPluginManager().registerEvents(
             new ClaimCoreListener(this, claimCoreFactory, pendingClaimService),
             this
         );
         getServer().getPluginManager().registerEvents(
-            new ClaimProtectionListener(this, claimService, claimCoreFactory, explosionAuthorizationService),
+            new ClaimProtectionListener(this, claimService, claimCoreFactory, explosionAuthorizationService, claimCleanupService),
             this
         );
         getServer().getPluginManager().registerEvents(new ClaimSelectionListener(claimSelectionService), this);
         getServer().getPluginManager().registerEvents(new SelectionToolListener(claimSelectionService, onlineRewardService), this);
         getServer().getPluginManager().registerEvents(
-            new ClaimEnvironmentProtectionListener(claimService, explosionAuthorizationService),
+            new ClaimEnvironmentProtectionListener(claimService, explosionAuthorizationService, claimCleanupService),
             this
         );
         getServer().getPluginManager().registerEvents(
@@ -162,10 +169,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ClaimNamingListener(this, pendingClaimService), this);
         getServer().getPluginManager().registerEvents(new ClaimInputListener(this, claimInputService), this);
         getServer().getPluginManager().registerEvents(new MenuListener(menuService), this);
-        getServer().getPluginManager().registerEvents(
-            new ClaimEnterLeaveListener(this, claimService, profileService, claimVisualService),
-            this
-        );
+        this.claimEnterLeaveListener = new ClaimEnterLeaveListener(this, claimService, profileService, claimVisualService);
+        getServer().getPluginManager().registerEvents(claimEnterLeaveListener, this);
         getServer().getPluginManager().registerEvents(new CrossServerTeleportListener(this, crossServerTeleportService), this);
         getServer().getPluginManager().registerEvents(new RemovalConfirmListener(this, removalConfirmationService), this);
 
@@ -182,7 +187,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
                 claimSelectionService,
                 menuService,
                 removalConfirmationService,
-                claimTransferService
+                claimTransferService,
+                claimCleanupService
             );
             command.setExecutor(executor);
             command.setTabCompleter(executor);
@@ -194,6 +200,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
         hologramService.refreshAll(claimService);
         claimSyncService.start();
+        claimCleanupService.start();
         onlineRewardService.start();
         logSharedModeWarnings();
         logLegacyRuleConfigWarnings();
@@ -206,6 +213,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         if (onlineRewardService != null) {
             onlineRewardService.stop();
         }
+        if (claimCleanupService != null) {
+            claimCleanupService.stop();
+        }
         if (claimTransferService != null) {
             claimTransferService.clear();
         }
@@ -217,6 +227,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
         if (claimService != null) {
             claimService.save();
+        }
+        if (claimEnterLeaveListener != null) {
+            claimEnterLeaveListener.shutdown();
         }
         if (hologramService != null) {
             hologramService.clearAllLoadedHolograms();
@@ -263,6 +276,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return claimService;
     }
 
+    public ClaimCleanupService claimCleanupService() {
+        return claimCleanupService;
+    }
+
     public EconomyHook economy() {
         return economyHook;
     }
@@ -272,21 +289,36 @@ public final class CoreClaimPlugin extends JavaPlugin {
     }
 
     public String color(String text) {
-        return text == null ? "" : text.replace('&', '\u00A7');
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        String colored = applyHexColors(text, AMPERSAND_HEX_PATTERN);
+        colored = applyHexColors(colored, MINI_HEX_PATTERN);
+        return colored.replace('&', '\u00A7');
     }
 
     public String message(String path) {
-        String prefix = messagesConfig().getString("prefix", "&6[CoreClaim] &f");
-        String body = messagesConfig().getString(path, path);
-        return color(prefix + body);
+        return message(path, new String[0]);
     }
 
     public String message(String path, String... replacements) {
-        String message = message(path);
+        String prefix = messagesConfig().getString("prefix", "&6[CoreClaim] &f");
+        String body = messagesConfig().getString(path, path);
+        String message = prefix + body;
         for (int index = 0; index + 1 < replacements.length; index += 2) {
             message = message.replace(replacements[index], replacements[index + 1]);
         }
-        return message;
+        return color(message);
+    }
+
+    private String applyHexColors(String input, Pattern pattern) {
+        Matcher matcher = pattern.matcher(input);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(ChatColor.of("#" + matcher.group(1)).toString()));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 
     public int reloadPluginResources() {
@@ -302,6 +334,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
         this.groupConfig = new GroupConfig(groupsResource.config());
         int claimCount = claimService == null ? 0 : claimService.reloadClaims();
+        if (claimCleanupService != null) {
+            claimCleanupService.reload();
+        }
         if (claimSyncService != null) {
             claimSyncService.reloadSettings();
         }
@@ -455,8 +490,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     private void loadMenuResources() {
         menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
+        menuResources.put("claim-view", new ResourceConfig(this, "gui/claim-view.yml"));
         menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
         menuResources.put("trust", new ResourceConfig(this, "gui/trust.yml"));
+        menuResources.put("trust-online-add", new ResourceConfig(this, "gui/trust-online-add.yml"));
         menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
         menuResources.put("selection-create", new ResourceConfig(this, "gui/selection-create.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
@@ -465,8 +502,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private void ensureHealthyGuiResources() {
         for (String resource : List.of(
             "gui/claim-list.yml",
+            "gui/claim-view.yml",
             "gui/claim-manage.yml",
             "gui/trust.yml",
+            "gui/trust-online-add.yml",
             "gui/claim-permissions.yml",
             "gui/selection-create.yml",
             "gui/core.yml"
@@ -506,10 +545,13 @@ public final class CoreClaimPlugin extends JavaPlugin {
             return false;
         }
         return switch (fileName) {
+            case "gui/claim-list.yml" -> !content.contains("layout-version: 2");
+            case "gui/claim-view.yml" -> !content.contains("layout-version: 1");
+            case "gui/trust-online-add.yml" -> !content.contains("layout-version: 1");
             case "gui/core.yml",
-                 "gui/claim-permissions.yml" -> !content.contains("layout-version: 4");
-            case "gui/trust.yml",
-                 "gui/selection-create.yml" -> !content.contains("layout-version: 3");
+                 "gui/claim-permissions.yml" -> !content.contains("layout-version: 5");
+            case "gui/trust.yml" -> !content.contains("layout-version: 4");
+            case "gui/selection-create.yml" -> !content.contains("layout-version: 3");
             default -> false;
         };
     }

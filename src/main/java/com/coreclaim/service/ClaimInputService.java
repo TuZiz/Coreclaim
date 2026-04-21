@@ -113,7 +113,7 @@ public final class ClaimInputService {
             return;
         }
         try {
-            claimService.renameClaim(claim, message);
+            claimService.renameClaim(claim, message, player.getUniqueId());
         } catch (IllegalArgumentException exception) {
             player.sendMessage(plugin.message("claim-name-exists", "{name}", message.trim()));
             return;
@@ -123,7 +123,7 @@ public final class ClaimInputService {
 
     private void handleEnterMessage(Player player, Claim claim, String message) {
         if (isClear(message)) {
-            claimService.updateEnterMessage(claim, "");
+            claimService.updateEnterMessage(claim, "", player.getUniqueId());
             player.sendMessage(plugin.color("&6[Claim] &a已恢复默认进入提示。"));
             return;
         }
@@ -135,13 +135,13 @@ public final class ClaimInputService {
             player.sendMessage(plugin.color("&6[Claim] &c进入提示太长，最多 " + NOTIFY_MAX_LENGTH + " 个字符。"));
             return;
         }
-        claimService.updateEnterMessage(claim, message);
+        claimService.updateEnterMessage(claim, message, player.getUniqueId());
         player.sendMessage(plugin.color("&6[Claim] &a已更新进入提示。"));
     }
 
     private void handleLeaveMessage(Player player, Claim claim, String message) {
         if (isClear(message)) {
-            claimService.updateLeaveMessage(claim, "");
+            claimService.updateLeaveMessage(claim, "", player.getUniqueId());
             player.sendMessage(plugin.color("&6[Claim] &a已恢复默认离开提示。"));
             return;
         }
@@ -153,7 +153,7 @@ public final class ClaimInputService {
             player.sendMessage(plugin.color("&6[Claim] &c离开提示太长，最多 " + NOTIFY_MAX_LENGTH + " 个字符。"));
             return;
         }
-        claimService.updateLeaveMessage(claim, message);
+        claimService.updateLeaveMessage(claim, message, player.getUniqueId());
         player.sendMessage(plugin.color("&6[Claim] &a已更新离开提示。"));
     }
 

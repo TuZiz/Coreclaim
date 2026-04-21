@@ -1,5 +1,5 @@
 layout-version: 4
-title: '&8[&6领地&8] &6&l领地核心管理'
+title: '&#55FFAA&l领地核心 &8| &f管理面板'
 GuiPlain:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
@@ -19,85 +19,85 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1501
-    name: '&e&l领地详情'
+    name: '&#55FFAA&l领地详情'
     lore:
       - ''
-      - ' &7领地名称: &b{name}'
-      - ' &7领地数量: &e{claims}&7/&a{max_claims}'
-      - ' &7中心坐标: &f({center_x}, {center_z})'
+      - ' &#4CC9F0■ &7领地名称: &f{name}'
+      - ' &#4CC9F0■ &7领地数量: &f{claims}&8/&7{max_claims}'
+      - ' &#4CC9F0■ &7中心坐标: &f({center_x}, {center_z})'
       - ''
-      - ' &7当前规模: &e{width}x{depth}'
-      - ' &7当前面积: &e{area}'
-      - ' &7当前活跃值: &a{activity}'
-      - ' &7成员数量: &f{trusted_count}'
+      - ' &#FFD166■ &7当前规模: &f{width}x{depth}'
+      - ' &#FFD166■ &7当前面积: &f{area}'
+      - ' &#FFD166■ &7当前活跃: &f{activity}'
+      - ' &#FFD166■ &7成员数量: &f{trusted_count}'
       - ''
-      - ' &7进入提示: {enter_state}'
-      - ' &7离开提示: {leave_state}'
+      - ' &#55FFAA■ &7进入提示: &f{enter_state}'
+      - ' &#55FFAA■ &7离开提示: &f{leave_state}'
 
   expand:
     char: "E"
     material: NETHERITE_PICKAXE
     custom-model-data: 1502
-    name: '&b&l扩建领地'
+    name: '&#4CC9F0&l扩建领地'
     lore:
       - ''
       - ' &7打开东南西北四个方向的扩建页'
       - ' &7可以直接查看价格与目标范围'
       - ''
-      - ' &e点击打开'
+      - ' &#4CC9F0&l» &f点击打开面板'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   claim-list:
     char: "L"
     material: FILLED_MAP
     custom-model-data: 1503
-    name: '&6&l我的领地'
+    name: '&#FFD166&l我的领地'
     lore:
       - ''
-      - ' &7当前拥有总数: &e{total}'
+      - ' &7当前拥有总数: &f{total}'
       - ''
-      - ' &e点击查看全部领地'
+      - ' &#FFD166&l» &f点击查看全部领地'
     sound: ITEM_BOOK_PAGE_TURN
 
   trust:
     char: "T"
     material: NAME_TAG
     custom-model-data: 1504
-    name: '&d&l成员管理'
+    name: '&#4CC9F0&l成员管理'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7成员数量: &e{trusted_count}'
+      - ' &7当前领地: &f{name}'
+      - ' &7成员数量: &f{trusted_count}'
       - ' &7命令添加: &f/claim add <玩家>'
       - ''
-      - ' &e点击查看成员列表'
+      - ' &#4CC9F0&l» &f点击查看成员列表'
     sound: BLOCK_NOTE_BLOCK_PLING
 
   permissions:
     char: "P"
     material: COMPARATOR
     custom-model-data: 1505
-    name: '&5&l权限与交互'
+    name: '&#FFD166&l权限与交互'
     lore:
       - ''
       - ' &7统一设置基础权限与交互细则'
       - ' &7未设置的细则会跟随基础权限'
       - ''
-      - ' &e点击打开'
+      - ' &#FFD166&l» &f点击打开面板'
     sound: UI_BUTTON_CLICK
 
   rename:
     char: "R"
     material: ANVIL
     custom-model-data: 1506
-    name: '&a&l修改领地名称'
+    name: '&#55FFAA&l修改领地名称'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
+      - ' &7当前名称: &f{name}'
       - ' &7点击后在聊天栏输入新名称'
-      - ' &7名称长度最多 16 个字符'
+      - ' &8(名称长度最多 16 个字符)'
       - ''
-      - ' &e点击开始重命名'
+      - ' &#55FFAA&l» &f点击开始重命名'
     sound: BLOCK_ANVIL_USE
 
   teleport:
@@ -105,52 +105,54 @@ items:
     material: ENDER_PEARL
     custom-model-data: 1510
     glow: true
-    name: '&d&l传送到领地'
+    name: '&#4CC9F0&l传送到领地'
     lore:
       - ''
       - ' &7优先传送到当前领地的传送点'
       - ' &7未设置时会回到核心位置'
       - ''
-      - ' &e点击传送'
+      - ' &#4CC9F0&l» &f点击传送回家'
     sound: ENTITY_ENDERMAN_TELEPORT
 
   notify:
     char: "N"
     material: BELL
     custom-model-data: 1508
-    name: '&b&l通知设置'
+    name: '&#FFD166&l通知设置'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7进入状态: {enter_state}'
-      - ' &7离开状态: {leave_state}'
+      - ' &7当前领地: &f{name}'
+      - ' &7进入状态: &f{enter_state}'
+      - ' &7离开状态: &f{leave_state}'
       - ''
-      - ' &7当前进入内容: &b{enter_current}'
-      - ' &7当前离开内容: &e{leave_current}'
+      - ' &7当前进入内容:'
+      - ' &f{enter_current}'
+      - ' &7当前离开内容:'
+      - ' &f{leave_current}'
       - ''
-      - ' &7左键编辑进入提示'
-      - ' &7右键编辑离开提示'
+      - ' &#4CC9F0&l» &f左键 &7编辑进入提示'
+      - ' &#FFD166&l» &f右键 &7编辑离开提示'
     sound: BLOCK_BELL_USE
 
   hide:
     char: "H"
     material: BLAZE_POWDER
     custom-model-data: 1509
-    name: '&c&l隐藏核心显示'
+    name: '&#FF6B6B&l隐藏核心显示'
     lore:
       - ''
       - ' &7隐藏核心方块与悬浮提示'
-      - ' &c隐藏后无法再通过核心方块打开菜单'
+      - ' &#FF6B6B&l! &c隐藏后无法再通过核心打开菜单'
       - ''
-      - ' &e点击确认隐藏'
+      - ' &#FF6B6B&l» &f点击确认隐藏'
     sound: BLOCK_ANVIL_PLACE
 
   close:
     char: "X"
     material: BARRIER
     custom-model-data: 1511
-    name: '&c&l关闭菜单'
+    name: '&#FF6B6B&l关闭菜单'
     lore:
       - ''
-      - ' &7关闭当前领地核心菜单'
+      - ' &#FF6B6B&l» &7关闭当前管理面板'
     sound: UI_BUTTON_CLICK

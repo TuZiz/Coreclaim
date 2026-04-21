@@ -15,6 +15,9 @@ public final class PlayerProfile {
     private boolean starterCoreReclaimed;
     private boolean starterCoreUsed;
     private boolean autoShowBorders;
+    private long lastSeenAt;
+    private String lastGroupKey;
+    private boolean cleanupPermissionExempt;
     private final Set<UUID> globalTrustedMembers = new LinkedHashSet<>();
 
     public PlayerProfile(
@@ -25,7 +28,10 @@ public final class PlayerProfile {
         boolean starterCoreGranted,
         boolean starterCoreReclaimed,
         boolean starterCoreUsed,
-        boolean autoShowBorders
+        boolean autoShowBorders,
+        long lastSeenAt,
+        String lastGroupKey,
+        boolean cleanupPermissionExempt
     ) {
         this.uuid = uuid;
         this.lastKnownName = lastKnownName;
@@ -35,6 +41,9 @@ public final class PlayerProfile {
         this.starterCoreReclaimed = starterCoreReclaimed;
         this.starterCoreUsed = starterCoreUsed;
         this.autoShowBorders = autoShowBorders;
+        this.lastSeenAt = Math.max(0L, lastSeenAt);
+        this.lastGroupKey = lastGroupKey == null ? "" : lastGroupKey;
+        this.cleanupPermissionExempt = cleanupPermissionExempt;
     }
 
     public UUID uuid() {
@@ -97,6 +106,30 @@ public final class PlayerProfile {
 
     public synchronized void setAutoShowBorders(boolean autoShowBorders) {
         this.autoShowBorders = autoShowBorders;
+    }
+
+    public synchronized long lastSeenAt() {
+        return lastSeenAt;
+    }
+
+    public synchronized void setLastSeenAt(long lastSeenAt) {
+        this.lastSeenAt = Math.max(this.lastSeenAt, Math.max(0L, lastSeenAt));
+    }
+
+    public synchronized String lastGroupKey() {
+        return lastGroupKey;
+    }
+
+    public synchronized void setLastGroupKey(String lastGroupKey) {
+        this.lastGroupKey = lastGroupKey == null ? "" : lastGroupKey.trim();
+    }
+
+    public synchronized boolean cleanupPermissionExempt() {
+        return cleanupPermissionExempt;
+    }
+
+    public synchronized void setCleanupPermissionExempt(boolean cleanupPermissionExempt) {
+        this.cleanupPermissionExempt = cleanupPermissionExempt;
     }
 
     public synchronized boolean addGlobalTrustedMember(UUID memberId) {

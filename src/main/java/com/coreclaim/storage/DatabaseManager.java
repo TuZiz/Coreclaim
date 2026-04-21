@@ -17,7 +17,7 @@ import java.util.Locale;
 
 public final class DatabaseManager {
 
-    private static final int SCHEMA_VERSION = 4;
+    private static final int SCHEMA_VERSION = 5;
     private static final String SCHEMA_VERSION_KEY = "schema_version";
     private static final String MIGRATION_COMPLETED_KEY = "sqlite_migration_completed";
     private static final DateTimeFormatter BACKUP_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -93,21 +93,27 @@ public final class DatabaseManager {
                     uuid,
                     name,
                     activity_points,
-                    online_minutes,
-                    starter_core_granted,
-                    starter_core_reclaimed,
-                    starter_core_used,
-                    auto_show_borders
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    name = VALUES(name),
-                    activity_points = VALUES(activity_points),
-                    online_minutes = VALUES(online_minutes),
-                    starter_core_granted = VALUES(starter_core_granted),
-                    starter_core_reclaimed = VALUES(starter_core_reclaimed),
-                    starter_core_used = VALUES(starter_core_used),
-                    auto_show_borders = VALUES(auto_show_borders)
+                online_minutes,
+                starter_core_granted,
+                starter_core_reclaimed,
+                starter_core_used,
+                auto_show_borders,
+                last_seen_at,
+                last_group_key,
+                cleanup_permission_exempt
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                activity_points = VALUES(activity_points),
+                online_minutes = VALUES(online_minutes),
+                starter_core_granted = VALUES(starter_core_granted),
+                starter_core_reclaimed = VALUES(starter_core_reclaimed),
+                starter_core_used = VALUES(starter_core_used),
+                auto_show_borders = VALUES(auto_show_borders),
+                last_seen_at = VALUES(last_seen_at),
+                last_group_key = VALUES(last_group_key),
+                cleanup_permission_exempt = VALUES(cleanup_permission_exempt)
                 """;
         }
         return """
@@ -119,9 +125,12 @@ public final class DatabaseManager {
                 starter_core_granted,
                 starter_core_reclaimed,
                 starter_core_used,
-                auto_show_borders
+                auto_show_borders,
+                last_seen_at,
+                last_group_key,
+                cleanup_permission_exempt
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 name = excluded.name,
                 activity_points = excluded.activity_points,
@@ -129,7 +138,10 @@ public final class DatabaseManager {
                 starter_core_granted = excluded.starter_core_granted,
                 starter_core_reclaimed = excluded.starter_core_reclaimed,
                 starter_core_used = excluded.starter_core_used,
-                auto_show_borders = excluded.auto_show_borders
+                auto_show_borders = excluded.auto_show_borders,
+                last_seen_at = excluded.last_seen_at,
+                last_group_key = excluded.last_group_key,
+                cleanup_permission_exempt = excluded.cleanup_permission_exempt
             """;
     }
 
@@ -388,9 +400,25 @@ public final class DatabaseManager {
                 starter_core_granted %s NOT NULL,
                 starter_core_reclaimed %s NOT NULL DEFAULT 0,
                 starter_core_used %s NOT NULL DEFAULT 0,
-                auto_show_borders %s NOT NULL DEFAULT 0
+                auto_show_borders %s NOT NULL DEFAULT 0,
+                last_seen_at %s NOT NULL DEFAULT 0,
+                last_group_key %s NOT NULL DEFAULT '',
+                cleanup_permission_exempt %s NOT NULL DEFAULT 0
             )%s
-            """.formatted(uuidType(), shortTextType(), integerType(), integerType(), booleanType(), booleanType(), booleanType(), booleanType(), tableOptions()),
+            """.formatted(
+                uuidType(),
+                shortTextType(),
+                integerType(),
+                integerType(),
+                booleanType(),
+                booleanType(),
+                booleanType(),
+                booleanType(),
+                longType(),
+                shortTextType(),
+                booleanType(),
+                tableOptions()
+            ),
             statement -> {
             }
         );
@@ -554,6 +582,9 @@ public final class DatabaseManager {
         ensureColumn("profiles", "starter_core_reclaimed", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("profiles", "starter_core_used", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("profiles", "auto_show_borders", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("profiles", "last_seen_at", longType() + " NOT NULL DEFAULT 0");
+        ensureColumn("profiles", "last_group_key", shortTextType() + " NOT NULL DEFAULT ''");
+        ensureColumn("profiles", "cleanup_permission_exempt", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
@@ -585,6 +616,33 @@ public final class DatabaseManager {
         );
         update(
             """
+            CREATE TABLE IF NOT EXISTS claim_cleanup_state (
+                claim_id %s PRIMARY KEY,
+                has_build_evidence %s NOT NULL DEFAULT 0,
+                has_interaction_evidence %s NOT NULL DEFAULT 0,
+                grace_marked_at %s NOT NULL DEFAULT 0,
+                delete_after_at %s NOT NULL DEFAULT 0,
+                skip_cleanup %s NOT NULL DEFAULT 0,
+                legacy_unknown %s NOT NULL DEFAULT 1,
+                last_reason %s NOT NULL DEFAULT '',
+                FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
+            )%s
+            """.formatted(
+                integerType(),
+                booleanType(),
+                booleanType(),
+                longType(),
+                longType(),
+                booleanType(),
+                booleanType(),
+                shortTextType(),
+                tableOptions()
+            ),
+            statement -> {
+            }
+        );
+        update(
+            """
             CREATE TABLE IF NOT EXISTS coreclaim_meta (
                 meta_key %s PRIMARY KEY,
                 meta_value %s NOT NULL
@@ -593,6 +651,13 @@ public final class DatabaseManager {
             statement -> {
             }
         );
+        ensureColumn("claim_cleanup_state", "has_build_evidence", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_cleanup_state", "has_interaction_evidence", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_cleanup_state", "grace_marked_at", longType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_cleanup_state", "delete_after_at", longType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_cleanup_state", "skip_cleanup", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_cleanup_state", "legacy_unknown", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claim_cleanup_state", "last_reason", shortTextType() + " NOT NULL DEFAULT ''");
         setMeta(SCHEMA_VERSION_KEY, String.valueOf(SCHEMA_VERSION));
     }
 

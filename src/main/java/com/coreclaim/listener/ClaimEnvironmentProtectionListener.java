@@ -4,6 +4,7 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
+import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import java.util.Iterator;
@@ -41,10 +42,16 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     private final ClaimService claimService;
     private final ExplosionAuthorizationService explosionAuthorizationService;
+    private final ClaimCleanupService claimCleanupService;
 
-    public ClaimEnvironmentProtectionListener(ClaimService claimService, ExplosionAuthorizationService explosionAuthorizationService) {
+    public ClaimEnvironmentProtectionListener(
+        ClaimService claimService,
+        ExplosionAuthorizationService explosionAuthorizationService,
+        ClaimCleanupService claimCleanupService
+    ) {
         this.claimService = claimService;
         this.explosionAuthorizationService = explosionAuthorizationService;
+        this.claimCleanupService = claimCleanupService;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -179,15 +186,11 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         }
         Optional<Claim> claim = claimService.findClaim(location);
         if (claim.isPresent()) {
-            if (claimService.flagState(claim.get(), ClaimFlag.CONTAINER) != ClaimFlagState.UNSET) {
-                if (!claimService.hasFlagPermission(claim.get(), player.getUniqueId(), ClaimFlag.CONTAINER)) {
-                    event.setCancelled(true);
-                }
+            if (!claimService.hasFlagPermission(claim.get(), player.getUniqueId(), ClaimFlag.CONTAINER)) {
+                event.setCancelled(true);
                 return;
             }
-            if (!claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.CONTAINER)) {
-                event.setCancelled(true);
-            }
+            claimCleanupService.recordInteractionActivity(claim.get(), player.getUniqueId());
         }
     }
 

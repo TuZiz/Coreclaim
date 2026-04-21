@@ -28,7 +28,19 @@ public final class ProfileService {
     }
 
     public PlayerProfile getOrCreate(UUID uuid, String name) {
-        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(uuid, name, 0, 0, false, false, false, false));
+        PlayerProfile profile = profiles.computeIfAbsent(uuid, key -> new PlayerProfile(
+            uuid,
+            name,
+            0,
+            0,
+            false,
+            false,
+            false,
+            false,
+            0L,
+            "",
+            false
+        ));
         if (name != null && !name.isBlank()) {
             profile.setLastKnownName(name);
             refreshKnownName(profile);
@@ -49,8 +61,31 @@ public final class ProfileService {
                 statement.setInt(6, profile.starterCoreReclaimed() ? 1 : 0);
                 statement.setInt(7, profile.starterCoreUsed() ? 1 : 0);
                 statement.setInt(8, profile.autoShowBorders() ? 1 : 0);
+                statement.setLong(9, profile.lastSeenAt());
+                statement.setString(10, profile.lastGroupKey());
+                statement.setInt(11, profile.cleanupPermissionExempt() ? 1 : 0);
             }
         );
+    }
+
+    public PlayerProfile findProfile(UUID uuid) {
+        return uuid == null ? null : profiles.get(uuid);
+    }
+
+    public void updatePresence(UUID uuid, String name, long lastSeenAt, String groupKey, boolean cleanupPermissionExempt) {
+        PlayerProfile profile = getOrCreate(uuid, name);
+        profile.setLastSeenAt(lastSeenAt);
+        if (groupKey != null) {
+            profile.setLastGroupKey(groupKey);
+        }
+        profile.setCleanupPermissionExempt(cleanupPermissionExempt);
+        saveProfile(profile);
+    }
+
+    public void touchLastSeen(UUID uuid, String name, long lastSeenAt) {
+        PlayerProfile profile = getOrCreate(uuid, name);
+        profile.setLastSeenAt(lastSeenAt);
+        saveProfile(profile);
     }
 
     public boolean addGlobalTrustedMember(UUID ownerId, UUID memberId) {
@@ -131,7 +166,11 @@ public final class ProfileService {
 
     private void load() {
         databaseManager.query(
-            "SELECT uuid, name, activity_points, online_minutes, starter_core_granted, starter_core_reclaimed, starter_core_used, auto_show_borders FROM profiles",
+            """
+            SELECT uuid, name, activity_points, online_minutes, starter_core_granted, starter_core_reclaimed,
+                   starter_core_used, auto_show_borders, last_seen_at, last_group_key, cleanup_permission_exempt
+            FROM profiles
+            """,
             statement -> {
             },
             resultSet -> {
@@ -145,7 +184,10 @@ public final class ProfileService {
                         resultSet.getInt("starter_core_granted") == 1,
                         resultSet.getInt("starter_core_reclaimed") == 1,
                         resultSet.getInt("starter_core_used") == 1,
-                        resultSet.getInt("auto_show_borders") == 1
+                        resultSet.getInt("auto_show_borders") == 1,
+                        resultSet.getLong("last_seen_at"),
+                        resultSet.getString("last_group_key"),
+                        resultSet.getInt("cleanup_permission_exempt") == 1
                     );
                     profiles.put(uuid, profile);
                     refreshKnownName(profile);

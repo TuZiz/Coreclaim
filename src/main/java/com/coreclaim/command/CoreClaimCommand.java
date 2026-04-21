@@ -10,9 +10,12 @@ import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimSelectionService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimService.ClaimListEntry;
+import com.coreclaim.service.ClaimService.ClaimListRelation;
 import com.coreclaim.service.ClaimTransferService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
@@ -40,6 +43,7 @@ public final class CoreClaimCommand implements TabExecutor {
     private final MenuService menuService;
     private final RemovalConfirmationService removalConfirmationService;
     private final ClaimTransferService claimTransferService;
+    private final ClaimCleanupService claimCleanupService;
     public CoreClaimCommand(
         CoreClaimPlugin plugin,
         ClaimService claimService,
@@ -49,7 +53,8 @@ public final class CoreClaimCommand implements TabExecutor {
         ClaimSelectionService claimSelectionService,
         MenuService menuService,
         RemovalConfirmationService removalConfirmationService,
-        ClaimTransferService claimTransferService
+        ClaimTransferService claimTransferService,
+        ClaimCleanupService claimCleanupService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -60,6 +65,7 @@ public final class CoreClaimCommand implements TabExecutor {
         this.menuService = menuService;
         this.removalConfirmationService = removalConfirmationService;
         this.claimTransferService = claimTransferService;
+        this.claimCleanupService = claimCleanupService;
     }
 
     @Override
@@ -70,7 +76,11 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         if (args.length == 0) {
-            return handleMenu(sender);
+            if (sender instanceof Player) {
+                return handleMenu(sender);
+            }
+            sendModernHelp(sender);
+            return true;
         }
 
         if (args[0].equalsIgnoreCase("help")) {
@@ -89,8 +99,8 @@ public final class CoreClaimCommand implements TabExecutor {
             case "tp" -> handleTeleport(sender, args);
             case "tpset" -> handleTpSet(sender);
             case "expand" -> handleExpand(sender, args);
-            case "remove" -> handleRemove(sender, args);
-            case "delete" -> handleDelete(sender, args);
+            case "remove" -> handleRemoveClaim(sender, args);
+            case "unadd" -> handleUnadd(sender, args);
             case "confirm" -> handleConfirm(sender);
             case "deny" -> handleDeny(sender, args);
             case "undeny" -> handleUndeny(sender, args);
@@ -108,23 +118,48 @@ public final class CoreClaimCommand implements TabExecutor {
         };
     }
 
+    /*
     private boolean handleList(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
             return true;
         }
 
-        List<Claim> claims = claimService.claimsOfFresh(player.getUniqueId());
+        List<ClaimListEntry> claims = claimService.visibleClaimsOfFresh(player.getUniqueId());
         if (claims.isEmpty()) {
-            player.sendMessage(plugin.message("claim-list-empty"));
+            player.sendMessage(chatMessage("claim-list-empty", "&e&o你目前还没有可查看的领地。"));
             return true;
         }
 
-        player.sendMessage(plugin.color("&6[Claim] &f你的领地列表:"));
+        player.sendMessage(plugin.color("&6[Claim] &f浣犵殑棰嗗湴鍒楄〃:"));
         for (Claim claim : claims) {
             player.sendMessage(plugin.color("&7- &e" + claim.name()
-                + " &7核心: &f" + claim.centerX() + "," + claim.centerZ()
-                + " &7大小: &f" + claim.width() + "x" + claim.depth()));
+                + " &7鏍稿績: &f" + claim.centerX() + "," + claim.centerZ()
+                + " &7澶у皬: &f" + claim.width() + "x" + claim.depth()));
+        }
+        return true;
+    }
+    */
+
+    private boolean handleList(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+
+        List<ClaimListEntry> claims = claimService.visibleClaimsOfFresh(player.getUniqueId());
+        if (claims.isEmpty()) {
+            player.sendMessage(chatMessage("claim-list-empty", "&e&o\u4f60\u76ee\u524d\u8fd8\u6ca1\u6709\u53ef\u67e5\u770b\u7684\u9886\u5730\u3002"));
+            return true;
+        }
+
+        player.sendMessage(plugin.color("&6[Claim] &f\u4f60\u7684\u9886\u5730\u5217\u8868:"));
+        for (ClaimListEntry entry : claims) {
+            Claim claim = entry.claim();
+            player.sendMessage(plugin.color("&7[" + claimListRelationText(entry.relation()) + "&7] &e" + claim.name()
+                + " &8| &7\u4e3b\u4eba: &b" + claim.ownerName()
+                + " &8| &7\u6838\u5fc3: &f" + claim.centerX() + "," + claim.centerZ()
+                + " &8| &7\u5927\u5c0f: &f" + claim.width() + "x" + claim.depth()));
         }
         return true;
     }
@@ -210,7 +245,6 @@ public final class CoreClaimCommand implements TabExecutor {
         player.sendMessage(plugin.message("claim-show-success", "{name}", claim.name()));
         return true;
     }
-
     private boolean handleShowAuto(Player player, String[] args) {
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
         if (args.length == 2) {
@@ -234,7 +268,6 @@ public final class CoreClaimCommand implements TabExecutor {
         player.sendMessage(plugin.message(enabled ? "show-auto-enabled" : "show-auto-disabled"));
         return true;
     }
-
     private boolean handleCreate(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
@@ -244,7 +277,7 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c用法: &7/claim create <领地名字>"));
             return true;
         }
-        String name = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)).trim();
+        String name = String.join(" ", Arrays.copyOfRange(args, 1, args.length)).trim();
         ClaimSelectionService.SelectionPreview preview = claimSelectionService.preview(player);
         if (preview == null || !preview.ready()) {
             player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c请先用圈地工具选好两个对角点。"));
@@ -287,7 +320,6 @@ public final class CoreClaimCommand implements TabExecutor {
         claimActionService.teleportToClaim(player, claim);
         return true;
     }
-
     private boolean handleTpSet(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
@@ -303,14 +335,11 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         if (!claimService.isLocalClaim(claim)) {
-            player.sendMessage(chatMessage(
-                "tpset-cross-server-denied",
-                "&c&l! &7请在领地所属区服内设置传送点。"
-            ));
+            player.sendMessage(chatMessage("tpset-cross-server-denied", "&c&l! &7请在领地所属区服内设置传送点。"));
             return true;
         }
 
-        claimService.updateTeleportPoint(claim, player.getLocation());
+        claimService.updateTeleportPoint(claim, player.getLocation(), player.getUniqueId());
         player.sendMessage(chatMessage(
             "claim-tpset-success",
             "&a&l传送点: &7已将领地 &e{name} &7的传送点更新到你当前脚下位置。",
@@ -319,34 +348,7 @@ public final class CoreClaimCommand implements TabExecutor {
         return true;
     }
 
-    private boolean handleRemove(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.message("player-only"));
-            return true;
-        }
-        if (args.length != 2) {
-            player.sendMessage(plugin.color("&c用法: &7/claim remove <玩家>"));
-            return true;
-        }
-        Claim claim = claimActionService.findCurrentClaim(player);
-        if (claim == null) {
-            player.sendMessage(plugin.color("&c你必须站在一块可编辑的领地内才能使用 /claim remove"));
-            return true;
-        }
-        if (!claimActionService.canEditClaim(player, claim)) {
-            player.sendMessage(plugin.message("trust-no-permission"));
-            return true;
-        }
-        OfflinePlayer target = resolveKnownPlayer(args[1]);
-        if (target == null) {
-            player.sendMessage(plugin.message("trust-no-target"));
-            return true;
-        }
-        claimActionService.untrustPlayer(player, claim, target);
-        return true;
-    }
-
-    private boolean handleDelete(CommandSender sender, String[] args) {
+    private boolean handleRemoveClaim(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
             return true;
@@ -362,6 +364,33 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         removalConfirmationService.request(player, claim);
+        return true;
+    }
+
+    private boolean handleUnadd(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return true;
+        }
+        if (args.length != 2) {
+            player.sendMessage(plugin.message("unadd-usage"));
+            return true;
+        }
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
+        if (claim == null) {
+            player.sendMessage(plugin.color("&c浣犲繀椤荤珯鍦ㄤ竴鍧楀彲缂栬緫鐨勯鍦板唴鎵嶈兘浣跨敤 /claim unadd"));
+            return true;
+        }
+        if (!claimActionService.canEditClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return true;
+        }
+        OfflinePlayer target = resolveKnownPlayer(args[1]);
+        if (target == null) {
+            player.sendMessage(plugin.message("trust-no-target"));
+            return true;
+        }
+        claimActionService.untrustPlayer(player, claim, target);
         return true;
     }
 
@@ -385,7 +414,7 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.color("&c\u7528\u6cd5: &7/claim add <\u73a9\u5bb6>"));
             return true;
         }
-        Claim claim = claimActionService.findCurrentClaim(player);
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
             player.sendMessage(plugin.color("&c\u4f60\u5fc5\u987b\u7ad9\u5728\u4e00\u5757\u53ef\u7f16\u8f91\u7684\u9886\u5730\u5185\u624d\u80fd\u4f7f\u7528 /claim add"));
             return true;
@@ -402,7 +431,6 @@ public final class CoreClaimCommand implements TabExecutor {
         claimActionService.trustPlayer(player, claim, target);
         return true;
     }
-
     private boolean handleDeny(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
@@ -424,10 +452,10 @@ public final class CoreClaimCommand implements TabExecutor {
         String targetName = args[1].trim();
         if ("*".equals(targetName)) {
             if (claim.denyAll()) {
-                player.sendMessage(chatMessage("claim-deny-all-already-enabled", "&e&l封闭模式: &7这块领地已经是 deny * 状态。"));
+                player.sendMessage(chatMessage("claim-deny-all-already-enabled", "&e&l封闭模式: &7这块领地已经开启 deny *。"));
                 return true;
             }
-            claimService.updateDenyAll(claim, true);
+            claimService.updateDenyAll(claim, true, player.getUniqueId());
             player.sendMessage(chatMessage(
                 "claim-deny-all-enabled",
                 "&a&l封闭模式: &7已为领地 &e{name} &7开启 deny *。",
@@ -445,7 +473,7 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.message("trust-self"));
             return true;
         }
-        if (!claimService.addDeniedMember(claim, target.getUniqueId())) {
+        if (!claimService.addDeniedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             player.sendMessage(chatMessage(
                 "claim-deny-exists",
                 "&e{player} &7已经在领地 &e{name} &7的 deny 列表里了。",
@@ -462,7 +490,6 @@ public final class CoreClaimCommand implements TabExecutor {
         ));
         return true;
     }
-
     private boolean handleUndeny(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
@@ -487,7 +514,7 @@ public final class CoreClaimCommand implements TabExecutor {
                 player.sendMessage(chatMessage("claim-deny-all-already-disabled", "&e&l封闭模式: &7这块领地当前没有开启 deny *。"));
                 return true;
             }
-            claimService.updateDenyAll(claim, false);
+            claimService.updateDenyAll(claim, false, player.getUniqueId());
             player.sendMessage(chatMessage(
                 "claim-deny-all-disabled",
                 "&a&l封闭模式: &7已为领地 &e{name} &7关闭 deny *。",
@@ -501,7 +528,7 @@ public final class CoreClaimCommand implements TabExecutor {
             player.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
-        if (!claimService.removeDeniedMember(claim, target.getUniqueId())) {
+        if (!claimService.removeDeniedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             player.sendMessage(chatMessage(
                 "claim-deny-missing",
                 "&e{player} &7不在领地 &e{name} &7的 deny 列表中。",
@@ -554,7 +581,7 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
 
-        claimService.updateFlagState(claim, flag, state);
+        claimService.updateFlagState(claim, flag, state, player.getUniqueId());
         player.sendMessage(chatMessage(
             "flag-updated",
             "&a已将领地 &e{name} &7的旗标 &b{flag} &7设置为 {state}&7。",
@@ -571,10 +598,7 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(chatMessage(
-                "admin-usage",
-                "&c用法: &7/claim admin <create|info|playerclaims|diagnose|add|remove|deny|undeny|permission|flag|setserver> ..."
-            ));
+            sender.sendMessage(plugin.message("admin-usage"));
             return true;
         }
 
@@ -589,13 +613,11 @@ public final class CoreClaimCommand implements TabExecutor {
             case "flag" -> handleAdminFlag(sender, args);
             case "deny" -> handleAdminDeny(sender, args);
             case "undeny" -> handleAdminUndeny(sender, args);
-            case "remove" -> handleAdminRemoveMember(sender, args);
+            case "unadd" -> handleAdminUnadd(sender, args);
+            case "cleanup" -> handleAdminCleanup(sender, args);
             case "setserver" -> handleAdminSetServer(sender, args);
             default -> {
-                sender.sendMessage(chatMessage(
-                    "admin-usage",
-                    "&c用法: &7/claim admin <create|info|playerclaims|diagnose|add|remove|deny|undeny|permission|flag|setserver> ..."
-                ));
+                sender.sendMessage(plugin.message("admin-usage"));
                 yield true;
             }
         };
@@ -611,12 +633,12 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         if (args.length < 4 || !args[2].equalsIgnoreCase("system")) {
-            sender.sendMessage(chatMessage("admin-create-system-usage", "&c用法: &7/claim admin create system <领地名>"));
+            sender.sendMessage(chatMessage("admin-create-system-usage", "&c鐢ㄦ硶: &7/claim admin create system <棰嗗湴鍚?"));
             return true;
         }
         String claimName = joinArgs(args, 3);
         if (claimName.isBlank()) {
-            sender.sendMessage(chatMessage("admin-create-system-usage", "&c用法: &7/claim admin create system <领地名>"));
+            sender.sendMessage(chatMessage("admin-create-system-usage", "&c鐢ㄦ硶: &7/claim admin create system <棰嗗湴鍚?"));
             return true;
         }
         return claimSelectionService.createSystemClaim(player, claimName);
@@ -640,7 +662,6 @@ public final class CoreClaimCommand implements TabExecutor {
         sendEnhancedClaimDetails(sender, claim, true);
         return true;
     }
-
     private boolean handleAdminPlayerClaims(CommandSender sender, String[] args) {
         if (!hasAdminViewPermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -659,7 +680,7 @@ public final class CoreClaimCommand implements TabExecutor {
         if (claims.isEmpty()) {
             sender.sendMessage(chatMessage(
                 "admin-playerclaims-empty",
-                "&e{player} &7名下当前没有领地。",
+                "&e{player} &7当前没有任何领地。",
                 "{player}", displayName(target)
             ));
             return true;
@@ -673,7 +694,6 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         return true;
     }
-
     private boolean handleAdminDiagnose(CommandSender sender, String[] args) {
         if (!hasAdminViewPermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -696,7 +716,7 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&6[Claim] &fOwner: &b" + claim.ownerName() + " &8| &fServer ID: &e" + claimService.displayServerId(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f当前服 server-id: &e" + plugin.settings().serverId()
             + " &8| &f是否本服: " + (localClaim ? "&a是" : "&c否")));
-        sender.sendMessage(plugin.color("&6[Claim] &f系统领地: " + (claim.systemManaged() ? "&6是 &8| &f计入配额: &c否" : "&7否 &8| &f计入配额: &a是")));
+        sender.sendMessage(plugin.color("&6[Claim] &f系统领地: " + (claim.systemManaged() ? "&6是&8| &f计入配额: &c否" : "&7否&8| &f计入配额: &a是")));
         sender.sendMessage(plugin.color("&6[Claim] &f规则来源: " + ruleSourceSummary(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f世界状态: " + (worldLoaded ? "&a已加载" : "&e未加载或不在本服")));
         sender.sendMessage(plugin.color("&6[Claim] &fTP 路由: &b" + route));
@@ -706,7 +726,6 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&6[Claim] &f交互旗标: " + summarizeFlags(claim)));
         return true;
     }
-
     private boolean handleAdminPermission(CommandSender sender, String[] args) {
         if (!hasAdminPermissionManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -738,12 +757,20 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(chatMessage("admin-permission-invalid", "&c未知默认权限: &e{permission}", "{permission}", permissionInput));
             return true;
         }
+        if (permission == ClaimPermission.CONTAINER) {
+            sender.sendMessage(chatMessage(
+                "admin-permission-container-deprecated",
+                "&eContainer access is now controlled by &7/claim admin flag container <allow|deny|unset>&e."
+            ));
+            return true;
+        }
         Boolean allowed = parseAllowDeny(stateInput);
         if (allowed == null) {
             sender.sendMessage(chatMessage("admin-permission-state-invalid", "&c状态只能是 &eallow &7或 &edeny"));
             return true;
         }
-        claimService.updatePermission(claim, permission, allowed);
+        UUID actorId = actorId(sender);
+        claimService.updatePermission(claim, permission, allowed, actorId);
         sender.sendMessage(chatMessage(
             "admin-permission-updated",
             "&a已将领地 &e{name} &7的默认权限 &b{permission} &7设置为 {state}&7。",
@@ -753,7 +780,6 @@ public final class CoreClaimCommand implements TabExecutor {
         ));
         return true;
     }
-
     private boolean handleAdminFlag(CommandSender sender, String[] args) {
         if (!hasAdminFlagManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -790,7 +816,8 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(chatMessage("admin-flag-state-invalid", "&c状态只能是 &eallow &7/ &edeny &7/ &eunset"));
             return true;
         }
-        claimService.updateFlagState(claim, flag, state);
+        UUID actorId = actorId(sender);
+        claimService.updateFlagState(claim, flag, state, actorId);
         sender.sendMessage(chatMessage(
             "admin-flag-updated",
             "&a已将领地 &e{name} &7的旗标 &b{flag} &7设置为 {state}&7。",
@@ -800,7 +827,6 @@ public final class CoreClaimCommand implements TabExecutor {
         ));
         return true;
     }
-
     private boolean handleAdminDeny(CommandSender sender, String[] args) {
         if (!hasAdminMemberManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -825,7 +851,8 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         if ("*".equals(targetArg)) {
-            claimService.updateDenyAll(claim, true);
+            UUID actorId = actorId(sender);
+            claimService.updateDenyAll(claim, true, actorId);
             sender.sendMessage(chatMessage("admin-deny-all-enabled", "&a已为领地 &e{name} &7开启 deny *。", "{name}", claim.name()));
             return true;
         }
@@ -834,14 +861,14 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
-        if (!claimService.addDeniedMember(claim, target.getUniqueId())) {
+        UUID actorId = actorId(sender);
+        if (!claimService.addDeniedMember(claim, target.getUniqueId(), actorId)) {
             sender.sendMessage(chatMessage("admin-deny-exists", "&e{player} &7已经在领地 &e{name} &7的 deny 列表中。", "{player}", displayName(target), "{name}", claim.name()));
             return true;
         }
         sender.sendMessage(chatMessage("admin-deny-added", "&a已将玩家 &e{player} &7加入领地 &e{name} &7的 deny 列表。", "{player}", displayName(target), "{name}", claim.name()));
         return true;
     }
-
     private boolean handleAdminUndeny(CommandSender sender, String[] args) {
         if (!hasAdminMemberManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -866,7 +893,8 @@ public final class CoreClaimCommand implements TabExecutor {
             return true;
         }
         if ("*".equals(targetArg)) {
-            claimService.updateDenyAll(claim, false);
+            UUID actorId = actorId(sender);
+            claimService.updateDenyAll(claim, false, actorId);
             sender.sendMessage(chatMessage("admin-deny-all-disabled", "&a已为领地 &e{name} &7关闭 deny *。", "{name}", claim.name()));
             return true;
         }
@@ -875,14 +903,14 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
-        if (!claimService.removeDeniedMember(claim, target.getUniqueId())) {
+        UUID actorId = actorId(sender);
+        if (!claimService.removeDeniedMember(claim, target.getUniqueId(), actorId)) {
             sender.sendMessage(chatMessage("admin-deny-missing", "&e{player} &7不在领地 &e{name} &7的 deny 列表中。", "{player}", displayName(target), "{name}", claim.name()));
             return true;
         }
         sender.sendMessage(chatMessage("admin-deny-removed", "&a已将玩家 &e{player} &7从领地 &e{name} &7的 deny 列表移除。", "{player}", displayName(target), "{name}", claim.name()));
         return true;
     }
-
     private boolean handleAdminAdd(CommandSender sender, String[] args) {
         if (!hasAdminMemberManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
@@ -905,28 +933,27 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
-        if (!claimService.addTrustedMember(claim, target.getUniqueId())) {
+        if (!claimService.addTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             sender.sendMessage(chatMessage("admin-trust-exists", "&e{player} &7已经是领地 &e{name} &7的成员。", "{player}", displayName(target), "{name}", claim.name()));
             return true;
         }
         sender.sendMessage(chatMessage("admin-trust-added", "&a已将玩家 &e{player} &7加入领地 &e{name} &7的成员列表。", "{player}", displayName(target), "{name}", claim.name()));
         return true;
     }
-
-    private boolean handleAdminRemoveMember(CommandSender sender, String[] args) {
+    private boolean handleAdminUnadd(CommandSender sender, String[] args) {
         if (!hasAdminMemberManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(chatMessage("admin-remove-member-usage", "&c用法: &7/claim admin remove <玩家>"));
+            sender.sendMessage(plugin.message("admin-unadd-usage"));
             return true;
         }
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("player-only"));
             return true;
         }
-        Claim claim = resolveCurrentAdminClaim(player, "/claim admin remove");
+        Claim claim = resolveCurrentAdminClaim(player, "/claim admin unadd");
         if (claim == null) {
             return true;
         }
@@ -935,7 +962,7 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.message("trust-no-target"));
             return true;
         }
-        if (!claimService.removeTrustedMember(claim, target.getUniqueId())) {
+        if (!claimService.removeTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
             sender.sendMessage(chatMessage("admin-untrust-missing", "&e{player} &7不在领地 &e{name} &7的成员列表中。", "{player}", displayName(target), "{name}", claim.name()));
             return true;
         }
@@ -943,43 +970,104 @@ public final class CoreClaimCommand implements TabExecutor {
         return true;
     }
 
-    private boolean handleAdminDeleteClaim(CommandSender sender, String[] args) {
+    private boolean handleAdminCleanup(CommandSender sender, String[] args) {
         if (!hasAdminClaimManagePermission(sender)) {
             sender.sendMessage(plugin.message("no-permission"));
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(plugin.message("admin-remove-usage"));
+            sender.sendMessage(chatMessage("admin-cleanup-usage", "&c用法: &7/claim admin cleanup <list|run|skip|baseline> ..."));
             return true;
         }
 
-        Claim claim = resolveAdminClaimSelector(sender, joinArgs(args, 2));
-        if (claim == null) {
-            return true;
-        }
-        return claimActionService.adminRemoveClaim(sender, claim);
+        return switch (args[2].toLowerCase(Locale.ROOT)) {
+            case "list" -> handleAdminCleanupList(sender);
+            case "run" -> handleAdminCleanupRun(sender);
+            case "skip" -> handleAdminCleanupSkip(sender, args);
+            case "baseline" -> handleAdminCleanupBaseline(sender, args);
+            default -> {
+                sender.sendMessage(chatMessage("admin-cleanup-usage", "&c用法: &7/claim admin cleanup <list|run|skip|baseline> ..."));
+                yield true;
+            }
+        };
     }
 
-    private boolean handleAdminTransfer(CommandSender sender, String[] args) {
-        if (!hasAdminClaimManagePermission(sender)) {
-            sender.sendMessage(plugin.message("no-permission"));
+    private boolean handleAdminCleanupList(CommandSender sender) {
+        ClaimCleanupService.CleanupSnapshot snapshot = claimCleanupService.snapshot();
+        if (!plugin.settings().inactiveClaimCleanupEnabled()) {
+            sender.sendMessage(chatMessage("admin-cleanup-disabled", "&e自动空地清理当前处于关闭状态，下面显示的是手动扫描视图。"));
+        }
+        sender.sendMessage(chatMessage(
+            "admin-cleanup-list-header",
+            "&6空地清理: &7候选 &e{candidates} &7| 宽限中 &e{grace} &7| 旧地待基线 &e{legacy}",
+            "{candidates}", String.valueOf(snapshot.candidates().size()),
+            "{grace}", String.valueOf(snapshot.graceClaims().size()),
+            "{legacy}", String.valueOf(snapshot.legacyClaims().size())
+        ));
+        if (snapshot.candidates().isEmpty() && snapshot.graceClaims().isEmpty() && snapshot.legacyClaims().isEmpty()) {
+            sender.sendMessage(chatMessage("admin-cleanup-list-empty", "&7当前没有任何空地清理候选。"));
             return true;
         }
+        sendCleanupEntries(sender, "候选删除", snapshot.candidates(), false);
+        sendCleanupEntries(sender, "宽限中", snapshot.graceClaims(), true);
+        sendCleanupEntries(sender, "旧地待基线", snapshot.legacyClaims(), false);
+        return true;
+    }
+
+    private boolean handleAdminCleanupRun(CommandSender sender) {
+        ClaimCleanupService.CleanupRunResult result = claimCleanupService.runScanNow();
+        sender.sendMessage(chatMessage(
+            "admin-cleanup-run-result",
+            "&a空地清理: &7本次扫描 &e{scanned} &7块，本次打标 &e{marked} &7块，删除 &e{deleted} &7块，撤销宽限 &e{revoked} &7块。当前候选 &e{candidates} &7块，宽限中 &e{grace} &7块。",
+            "{scanned}", String.valueOf(result.scannedClaims()),
+            "{marked}", String.valueOf(result.markedGraceClaims()),
+            "{deleted}", String.valueOf(result.deletedClaims()),
+            "{revoked}", String.valueOf(result.revokedGraceClaims()),
+            "{candidates}", String.valueOf(result.candidates()),
+            "{grace}", String.valueOf(result.graceClaims())
+        ));
+        return true;
+    }
+
+    private boolean handleAdminCleanupSkip(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage(plugin.message("admin-transfer-usage"));
+            sender.sendMessage(chatMessage("admin-cleanup-skip-usage", "&c用法: &7/claim admin cleanup skip <领地名|#claimId>"));
             return true;
         }
-        String claimName = joinArgs(args, 2, args.length - 1);
-        if (claimName.isBlank()) {
-            sender.sendMessage(plugin.message("admin-transfer-usage"));
-            return true;
-        }
-        Claim claim = resolveAdminClaimSelector(sender, claimName);
+        Claim claim = resolveAdminClaimSelector(sender, joinArgs(args, 3));
         if (claim == null) {
             return true;
         }
-        Player target = resolveOnlinePlayer(args[args.length - 1]);
-        claimTransferService.forceTransfer(sender, claim, target);
+        claimCleanupService.skipClaim(claim);
+        sender.sendMessage(chatMessage(
+            "admin-cleanup-skip-success",
+            "&a空地清理: &7已将领地 &e{name} &7标记为永久跳过自动清理。",
+            "{name}", claim.name()
+        ));
+        return true;
+    }
+
+    private boolean handleAdminCleanupBaseline(CommandSender sender, String[] args) {
+        if (args.length < 5) {
+            sender.sendMessage(chatMessage("admin-cleanup-baseline-usage", "&c用法: &7/claim admin cleanup baseline <领地名|#claimId> <empty|used|skip>"));
+            return true;
+        }
+        ClaimCleanupService.BaselineMode mode = ClaimCleanupService.BaselineMode.fromInput(args[args.length - 1]);
+        if (mode == null) {
+            sender.sendMessage(chatMessage("admin-cleanup-baseline-usage", "&c用法: &7/claim admin cleanup baseline <领地名|#claimId> <empty|used|skip>"));
+            return true;
+        }
+        Claim claim = resolveAdminClaimSelector(sender, joinArgs(args, 3, args.length - 1));
+        if (claim == null) {
+            return true;
+        }
+        claimCleanupService.baselineClaim(claim, mode);
+        sender.sendMessage(chatMessage(
+            "admin-cleanup-baseline-success",
+            "&a空地清理: &7已将领地 &e{name} &7基线设为 &b{mode}&7。",
+            "{name}", claim.name(),
+            "{mode}", cleanupBaselineModeText(mode)
+        ));
         return true;
     }
 
@@ -1005,14 +1093,14 @@ public final class CoreClaimCommand implements TabExecutor {
         if (claim == null) {
             sender.sendMessage(chatMessage(
                 "claim-server-update-failed",
-                "&c&l! &7找不到 ID 为 &e{id} &7的领地，或 server_id 更新失败。",
+                "&c&l失败: &7找不到 ID 为 &e{id} &7的领地，或 server_id 更新失败。",
                 "{id}", String.valueOf(claimId)
             ));
             return true;
         }
         sender.sendMessage(chatMessage(
             "claim-server-updated",
-            "&a&l修复: &7已将领地 &b{name} &7(#&f{id}&7) 的 server_id 更新为 &e{server}&7。",
+            "&a&l已修复: &7已将领地 &b{name} &7(#&f{id}&7) 的 server_id 更新为 &e{server}&7。",
             "{id}", String.valueOf(claim.id()),
             "{name}", claim.name(),
             "{server}", claimService.displayServerId(claim)
@@ -1045,61 +1133,7 @@ public final class CoreClaimCommand implements TabExecutor {
         }
 
         menuService.openCoreMenu(player, claim);
-        player.sendMessage(chatMessage("admin-edit-opened", "&a&l管理员: &7已打开领地 &e{name} &7的编辑菜单。", "{name}", claim.name()));
-        return true;
-    }
-
-    private boolean handleGlobalAdd(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.message("player-only"));
-            return true;
-        }
-        if (args.length < 2) {
-            player.sendMessage(plugin.message("global-add-usage"));
-            return true;
-        }
-        OfflinePlayer target = resolveKnownPlayer(args[1]);
-        if (target == null) {
-            player.sendMessage(plugin.message("trust-no-target"));
-            return true;
-        }
-        if (target.getUniqueId().equals(player.getUniqueId())) {
-            player.sendMessage(plugin.message("trust-self"));
-            return true;
-        }
-        profileService.getOrCreate(player.getUniqueId(), player.getName());
-        if (!profileService.addGlobalTrustedMember(player.getUniqueId(), target.getUniqueId())) {
-            player.sendMessage(plugin.message("global-add-exists", "{player}", displayName(target)));
-            return true;
-        }
-        player.sendMessage(plugin.message("global-add-success", "{player}", displayName(target)));
-        Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
-        if (onlineTarget != null) {
-            onlineTarget.sendMessage(plugin.message("global-add-notify", "{owner}", player.getName()));
-        }
-        return true;
-    }
-
-    private boolean handleGlobalRemove(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.message("player-only"));
-            return true;
-        }
-        if (args.length < 2) {
-            player.sendMessage(plugin.message("global-remove-usage"));
-            return true;
-        }
-        OfflinePlayer target = resolveKnownPlayer(args[1]);
-        if (target == null) {
-            player.sendMessage(plugin.message("trust-no-target"));
-            return true;
-        }
-        profileService.getOrCreate(player.getUniqueId(), player.getName());
-        if (!profileService.removeGlobalTrustedMember(player.getUniqueId(), target.getUniqueId())) {
-            player.sendMessage(plugin.message("global-remove-missing", "{player}", displayName(target)));
-            return true;
-        }
-        player.sendMessage(plugin.message("global-remove-success", "{player}", displayName(target)));
+        player.sendMessage(chatMessage("admin-edit-opened", "&a管理员模式: &7已打开领地 &e{name} &7的编辑菜单。", "{name}", claim.name()));
         return true;
     }
 
@@ -1173,7 +1207,7 @@ public final class CoreClaimCommand implements TabExecutor {
 
         switch (action) {
             case "get" -> sender.sendMessage(plugin.color("&6[Claim] &f" + profile.lastKnownName()
-                + " 的活跃度为 &e" + profile.activityPoints()));
+                + " 鐨勬椿璺冨害涓?&e" + profile.activityPoints()));
             case "set" -> {
                 if (args.length < 4) {
                     sender.sendMessage(plugin.message("activity-value-missing"));
@@ -1281,7 +1315,7 @@ public final class CoreClaimCommand implements TabExecutor {
             if (value <= 0) {
                 sender.sendMessage(chatMessage(
                     "claim-id-invalid",
-                    "&c&l! &7领地 ID &e{value} &7无效，请输入大于 0 的数字。",
+                    "&c领地 ID &e{value} &7无效，请输入大于 0 的数字。",
                     "{value}", raw
                 ));
                 return -1;
@@ -1290,7 +1324,7 @@ public final class CoreClaimCommand implements TabExecutor {
         } catch (NumberFormatException exception) {
             sender.sendMessage(chatMessage(
                 "claim-id-invalid",
-                "&c&l! &7领地 ID &e{value} &7无效，请输入大于 0 的数字。",
+                "&c领地 ID &e{value} &7无效，请输入大于 0 的数字。",
                 "{value}", raw
             ));
             return -1;
@@ -1316,9 +1350,9 @@ public final class CoreClaimCommand implements TabExecutor {
     }
 
     private Claim resolveCurrentAdminClaim(Player player, String usageLabel) {
-        Claim claim = claimActionService.findCurrentClaim(player);
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(plugin.color("&c你必须站在一块可管理的领地内才能使用 " + usageLabel));
+            player.sendMessage(plugin.color("&c浣犲繀椤荤珯鍦ㄤ竴鍧楀彲绠＄悊鐨勯鍦板唴鎵嶈兘浣跨敤 " + usageLabel));
             return null;
         }
         if (!claimActionService.canEditClaim(player, claim)) {
@@ -1391,9 +1425,9 @@ public final class CoreClaimCommand implements TabExecutor {
     }
 
     private Claim resolveCurrentEditableClaim(Player player, String usageLabel) {
-        Claim claim = claimActionService.findCurrentClaim(player);
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(plugin.color("&c你必须站在一块可编辑的领地内才能使用 " + usageLabel));
+            player.sendMessage(plugin.color("&c浣犲繀椤荤珯鍦ㄤ竴鍧楀彲缂栬緫鐨勯鍦板唴鎵嶈兘浣跨敤 " + usageLabel));
             return null;
         }
         if (!claimActionService.canEditClaim(player, claim)) {
@@ -1432,81 +1466,63 @@ public final class CoreClaimCommand implements TabExecutor {
         return String.valueOf(rounded);
     }
 
-    private void sendClaimDetails(CommandSender sender, Claim claim, boolean adminView) {
-        if (claim != null) {
-            boolean canSeeSensitive = adminView;
-            if (!canSeeSensitive && sender instanceof Player player) {
-                canSeeSensitive = claim.owner().equals(player.getUniqueId()) || hasAdminViewPermission(player);
-            }
-
-            if (adminView) {
-                sender.sendMessage(plugin.color("&6[Claim] &fClaim ID: &e" + claim.id()));
-                sender.sendMessage(plugin.color("&6[Claim] &fServer ID: &e" + claimService.displayServerId(claim)));
-            }
-            sender.sendMessage(plugin.color("&6[Claim] &f领地名称: &e" + claim.name()));
-            sender.sendMessage(plugin.color("&6[Claim] &f领地主人: &b" + claim.ownerName()));
-            sender.sendMessage(plugin.color("&6[Claim] &f所在世界: &e" + claim.world()));
-            sender.sendMessage(plugin.color("&6[Claim] &f核心坐标: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-            sender.sendMessage(plugin.color("&6[Claim] &f领地大小: &e" + claim.width() + "x" + claim.depth() + " &7(面积 " + claim.area() + ")"));
-            sender.sendMessage(plugin.color("&6[Claim] &f边界范围: &7X " + claim.minX() + " ~ " + claim.maxX() + " &8| &7Z " + claim.minZ() + " ~ " + claim.maxZ()));
-            sender.sendMessage(plugin.color("&6[Claim] &f高度模式: " + (claim.fullHeight()
-                ? "&a全高度保护"
-                : "&b选区高度 &7(Y " + claim.minY() + " ~ " + claim.maxY() + ", 高 " + claim.height() + ")")));
-            sender.sendMessage(plugin.color("&6[Claim] &f传送点: " + (claim.hasTeleportPoint()
-                ? "&a自定义 &7(" + formatTeleportPoint(claim) + ")"
-                : "&e核心")));
-            sender.sendMessage(plugin.color("&6[Claim] &fDeny 状态: &e" + claim.deniedMembers().size()
-                + " &7人 &8| &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭")));
-            sender.sendMessage(plugin.color("&6[Claim] &f默认权限: &7放置 " + stateText(claim.permission(ClaimPermission.PLACE))
-                + " &8| &7破坏 " + stateText(claim.permission(ClaimPermission.BREAK))
-                + " &8| &7交互 " + stateText(claim.permission(ClaimPermission.INTERACT))
-                + " &8| &7传送 " + stateText(claim.permission(ClaimPermission.TELEPORT))));
-            sender.sendMessage(plugin.color("&6[Claim] &f核心显示: " + (claim.coreVisible() ? "&a显示中" : "&c已隐藏")));
-            sender.sendMessage(plugin.color("&6[Claim] &f进入提示: &b" + previewMessage(claim.enterMessage(), claim, "默认进入提示")));
-            sender.sendMessage(plugin.color("&6[Claim] &f离开提示: &e" + previewMessage(claim.leaveMessage(), claim, "默认离开提示")));
-            if (canSeeSensitive) {
-                sender.sendMessage(plugin.color("&6[Claim] &f成员列表: " + joinPlayerNames(claim.trustedMembers())));
-                sender.sendMessage(plugin.color("&6[Claim] &fDeny 玩家: " + joinPlayerNames(claim.deniedMembers())));
-            }
-            if (adminView && claim.hasTeleportPoint()) {
-                sender.sendMessage(plugin.color("&6[Claim] &fTP Yaw/Pitch: &e" + formatYawPitch(claim.teleportYaw())
-                    + " &8/ &e" + formatYawPitch(claim.teleportPitch())));
-            }
+    private void sendCleanupEntries(
+        CommandSender sender,
+        String title,
+        List<ClaimCleanupService.CleanupEntry> entries,
+        boolean showGrace
+    ) {
+        if (entries.isEmpty()) {
             return;
         }
+        sender.sendMessage(plugin.color("&6[Claim] &f" + title + " &8(" + entries.size() + ")"));
+        for (ClaimCleanupService.CleanupEntry entry : entries) {
+            sender.sendMessage(plugin.color("&7- &f#" + entry.claim().id()
+                + " &e" + entry.claim().name()
+                + " &8| &7主人: &b" + entry.claim().ownerName()
+                + " &8| &7最后上线: &e" + lastSeenText(entry.lastSeenAt())
+                + " &8| &7原因: &c" + cleanupReasonText(entry.reason())
+                + (showGrace ? " &8| &7到期: &6" + graceText(entry.state().getDeleteAfterAt()) : "")));
+        }
+    }
 
-        if (adminView) {
-            sender.sendMessage(plugin.color("&6[Claim] &fClaim ID: &e" + claim.id()));
-            sender.sendMessage(plugin.color("&6[Claim] &fServer ID: &e" + claimService.displayServerId(claim)));
+    private String cleanupReasonText(com.coreclaim.model.ClaimCleanupReason reason) {
+        if (reason == null) {
+            return "未知";
         }
-        sender.sendMessage(plugin.color("&6[Claim] &f领地名称: &e" + claim.name()));
-        sender.sendMessage(plugin.color("&6[Claim] &f领地主人: &b" + claim.ownerName()));
-        sender.sendMessage(plugin.color("&6[Claim] &f所在世界: &e" + claim.world()));
-        sender.sendMessage(plugin.color("&6[Claim] &f核心坐标: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-        sender.sendMessage(plugin.color("&6[Claim] &f领地大小: &e" + claim.width() + "x" + claim.depth() + " &7(面积 " + claim.area() + ")"));
-        sender.sendMessage(plugin.color("&6[Claim] &f边界范围: &7X " + claim.minX() + " ~ " + claim.maxX() + " &8| &7Z " + claim.minZ() + " ~ " + claim.maxZ()));
-        if (claim.fullHeight()) {
-            sender.sendMessage(plugin.color("&6[Claim] &f高度模式: &a全高度保护"));
-        } else {
-            sender.sendMessage(plugin.color("&6[Claim] &f高度模式: &b选区高度 &7(Y " + claim.minY() + " ~ " + claim.maxY() + ", 高 " + claim.height() + ")"));
+        return switch (reason) {
+            case NO_BUILD -> "无建筑痕迹";
+            case NEVER_INTERACTED -> "从未交互";
+            case NO_BUILD_AND_NEVER_INTERACTED -> "无建筑且从未交互";
+            case NONE -> "无";
+        };
+    }
+
+    private String cleanupBaselineModeText(ClaimCleanupService.BaselineMode mode) {
+        if (mode == null) {
+            return "未知";
         }
-        sender.sendMessage(plugin.color("&6[Claim] &f成员人数: &e" + claim.trustedCount() + " &8| &fDeny 玩家: &c" + claim.deniedMembers().size()));
-        sender.sendMessage(plugin.color("&6[Claim] &f核心显示: " + (claim.coreVisible() ? "&a显示中" : "&c已隐藏")));
-        sender.sendMessage(plugin.color("&6[Claim] &f进入提示: &b" + previewMessage(claim.enterMessage(), claim, "默认进入提示")));
-        sender.sendMessage(plugin.color("&6[Claim] &f离开提示: &e" + previewMessage(claim.leaveMessage(), claim, "默认离开提示")));
-        if (adminView) {
-            sender.sendMessage(plugin.color("&6[Claim] &f默认权限明细:"));
-            sender.sendMessage(plugin.color("&7- 放置: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.PLACE))));
-            sender.sendMessage(plugin.color("&7- 破坏: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.BREAK))));
-            sender.sendMessage(plugin.color("&7- 交互: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.INTERACT))));
-            sender.sendMessage(plugin.color("&7- 容器: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.CONTAINER))));
-            sender.sendMessage(plugin.color("&7- 红石: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.REDSTONE))));
-            sender.sendMessage(plugin.color("&7- 爆炸: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.EXPLOSION))));
-            sender.sendMessage(plugin.color("&7- 桶: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.BUCKET))));
-            sender.sendMessage(plugin.color("&7- 传送: " + stateText(claim.permission(com.coreclaim.model.ClaimPermission.TELEPORT))));
-            sender.sendMessage(plugin.color("&6[Claim] &f\u6388\u6743\u73a9\u5bb6: " + joinPlayerNames(claim.trustedMembers())));
-            sender.sendMessage(plugin.color("&6[Claim] &fDeny 玩家: " + joinPlayerNames(claim.deniedMembers())));
+        return switch (mode) {
+            case EMPTY -> "empty(可追踪空地)";
+            case USED -> "used(已有使用证据)";
+            case SKIP -> "skip(永久跳过)";
+        };
+    }
+
+    private String lastSeenText(long lastSeenAt) {
+        if (lastSeenAt <= 0L) {
+            return "无记录";
         }
+        long elapsedDays = Math.max(0L, (System.currentTimeMillis() - lastSeenAt) / 86_400_000L);
+        return elapsedDays + "天前";
+    }
+
+    private String graceText(long deleteAfterAt) {
+        if (deleteAfterAt <= 0L) {
+            return "-";
+        }
+        long remainingDays = Math.max(0L, (deleteAfterAt - System.currentTimeMillis()) / 86_400_000L);
+        return remainingDays + "天后";
     }
 
     private void sendEnhancedClaimDetails(CommandSender sender, Claim claim, boolean adminView) {
@@ -1518,8 +1534,8 @@ public final class CoreClaimCommand implements TabExecutor {
         if (adminView) {
             sender.sendMessage(plugin.color("&6[Claim] &fClaim ID: &e" + claim.id()));
             sender.sendMessage(plugin.color("&6[Claim] &fServer ID: &e" + claimService.displayServerId(claim)));
-            sender.sendMessage(plugin.color("&6[Claim] &fSystem Managed: " + (claim.systemManaged() ? "&6Yes" : "&7No")));
-            sender.sendMessage(plugin.color("&6[Claim] &fCounts Toward Quota: " + (claimService.countsTowardQuota(claim) ? "&aYes" : "&cNo")));
+            sender.sendMessage(plugin.color("&6[Claim] &f系统领地: " + (claim.systemManaged() ? "&6是" : "&7否")));
+            sender.sendMessage(plugin.color("&6[Claim] &f计入配额: " + (claimService.countsTowardQuota(claim) ? "&a是" : "&c否")));
         }
         sender.sendMessage(plugin.color("&6[Claim] &f领地名称: &e" + (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name()));
         sender.sendMessage(plugin.color("&6[Claim] &f领地主人: &b" + claim.ownerName()));
@@ -1533,7 +1549,7 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&6[Claim] &f传送点: " + (claim.hasTeleportPoint()
             ? "&a自定义 &7(" + formatTeleportPoint(claim) + ")"
             : "&e核心")));
-        sender.sendMessage(plugin.color("&6[Claim] &fdeny 状态: &c" + claim.deniedMembers().size()
+        sender.sendMessage(plugin.color("&6[Claim] &fDeny 状态: &c" + claim.deniedMembers().size()
             + " &7人 &8| &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭")));
         sender.sendMessage(plugin.color("&6[Claim] &f规则来源: " + ruleSourceSummary(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f默认权限: &7放置 " + stateText(claim.permission(ClaimPermission.PLACE))
@@ -1581,9 +1597,9 @@ public final class CoreClaimCommand implements TabExecutor {
 
     private String flagStateText(ClaimFlagState state) {
         return switch (state) {
-            case ALLOW -> "&aALLOW";
-            case DENY -> "&cDENY";
-            case UNSET -> "&7UNSET";
+            case ALLOW -> "&a允许";
+            case DENY -> "&c禁止";
+            case UNSET -> "&7未设置";
         };
     }
 
@@ -1608,6 +1624,14 @@ public final class CoreClaimCommand implements TabExecutor {
 
     private String stateText(boolean enabled) {
         return enabled ? "&a允许" : "&c禁止";
+    }
+
+    private String claimListRelationText(ClaimListRelation relation) {
+        return relation == ClaimListRelation.OWNER ? "&a我的" : "&b已授权";
+    }
+
+    private UUID actorId(CommandSender sender) {
+        return sender instanceof Player player ? player.getUniqueId() : null;
     }
 
     private String joinPlayerNames(java.util.Set<java.util.UUID> players) {
@@ -1804,6 +1828,34 @@ public final class CoreClaimCommand implements TabExecutor {
         return names;
     }
 
+    private List<String> currentEditableClaimMemberNames(Player player) {
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
+        if (claim == null || !claimActionService.canEditClaim(player, claim)) {
+            return List.of();
+        }
+        return trustedMemberNames(claim);
+    }
+
+    private List<String> currentAdminClaimMemberNames(Player player) {
+        Claim claim = claimActionService.findCurrentPresenceClaim(player);
+        if (claim == null || !claimActionService.canEditClaim(player, claim)) {
+            return List.of();
+        }
+        return trustedMemberNames(claim);
+    }
+
+    private List<String> trustedMemberNames(Claim claim) {
+        if (claim == null || claim.trustedMembers().isEmpty()) {
+            return List.of();
+        }
+        return claim.trustedMembers().stream()
+            .map(Bukkit::getOfflinePlayer)
+            .map(this::displayName)
+            .distinct()
+            .sorted(String.CASE_INSENSITIVE_ORDER)
+            .toList();
+    }
+
     private List<String> claimIdOptions() {
         return claimService.allClaims().stream()
             .map(claim -> String.valueOf(claim.id()))
@@ -1813,7 +1865,7 @@ public final class CoreClaimCommand implements TabExecutor {
 
     private void sendModernHelp(CommandSender sender) {
         sender.sendMessage(plugin.color("&6Claim 命令:"));
-        sender.sendMessage(plugin.color("&e/claim &7打开领地主菜单"));
+        sender.sendMessage(plugin.color("&e/claim &7查看玩家帮助"));
         sender.sendMessage(plugin.color("&e/claim info &7查看脚下当前领地详情"));
         sender.sendMessage(plugin.color("&e/claim list &7查看你当前拥有的领地列表"));
         sender.sendMessage(plugin.color("&e/claim menu &7打开领地菜单"));
@@ -1821,7 +1873,8 @@ public final class CoreClaimCommand implements TabExecutor {
         sender.sendMessage(plugin.color("&e/claim tp <领地名> &7传送到你有权限进入的领地"));
         sender.sendMessage(plugin.color("&e/claim tpset &7把脚下位置设为当前领地传送点"));
         sender.sendMessage(plugin.color("&e/claim add <玩家> &7站在当前领地内给这块领地加成员"));
-        sender.sendMessage(plugin.color("&e/claim remove <玩家> &7站在当前领地内移除这块领地成员"));
+        sender.sendMessage(plugin.color("&e/claim unadd <玩家> &7站在当前领地内移除这块领地成员"));
+        sender.sendMessage(plugin.color("&e/claim remove <领地名> &7删除你拥有的领地"));
         sender.sendMessage(plugin.color("&e/claim deny <玩家> 或 /claim deny * &7站在当前领地内设置 deny"));
         sender.sendMessage(plugin.color("&e/claim undeny <玩家> 或 /claim undeny * &7站在当前领地内取消 deny"));
         sender.sendMessage(plugin.color("&e/claim flag [list] &7查看或调整脚下领地的交互旗标"));
@@ -1833,13 +1886,13 @@ public final class CoreClaimCommand implements TabExecutor {
             sender.sendMessage(plugin.color("&e/claim admin playerclaims <玩家> &7查看玩家名下全部领地"));
             sender.sendMessage(plugin.color("&e/claim admin diagnose <领地名|#claimId> &7查看跨服与 TP 诊断"));
             sender.sendMessage(plugin.color("&e/claim admin add <玩家> &7站在当前领地内强制添加成员"));
-            sender.sendMessage(plugin.color("&e/claim admin remove <玩家> &7站在当前领地内强制移除成员"));
+            sender.sendMessage(plugin.color("&e/claim admin unadd <玩家> &7站在当前领地内强制移除成员"));
             sender.sendMessage(plugin.color("&e/claim admin deny <玩家> 或 /claim admin deny * &7站在当前领地内强制改 deny"));
             sender.sendMessage(plugin.color("&e/claim admin undeny <玩家> 或 /claim admin undeny * &7站在当前领地内取消 deny"));
             sender.sendMessage(plugin.color("&e/claim admin permission <permission> <allow|deny> &7站在当前领地内强制改默认权限"));
             sender.sendMessage(plugin.color("&e/claim admin flag <flag> <allow|deny|unset> &7站在当前领地内强制改交互旗标"));
             sender.sendMessage(plugin.color("&e/claim admin setserver <claimId> <serverId> &7修复旧领地的跨服 server_id"));
-            sender.sendMessage(plugin.color("&e/claim activity <get|set|add|take> <玩家> [值] &7管理活跃度"));
+            sender.sendMessage(plugin.color("&e/claim activity <get|set|add|take> <玩家> [值] &7管理活跃值"));
             sender.sendMessage(plugin.color("&e/claim reload &7重载配置与缓存"));
             sender.sendMessage(plugin.color("&e/claim givecore <玩家> [数量] &7手动发放领地核心"));
         }
@@ -1866,6 +1919,7 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("tpset");
             options.add("flag");
             options.add("add");
+            options.add("unadd");
             options.add("remove");
             options.add("deny");
             options.add("undeny");
@@ -1908,19 +1962,30 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("playerclaims");
             options.add("diagnose");
             options.add("add");
-            options.add("remove");
+            options.add("unadd");
             options.add("deny");
             options.add("undeny");
             options.add("permission");
             options.add("flag");
+            options.add("cleanup");
             options.add("setserver");
             return filter(options, args[1]);
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("add")
-            || args[0].equalsIgnoreCase("remove")
-            || args[0].equalsIgnoreCase("transfer"))) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("add")) {
             options.addAll(knownPlayerNames());
-            if (sender instanceof Player player && args[0].equalsIgnoreCase("transfer")) {
+            return filter(options, args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("unadd") && sender instanceof Player player) {
+            options.addAll(currentEditableClaimMemberNames(player));
+            return filter(options, args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("remove") && sender instanceof Player player) {
+            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
+            return filterByJoinedInput(options, args, 1);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("transfer")) {
+            options.addAll(knownPlayerNames());
+            if (sender instanceof Player player) {
                 options.add("accept");
                 options.add("deny");
                 options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
@@ -1934,10 +1999,6 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("edit") && hasAdminClaimManagePermission(sender)) {
             options.addAll(claimNames(claimService.allClaims()));
-            return filterByJoinedInput(options, args, 1);
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("delete") && sender instanceof Player player) {
-            options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
             return filterByJoinedInput(options, args, 1);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("show")) {
@@ -1992,8 +2053,14 @@ public final class CoreClaimCommand implements TabExecutor {
             return filter(options, args[2]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin")
-            && (args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("remove"))) {
+            && args[1].equalsIgnoreCase("add")) {
             options.addAll(knownPlayerNames());
+            return filter(options, args[2]);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("admin")
+            && args[1].equalsIgnoreCase("unadd")
+            && sender instanceof Player player) {
+            options.addAll(currentAdminClaimMemberNames(player));
             return filter(options, args[2]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin")
@@ -2012,9 +2079,15 @@ public final class CoreClaimCommand implements TabExecutor {
             options.addAll(flagKeys());
             return filter(options, args[2]);
         }
+        if (args.length == 3 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("cleanup")) {
+            options.add("list");
+            options.add("run");
+            options.add("skip");
+            options.add("baseline");
+            return filter(options, args[2]);
+        }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin")
             && (args[1].equalsIgnoreCase("info")
-            || args[1].equalsIgnoreCase("delete")
             || args[1].equalsIgnoreCase("transfer")
             || args[1].equalsIgnoreCase("diagnose"))) {
             options.addAll(claimSelectorOptions(claimService.allClaims()));
@@ -2033,11 +2106,24 @@ public final class CoreClaimCommand implements TabExecutor {
             options.add("unset");
             return filter(options, args[3]);
         }
+        if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("cleanup")) {
+            if (args[2].equalsIgnoreCase("skip") || args[2].equalsIgnoreCase("baseline")) {
+                options.addAll(claimSelectorOptions(claimService.allClaims()));
+            }
+            return filterByJoinedInput(options, args, 3);
+        }
+        if (args.length == 5 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("cleanup")
+            && args[2].equalsIgnoreCase("baseline")) {
+            options.add("empty");
+            options.add("used");
+            options.add("skip");
+            return filter(options, args[4]);
+        }
 
         if (args.length > 2 && (args[0].equalsIgnoreCase("show")
             || args[0].equalsIgnoreCase("tp")
             || args[0].equalsIgnoreCase("edit")
-            || args[0].equalsIgnoreCase("delete"))) {
+            || args[0].equalsIgnoreCase("remove"))) {
             if (args[0].equalsIgnoreCase("show") && args[1].equalsIgnoreCase("auto")) {
                 return options;
             }
@@ -2055,7 +2141,7 @@ public final class CoreClaimCommand implements TabExecutor {
                         .toList()));
                 } else if (args[0].equalsIgnoreCase("edit") && hasAdminClaimManagePermission(sender)) {
                     options.addAll(claimNames(claimService.allClaims()));
-                } else if (args[0].equalsIgnoreCase("delete")) {
+                } else if (args[0].equalsIgnoreCase("remove")) {
                     options.addAll(claimNames(claimService.claimsOf(player.getUniqueId())));
                 }
             } else if (args[0].equalsIgnoreCase("edit") && hasAdminClaimManagePermission(sender)) {
@@ -2065,9 +2151,10 @@ public final class CoreClaimCommand implements TabExecutor {
         }
         if (args.length > 3 && args[0].equalsIgnoreCase("admin")
             && (args[1].equalsIgnoreCase("info")
-            || args[1].equalsIgnoreCase("delete")
             || args[1].equalsIgnoreCase("transfer")
-            || args[1].equalsIgnoreCase("diagnose"))) {
+            || args[1].equalsIgnoreCase("diagnose")
+            || (args[1].equalsIgnoreCase("cleanup")
+                && (args[2].equalsIgnoreCase("skip") || args[2].equalsIgnoreCase("baseline"))))) {
             if (args[1].equalsIgnoreCase("transfer")) {
                 String candidateName = joinArgs(args, 2, args.length - 1);
                 if (hasUniqueMatchingClaim(claimService.allClaims(), candidateName)) {
@@ -2075,8 +2162,17 @@ public final class CoreClaimCommand implements TabExecutor {
                     return filter(options, args[args.length - 1]);
                 }
             }
+            if (args[1].equalsIgnoreCase("cleanup") && args[2].equalsIgnoreCase("baseline")) {
+                String candidateName = joinArgs(args, 3, args.length - 1);
+                if (hasUniqueMatchingClaim(claimService.allClaims(), candidateName)) {
+                    options.add("empty");
+                    options.add("used");
+                    options.add("skip");
+                    return filter(options, args[args.length - 1]);
+                }
+            }
             options.addAll(claimNames(claimService.allClaims()));
-            return filterByJoinedInput(options, args, 2);
+            return filterByJoinedInput(options, args, args[1].equalsIgnoreCase("cleanup") ? 3 : 2);
         }
         if (args.length > 2 && args[0].equalsIgnoreCase("transfer") && sender instanceof Player player) {
             List<Claim> ownedClaims = claimService.claimsOf(player.getUniqueId());
@@ -2122,6 +2218,7 @@ public final class CoreClaimCommand implements TabExecutor {
 
     private List<String> permissionKeys() {
         return Arrays.stream(ClaimPermission.values())
+            .filter(permission -> permission != ClaimPermission.CONTAINER)
             .map(permission -> permission.name().toLowerCase(Locale.ROOT))
             .toList();
     }

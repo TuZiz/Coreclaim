@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.bukkit.permissions.Permissible;
 
 public final class PluginConfig {
 
@@ -67,6 +68,13 @@ public final class PluginConfig {
     private final boolean crossServerTeleportEnabled;
     private final int crossServerTeleportPendingTimeoutSeconds;
     private final Map<String, String> legacyCrossServerWorldServerMap;
+    private final boolean inactiveClaimCleanupEnabled;
+    private final int inactiveClaimCleanupDays;
+    private final int inactiveClaimCleanupGraceDays;
+    private final int inactiveClaimCleanupScanIntervalMinutes;
+    private final Set<String> inactiveClaimCleanupExemptGroups;
+    private final Set<String> inactiveClaimCleanupExemptPermissions;
+    private final boolean inactiveClaimCleanupIgnoreSystemClaims;
     private final Map<ClaimPermission, Boolean> newClaimPermissionDefaults;
     private final Map<ClaimPermission, Boolean> systemClaimPermissionDefaults;
     private final Map<ClaimFlag, ClaimFlagState> newClaimFlagDefaults;
@@ -136,6 +144,13 @@ public final class PluginConfig {
         this.crossServerTeleportEnabled = config.getBoolean("cross-server-teleport.enabled", false);
         this.crossServerTeleportPendingTimeoutSeconds = Math.max(10, config.getInt("cross-server-teleport.pending-timeout-seconds", 30));
         this.legacyCrossServerWorldServerMap = loadLegacyWorldServerMap(config);
+        this.inactiveClaimCleanupEnabled = config.getBoolean("inactive-claim-cleanup.enabled", false);
+        this.inactiveClaimCleanupDays = Math.max(1, config.getInt("inactive-claim-cleanup.inactive-days", 90));
+        this.inactiveClaimCleanupGraceDays = Math.max(1, config.getInt("inactive-claim-cleanup.grace-days", 14));
+        this.inactiveClaimCleanupScanIntervalMinutes = Math.max(1, config.getInt("inactive-claim-cleanup.scan-interval-minutes", 30));
+        this.inactiveClaimCleanupExemptGroups = normalizeLowercaseValues(config.getStringList("inactive-claim-cleanup.exempt-groups"));
+        this.inactiveClaimCleanupExemptPermissions = normalizeLowercaseValues(config.getStringList("inactive-claim-cleanup.exempt-permissions"));
+        this.inactiveClaimCleanupIgnoreSystemClaims = config.getBoolean("inactive-claim-cleanup.ignore-system-claims", true);
         this.newClaimPermissionDefaults = loadPermissionDefaults(
             rulesConfig,
             config,
@@ -189,6 +204,17 @@ public final class PluginConfig {
             }
         }
         return materials;
+    }
+
+    private Set<String> normalizeLowercaseValues(List<String> values) {
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String value : values) {
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            normalized.add(value.trim().toLowerCase(Locale.ROOT));
+        }
+        return Collections.unmodifiableSet(normalized);
     }
 
     private Map<String, String> loadLegacyWorldServerMap(FileConfiguration config) {
@@ -541,6 +567,45 @@ public final class PluginConfig {
 
     public int crossServerTeleportPendingTimeoutSeconds() {
         return crossServerTeleportPendingTimeoutSeconds;
+    }
+
+    public boolean inactiveClaimCleanupEnabled() {
+        return inactiveClaimCleanupEnabled;
+    }
+
+    public int inactiveClaimCleanupDays() {
+        return inactiveClaimCleanupDays;
+    }
+
+    public int inactiveClaimCleanupGraceDays() {
+        return inactiveClaimCleanupGraceDays;
+    }
+
+    public int inactiveClaimCleanupScanIntervalMinutes() {
+        return inactiveClaimCleanupScanIntervalMinutes;
+    }
+
+    public boolean inactiveClaimCleanupIgnoreSystemClaims() {
+        return inactiveClaimCleanupIgnoreSystemClaims;
+    }
+
+    public boolean isInactiveClaimCleanupGroupExempt(String groupKey) {
+        if (groupKey == null || groupKey.isBlank()) {
+            return false;
+        }
+        return inactiveClaimCleanupExemptGroups.contains(groupKey.trim().toLowerCase(Locale.ROOT));
+    }
+
+    public boolean isInactiveClaimCleanupPermissionExempt(Permissible permissible) {
+        if (permissible == null) {
+            return false;
+        }
+        for (String permission : inactiveClaimCleanupExemptPermissions) {
+            if (permissible.hasPermission(permission)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public ClaimFlagState newClaimFlagDefault(ClaimFlag flag) {

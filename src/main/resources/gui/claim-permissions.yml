@@ -1,8 +1,8 @@
-layout-version: 4
+layout-version: 5
 title: '&8[&5权限&8] &5&l权限与交互 - {name}'
 GuiPlain:
   - "FFFFIFFFF"
-  - "FFPBHCRFF"
+  - "FFPBHFRFF"
   - "FFFEKTYFF"
   - "FFF1234FF"
   - "FFF5678FF"

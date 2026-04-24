@@ -1,5 +1,8 @@
 package com.coreclaim;
 
+import com.coreclaim.bootstrap.CommandRegistrar;
+import com.coreclaim.bootstrap.ListenerRegistrar;
+import com.coreclaim.bootstrap.PluginBootstrap;
 import com.coreclaim.command.CoreClaimCommand;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
@@ -8,17 +11,6 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.listener.ClaimEnterLeaveListener;
-import com.coreclaim.listener.ClaimEnvironmentProtectionListener;
-import com.coreclaim.listener.ClaimInputListener;
-import com.coreclaim.listener.ClaimCoreListener;
-import com.coreclaim.listener.ClaimCoreInteractionListener;
-import com.coreclaim.listener.ClaimNamingListener;
-import com.coreclaim.listener.ClaimProtectionListener;
-import com.coreclaim.listener.ClaimSelectionListener;
-import com.coreclaim.listener.CrossServerTeleportListener;
-import com.coreclaim.listener.MenuListener;
-import com.coreclaim.listener.RemovalConfirmListener;
-import com.coreclaim.listener.SelectionToolListener;
 import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
@@ -50,7 +42,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -90,109 +81,40 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-        ensureConfigDefaults();
-        ensureRulesDefaults();
-        ensureHealthyGuiResources();
-        this.messageResource = new ResourceConfig(this, "messages.yml");
-        this.groupsResource = new ResourceConfig(this, "groups.yml");
-        this.rulesResource = new ResourceConfig(this, "rules.yml");
-        loadMenuResources();
-
+        ResourceBootstrap.PreparedResources preparedResources = new ResourceBootstrap().prepare(this);
+        this.messageResource = preparedResources.messageResource();
+        this.groupsResource = preparedResources.groupsResource();
+        this.rulesResource = preparedResources.rulesResource();
         this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
         this.groupConfig = new GroupConfig(groupsResource.config());
-        this.platformScheduler = new PlatformScheduler(this);
-        this.databaseManager = new DatabaseManager(this);
-        this.claimCoreFactory = new ClaimCoreFactory(this);
-        this.profileService = new ProfileService(databaseManager);
-        this.claimService = new ClaimService(this, databaseManager, profileService);
-        this.economyHook = new EconomyHook(this);
-        this.hologramService = new HologramService(this);
-        this.claimCleanupService = new ClaimCleanupService(this, databaseManager, claimService, profileService, hologramService, platformScheduler);
-        this.claimService.setClaimCleanupService(claimCleanupService);
-        this.claimVisualService = new ClaimVisualService(this);
-        this.claimSyncService = new ClaimSyncService(this, databaseManager, claimService, hologramService);
-        this.claimService.setClaimSyncPublisher(claimSyncService);
-        this.crossServerTeleportService = new CrossServerTeleportService(this, databaseManager, claimService, claimVisualService);
-        this.onlineRewardService = new OnlineRewardService(this, platformScheduler, profileService, claimService, claimCoreFactory, claimCleanupService);
-        this.pendingClaimService = new PendingClaimService(
-            this,
-            claimService,
-            profileService,
-            claimCoreFactory,
-            hologramService,
-            claimVisualService,
-            economyHook,
-            onlineRewardService
-        );
-        this.claimActionService = new ClaimActionService(this, claimService, hologramService, claimVisualService, economyHook, crossServerTeleportService);
-        this.claimSelectionService = new ClaimSelectionService(
-            this,
-            claimService,
-            profileService,
-            claimVisualService,
-            hologramService,
-            economyHook,
-            onlineRewardService
-        );
-        this.claimInputService = new ClaimInputService(this, claimService, profileService);
-        this.claimTransferService = new ClaimTransferService(this, claimService, profileService);
-        this.removalConfirmationService = new RemovalConfirmationService(this, claimActionService, claimService);
-        this.explosionAuthorizationService = new ExplosionAuthorizationService();
-        this.menuService = new MenuService(
-            this,
-            claimService,
-            profileService,
-            claimActionService,
-            removalConfirmationService,
-            claimInputService,
-            claimSelectionService
-        );
-        getServer().getPluginManager().registerEvents(
-            new ClaimCoreListener(this, claimCoreFactory, pendingClaimService),
-            this
-        );
-        getServer().getPluginManager().registerEvents(
-            new ClaimProtectionListener(this, claimService, claimCoreFactory, explosionAuthorizationService, claimCleanupService),
-            this
-        );
-        getServer().getPluginManager().registerEvents(new ClaimSelectionListener(claimSelectionService), this);
-        getServer().getPluginManager().registerEvents(new SelectionToolListener(claimSelectionService, onlineRewardService), this);
-        getServer().getPluginManager().registerEvents(
-            new ClaimEnvironmentProtectionListener(claimService, explosionAuthorizationService, claimCleanupService),
-            this
-        );
-        getServer().getPluginManager().registerEvents(
-            new ClaimCoreInteractionListener(this, claimService, pendingClaimService, claimActionService, menuService),
-            this
-        );
-        getServer().getPluginManager().registerEvents(new ClaimNamingListener(this, pendingClaimService), this);
-        getServer().getPluginManager().registerEvents(new ClaimInputListener(this, claimInputService), this);
-        getServer().getPluginManager().registerEvents(new MenuListener(menuService), this);
-        this.claimEnterLeaveListener = new ClaimEnterLeaveListener(this, claimService, profileService, claimVisualService);
-        getServer().getPluginManager().registerEvents(claimEnterLeaveListener, this);
-        getServer().getPluginManager().registerEvents(new CrossServerTeleportListener(this, crossServerTeleportService), this);
-        getServer().getPluginManager().registerEvents(new RemovalConfirmListener(this, removalConfirmationService), this);
+
+        PluginBootstrap.BootstrapResult bootstrap = new PluginBootstrap().initialize(this, pluginConfig, groupConfig);
+        this.pluginConfig = bootstrap.pluginConfig();
+        this.groupConfig = bootstrap.groupConfig();
+        this.platformScheduler = bootstrap.platformScheduler();
+        this.databaseManager = bootstrap.databaseManager();
+        this.claimCoreFactory = bootstrap.claimCoreFactory();
+        this.profileService = bootstrap.profileService();
+        this.claimService = bootstrap.claimService();
+        this.economyHook = bootstrap.economyHook();
+        this.hologramService = bootstrap.hologramService();
+        this.claimCleanupService = bootstrap.claimCleanupService();
+        this.pendingClaimService = bootstrap.pendingClaimService();
+        this.claimActionService = bootstrap.claimActionService();
+        this.claimVisualService = bootstrap.claimVisualService();
+        this.crossServerTeleportService = bootstrap.crossServerTeleportService();
+        this.claimSyncService = bootstrap.claimSyncService();
+        this.claimSelectionService = bootstrap.claimSelectionService();
+        this.claimInputService = bootstrap.claimInputService();
+        this.claimTransferService = bootstrap.claimTransferService();
+        this.menuService = bootstrap.menuService();
+        this.onlineRewardService = bootstrap.onlineRewardService();
+        this.removalConfirmationService = bootstrap.removalConfirmationService();
+        this.explosionAuthorizationService = bootstrap.explosionAuthorizationService();
+        this.claimEnterLeaveListener = new ListenerRegistrar().registerAll(this, bootstrap);
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
-
-        PluginCommand command = getCommand("claim");
-        if (command != null) {
-            CoreClaimCommand executor = new CoreClaimCommand(
-                this,
-                claimService,
-                profileService,
-                claimActionService,
-                claimVisualService,
-                claimSelectionService,
-                menuService,
-                removalConfirmationService,
-                claimTransferService,
-                claimCleanupService
-            );
-            command.setExecutor(executor);
-            command.setTabCompleter(executor);
-        }
+        new CommandRegistrar().registerClaimCommand(this, bootstrap);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new CoreClaimPlaceholderExpansion(this, profileService, claimService).register();
@@ -325,6 +247,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         reloadConfig();
         ensureConfigDefaults();
         ensureRulesDefaults();
+        ensureMessagesDefaults();
         ensureHealthyGuiResources();
         reloadConfig();
         messageResource.reload();
@@ -354,7 +277,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return claimCount;
     }
 
-    private void ensureConfigDefaults() {
+    void ensureConfigDefaults() {
         try (InputStream inputStream = getResource("config.yml")) {
             if (inputStream == null) {
                 return;
@@ -422,7 +345,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
     }
 
-    private void ensureRulesDefaults() {
+    void ensureRulesDefaults() {
         try (InputStream inputStream = getResource("rules.yml")) {
             if (inputStream == null) {
                 return;
@@ -466,6 +389,45 @@ public final class CoreClaimPlugin extends JavaPlugin {
         }
     }
 
+    void ensureMessagesDefaults() {
+        try (InputStream inputStream = getResource("messages.yml")) {
+            if (inputStream == null) {
+                return;
+            }
+            if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
+                throw new IllegalStateException("Unable to create plugin data folder.");
+            }
+            File file = new File(getDataFolder(), "messages.yml");
+            boolean existed = file.exists();
+            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            FileConfiguration messagesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
+            boolean changed = false;
+            List<String> missingPaths = new ArrayList<>();
+            collectMissingConfigPaths(defaults, messagesConfig, "", missingPaths);
+            if (!missingPaths.isEmpty()) {
+                messagesConfig.setDefaults(defaults);
+                messagesConfig.options().copyDefaults(true);
+                changed = true;
+            }
+
+            String oldAdminUsage = "&#FF6B6B用法 &8| &7/claim admin <create|info|playerclaims|diagnose|add|unadd|deny|undeny|permission|flag|cleanup|setserver> ...";
+            String newAdminUsage = defaults.getString("admin-usage", oldAdminUsage);
+            if (oldAdminUsage.equals(messagesConfig.getString("admin-usage"))) {
+                messagesConfig.set("admin-usage", newAdminUsage);
+                changed = true;
+            }
+
+            if (!existed || changed) {
+                messagesConfig.save(file);
+                if (!missingPaths.isEmpty()) {
+                    getLogger().info("Added missing messages defaults: " + String.join(", ", missingPaths));
+                }
+            }
+        } catch (Exception exception) {
+            getLogger().warning("Failed to prepare messages defaults: " + exception.getMessage());
+        }
+    }
+
     private boolean migrateLegacySection(ConfigurationSection source, FileConfiguration target, String prefix) {
         if (source == null) {
             return false;
@@ -488,7 +450,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return changed;
     }
 
-    private void loadMenuResources() {
+    void loadMenuResources() {
         menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
         menuResources.put("claim-view", new ResourceConfig(this, "gui/claim-view.yml"));
         menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
@@ -499,7 +461,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
     }
 
-    private void ensureHealthyGuiResources() {
+    void ensureHealthyGuiResources() {
         for (String resource : List.of(
             "gui/claim-list.yml",
             "gui/claim-view.yml",

@@ -9,6 +9,7 @@ import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
+import com.coreclaim.util.AdminAccess;
 import java.util.Iterator;
 import java.util.Optional;
 import org.bukkit.Location;
@@ -644,7 +645,7 @@ public final class ClaimProtectionListener implements Listener {
     }
 
     private boolean isBypassing(Player player) {
-        return player.hasPermission("coreclaim.admin");
+        return AdminAccess.hasForceBypass(player);
     }
 
     private int claimId(Optional<Claim> claim) {

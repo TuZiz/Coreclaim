@@ -7,9 +7,11 @@ import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
+import com.coreclaim.util.AdminAccess;
 import java.util.Iterator;
 import java.util.Optional;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -20,6 +22,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Tameable;
+import org.bukkit.entity.Turtle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBurnEvent;
@@ -106,6 +109,9 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             }
             return;
         }
+        if (isNaturalTurtleEggPlacement(event)) {
+            return;
+        }
         if (claimService.findClaim(event.getBlock().getLocation()).isPresent()) {
             event.setCancelled(true);
         }
@@ -177,7 +183,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (!(event.getPlayer() instanceof Player player) || player.hasPermission("coreclaim.admin")) {
+        if (!(event.getPlayer() instanceof Player player) || AdminAccess.hasForceBypass(player)) {
             return;
         }
         Location location = inventoryLocation(event.getInventory());
@@ -222,6 +228,10 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return false;
         }
         return claimId(fromClaim) != claimId(toClaim);
+    }
+
+    private boolean isNaturalTurtleEggPlacement(EntityChangeBlockEvent event) {
+        return event.getEntity() instanceof Turtle && event.getTo() == Material.TURTLE_EGG;
     }
 
     private int claimId(Optional<Claim> claim) {

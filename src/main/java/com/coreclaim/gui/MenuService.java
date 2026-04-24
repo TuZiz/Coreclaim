@@ -2,6 +2,9 @@ package com.coreclaim.gui;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
+import com.coreclaim.gui.support.MenuConfigAccessor;
+import com.coreclaim.gui.support.MenuItemFactory;
+import com.coreclaim.gui.support.MenuTextFormatter;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
@@ -16,6 +19,7 @@ import com.coreclaim.service.ClaimService.ClaimListEntry;
 import com.coreclaim.service.ClaimService.ClaimListRelation;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
+import com.coreclaim.util.AdminAccess;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -48,6 +52,9 @@ public final class MenuService {
     private final RemovalConfirmationService removalConfirmationService;
     private final ClaimInputService claimInputService;
     private final ClaimSelectionService claimSelectionService;
+    private final MenuConfigAccessor configAccessor;
+    private final MenuTextFormatter textFormatter;
+    private final MenuItemFactory itemFactory;
 
     public MenuService(
         CoreClaimPlugin plugin,
@@ -65,6 +72,9 @@ public final class MenuService {
         this.removalConfirmationService = removalConfirmationService;
         this.claimInputService = claimInputService;
         this.claimSelectionService = claimSelectionService;
+        this.configAccessor = new MenuConfigAccessor(plugin);
+        this.textFormatter = new MenuTextFormatter(plugin);
+        this.itemFactory = new MenuItemFactory(plugin, configAccessor, textFormatter);
     }
 
     public void openMainMenu(Player player) {
@@ -506,7 +516,11 @@ public final class MenuService {
         }
         if (slot == slot("claim-manage", "delete")) {
             playConfiguredSound(player, "claim-manage", "delete");
-            if (removalConfirmationService.request(player, claim)) {
+            boolean adminMode = !claim.owner().equals(player.getUniqueId()) && AdminAccess.hasClaimManageAccess(player);
+            boolean requested = adminMode
+                ? removalConfirmationService.requestAdminRemoval(player, claim)
+                : removalConfirmationService.requestOwnerRemoval(player, claim);
+            if (requested) {
                 player.closeInventory();
             }
             return;
@@ -690,7 +704,7 @@ public final class MenuService {
                 return;
             }
             if (claim.isDenied(targetId)) {
-                player.sendMessage(plugin.color("&c该玩家仍在 deny 列表中，请先解除 deny 再进行授权"));
+                player.sendMessage(plugin.color("&c\u8be5\u73a9\u5bb6\u4ecd\u5728 deny \u5217\u8868\u4e2d\uff0c\u8bf7\u5148\u89e3\u9664 deny \u518d\u8fdb\u884c\u6388\u6743\u3002"));
                 openTrustOnlineAddMenu(player, claim, holder.page, holder.returnPage);
                 return;
             }
@@ -838,179 +852,47 @@ public final class MenuService {
     }
 
     private FileConfiguration menu(String menuKey) {
-        return plugin.menuConfig(menuKey);
+        return configAccessor.menu(menuKey);
     }
 
     private boolean hasItem(String menuKey, String itemKey) {
-        return menu(menuKey).isConfigurationSection("items." + itemKey);
+        return configAccessor.hasItem(menuKey, itemKey);
     }
 
     private int menuSize(String menuKey) {
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
-        if (!layout.isEmpty()) {
-            return layout.size() * 9;
-        }
-        return menu(menuKey).getInt("size", 27);
+        return configAccessor.menuSize(menuKey);
     }
 
     private String menuTitle(String menuKey, String... replacements) {
-        return plugin.color(apply(menu(menuKey).getString("title", menuKey), replacements));
+        return textFormatter.menuTitle(menu(menuKey).getString("title", menuKey), replacements);
     }
 
     private int slot(String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return 0;
-        }
-        if (section.contains("slot")) {
-            return section.getInt("slot", 0);
-        }
-        List<Integer> slots = slots(menuKey, itemKey);
-        return slots.isEmpty() ? 0 : slots.get(0);
+        return configAccessor.slot(menuKey, itemKey, textFormatter::padLayout);
     }
 
     private List<Integer> slots(String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        List<Integer> result = new ArrayList<>();
-        if (section == null) {
-            return result;
-        }
-        if (section.contains("slot")) {
-            result.add(section.getInt("slot", 0));
-            return result;
-        }
-        String rawChar = section.getString("char", "");
-        if (rawChar.isBlank()) {
-            return result;
-        }
-        char symbol = rawChar.charAt(0);
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
-        for (int row = 0; row < layout.size(); row++) {
-            String line = padLayout(layout.get(row));
-            for (int column = 0; column < 9; column++) {
-                if (line.charAt(column) == symbol) {
-                    result.add(row * 9 + column);
-                }
-            }
-        }
-        return result;
+        return configAccessor.slots(menuKey, itemKey, textFormatter::padLayout);
     }
 
     private ItemStack configuredItem(String menuKey, String itemKey, String... replacements) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return item(Material.BARRIER, "&cMissing: " + menuKey + "." + itemKey);
-        }
-        Material material = Material.matchMaterial(section.getString("material", "BARRIER"));
-        if (material == null) {
-            material = Material.BARRIER;
-        }
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return item;
-        }
-        meta.setDisplayName(plugin.color(apply(section.getString("name", itemKey), replacements)));
-        List<String> lore = section.getStringList("lore");
-        if (!lore.isEmpty()) {
-            List<String> lines = new ArrayList<>();
-            for (String line : lore) {
-                lines.add(plugin.color(apply(line, replacements)));
-            }
-            meta.setLore(lines);
-        }
-        if (section.contains("custom-model-data")) {
-            meta.setCustomModelData(section.getInt("custom-model-data"));
-        }
-        if (section.getBoolean("glow", false)) {
-            meta.addEnchant(Enchantment.LUCK, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        item.setItemMeta(meta);
-        if (material == Material.PLAYER_HEAD && item.getItemMeta() instanceof SkullMeta skullMeta) {
-            String owner = section.getString("skull-owner", "");
-            String texture = section.getString("skull-texture", "");
-            if (!owner.isBlank()) {
-                skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(owner));
-                item.setItemMeta(skullMeta);
-            } else if (!texture.isBlank()) {
-                applySkullTexture(skullMeta, texture);
-                item.setItemMeta(skullMeta);
-            }
-        }
-        return item;
+        return itemFactory.configuredItem(menuKey, itemKey, replacements);
     }
 
     private ItemStack playerHead(String menuKey, String itemKey, UUID playerId, String... replacements) {
-        ItemStack item = configuredItem(menuKey, itemKey, replacements);
-        if (!(item.getItemMeta() instanceof SkullMeta meta)) {
-            return item;
-        }
-        meta.setOwningPlayer(Bukkit.getOfflinePlayer(playerId));
-        item.setItemMeta(meta);
-        return item;
+        return itemFactory.playerHead(menuKey, itemKey, playerId, replacements);
     }
 
     private void playConfiguredSound(Player player, String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return;
-        }
-        String rawSound = section.getString("sound", "");
-        if (rawSound == null || rawSound.isBlank()) {
-            return;
-        }
-        try {
-            Sound sound = Sound.valueOf(rawSound.toUpperCase());
-            float volume = (float) section.getDouble("sound-volume", 1D);
-            float pitch = (float) section.getDouble("sound-pitch", 1D);
-            player.playSound(player.getLocation(), sound, volume, pitch);
-        } catch (IllegalArgumentException ignored) {
-        }
-    }
-
-    private void applySkullTexture(SkullMeta meta, String texture) {
-        try {
-            Class<?> gameProfileClass = Class.forName("com.mojang.authlib.GameProfile");
-            Class<?> propertyClass = Class.forName("com.mojang.authlib.properties.Property");
-            Object gameProfile = gameProfileClass.getConstructor(UUID.class, String.class)
-                .newInstance(UUID.nameUUIDFromBytes(texture.getBytes()), "coreclaim_head");
-            Object property = propertyClass.getConstructor(String.class, String.class)
-                .newInstance("textures", normalizeTexture(texture));
-            Object propertyMap = gameProfileClass.getMethod("getProperties").invoke(gameProfile);
-            propertyMap.getClass().getMethod("put", Object.class, Object.class).invoke(propertyMap, "textures", property);
-            Field profileField = meta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(meta, gameProfile);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private String normalizeTexture(String texture) {
-        if (texture.startsWith("http://") || texture.startsWith("https://")) {
-            String payload = "{\"textures\":{\"SKIN\":{\"url\":\"" + texture + "\"}}}";
-            return Base64.getEncoder().encodeToString(payload.getBytes());
-        }
-        return texture;
+        itemFactory.playConfiguredSound(player, menuKey, itemKey);
     }
 
     private String displayNotifyPreview(String raw, Claim claim, String fallback) {
-        String base = raw == null || raw.isBlank() ? fallback : raw;
-        String preview = base
-            .replace("%claim_name%", claim.name())
-            .replace("{claim_name}", claim.name())
-            .replace("{name}", claim.name())
-            .replace("%owner%", claim.ownerName())
-            .replace("{owner}", claim.ownerName());
-        if (preview.length() > 24) {
-            return preview.substring(0, 24) + "...";
-        }
-        return preview;
+        return textFormatter.displayNotifyPreview(raw, claim, fallback);
     }
 
     private String notifyStateText(String raw) {
-        return raw == null || raw.isBlank() ? "&7\u9ed8\u8ba4\u5185\u5bb9" : "&e\u5df2\u4fee\u6539";
+        return textFormatter.notifyStateText(raw);
     }
 
     private ClaimListEntry resolveVisibleListEntry(Player player, int claimId) {
@@ -1049,39 +931,34 @@ public final class MenuService {
     }
 
     private void sendClaimViewDetails(Player player, Claim claim) {
-        player.sendMessage(plugin.color("&6[Claim] &f领地名称: &e" + claim.name()));
-        player.sendMessage(plugin.color("&6[Claim] &f领地主人: &b" + claim.ownerName()));
-        player.sendMessage(plugin.color("&6[Claim] &f所属区服: &e" + claimService.displayServerId(claim)));
-        player.sendMessage(plugin.color("&6[Claim] &f所在世界: &e" + claim.world()));
-        player.sendMessage(plugin.color("&6[Claim] &f核心坐标: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-        player.sendMessage(plugin.color("&6[Claim] &f领地大小: &e" + claim.width() + "x" + claim.depth() + " &7(面积 " + claim.area() + ")"));
-        player.sendMessage(plugin.color("&6[Claim] &f传送点: " + (claim.hasTeleportPoint() ? "&a已设置" : "&e未设置，默认回核心")));
-        player.sendMessage(plugin.color("&6[Claim] &f成员数量: &e" + claim.trustedCount()));
+        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u540d\u79f0: &e" + claim.name()));
+        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u4e3b\u4eba: &b" + claim.ownerName()));
+        player.sendMessage(plugin.color("&6[Claim] &f\u6240\u5c5e\u533a\u670d: &e" + claimService.displayServerId(claim)));
+        player.sendMessage(plugin.color("&6[Claim] &f\u6240\u5728\u4e16\u754c: &e" + claim.world()));
+        player.sendMessage(plugin.color("&6[Claim] &f\u6838\u5fc3\u5750\u6807: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
+        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u5927\u5c0f: &e" + claim.width() + "x" + claim.depth() + " &7(\u9762\u79ef " + claim.area() + ")"));
+        player.sendMessage(plugin.color("&6[Claim] &f\u4f20\u9001\u70b9: " + (claim.hasTeleportPoint() ? "&a\u5df2\u8bbe\u7f6e" : "&e\u672a\u8bbe\u7f6e\uff0c\u9ed8\u8ba4\u56de\u6838\u5fc3")));
+        player.sendMessage(plugin.color("&6[Claim] &f\u6210\u5458\u6570\u91cf: &e" + claim.trustedCount()));
     }
 
     private String relationText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&a我的领地" : "&b已授权领地";
+        return textFormatter.relationText(relation);
     }
 
     private String leftClickActionText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&7左键打开核心管理" : "&7左键查看只读详情";
+        return textFormatter.leftClickActionText(relation);
     }
 
     private String stripMessagePrefix(String message) {
-        String prefix = plugin.color(plugin.messagesConfig().getString("prefix", ""));
-        return message != null && message.startsWith(prefix) ? message.substring(prefix.length()) : (message == null ? "" : message);
+        return textFormatter.stripMessagePrefix(message);
     }
 
     private String stateText(boolean enabled) {
-        return enabled ? "&a\u5141\u8bb8" : "&c\u7981\u6b62";
+        return textFormatter.stateText(enabled);
     }
 
     private String flagStateText(ClaimFlagState state) {
-        return switch (state) {
-            case ALLOW -> "&a\u5141\u8bb8";
-            case DENY -> "&c\u7981\u6b62";
-            case UNSET -> "&7\u672a\u8bbe\u7f6e";
-        };
+        return textFormatter.flagStateText(state);
     }
 
     private int countCustomFlags(Claim claim) {
@@ -1095,21 +972,11 @@ public final class MenuService {
     }
 
     private String flagItemKey(ClaimFlag flag) {
-        return switch (flag) {
-            case CONTAINER -> "flag-container";
-            case USE_BUTTON -> "flag-use-button";
-            case USE_LEVER -> "flag-use-lever";
-            case USE_PRESSURE_PLATE -> "flag-use-pressure-plate";
-            case USE_DOOR -> "flag-use-door";
-            case USE_TRAPDOOR -> "flag-use-trapdoor";
-            case USE_FENCE_GATE -> "flag-use-fence-gate";
-            case USE_BED -> "flag-use-bed";
-        };
+        return textFormatter.flagItemKey(flag);
     }
 
     private String playerName(UUID playerId) {
-        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
-        return player.getName() == null ? playerId.toString() : player.getName();
+        return textFormatter.playerName(playerId);
     }
 
     private List<Player> availableOnlineTrustTargets(Player viewer, Claim claim) {
@@ -1129,38 +996,15 @@ public final class MenuService {
     }
 
     private String padLayout(String line) {
-        String value = line == null ? "" : line;
-        if (value.length() >= 9) {
-            return value.substring(0, 9);
-        }
-        return String.format("%-9s", value);
+        return textFormatter.padLayout(line);
     }
 
     private String apply(String text, String... replacements) {
-        String result = text == null ? "" : text;
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            result = result.replace(replacements[index], replacements[index + 1]);
-        }
-        return result;
+        return textFormatter.apply(text, replacements);
     }
 
     private ItemStack item(Material material, String name, String... lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return item;
-        }
-        meta.setDisplayName(plugin.color(name));
-        if (lore.length > 0) {
-            List<String> lines = new ArrayList<>();
-            for (String line : lore) {
-                lines.add(plugin.color(line));
-            }
-            meta.setLore(lines);
-        }
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        item.setItemMeta(meta);
-        return item;
+        return itemFactory.item(material, name, lore);
     }
 
     private abstract static class BaseHolder implements InventoryHolder {

@@ -7,6 +7,7 @@ import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ProfileService;
+import com.coreclaim.util.AdminAccess;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -196,6 +197,10 @@ public final class ClaimEnterLeaveListener implements Listener {
         Claim toClaim = resolveTargetClaim(session, fromClaim, to);
         int fromId = fromClaim == null ? -1 : fromClaim.id();
         int toId = toClaim == null ? -1 : toClaim.id();
+        Claim fromNotifyClaim = resolveNotifyClaim(from);
+        Claim toNotifyClaim = resolveNotifyClaim(to);
+        int fromNotifyId = fromNotifyClaim == null ? -1 : fromNotifyClaim.id();
+        int toNotifyId = toNotifyClaim == null ? -1 : toNotifyClaim.id();
 
         if (fromId != toId && isBlockedEntry(player, toClaim)) {
             player.sendMessage(plugin.color("&6[Claim] &c你被这块领地 deny，无法进入 &e" + toClaim.name() + "&c。"));
@@ -207,7 +212,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         session.currentClaimId = toClaim == null ? null : toClaim.id();
         updateFlightState(player, session, toClaim, reason + (fromId == toId ? "-same-claim" : "-claim-change"));
 
-        if (fromId == toId) {
+        if (fromNotifyId == toNotifyId) {
             cleanupSession(playerId, session);
             return false;
         }
@@ -216,14 +221,14 @@ public final class ClaimEnterLeaveListener implements Listener {
             cleanupSession(playerId, session);
             return false;
         }
-        if (fromClaim != null) {
-            sendActionBar(player, leaveMessage(fromClaim));
+        if (fromNotifyClaim != null) {
+            sendActionBar(player, leaveMessage(fromNotifyClaim));
         }
-        if (toClaim != null) {
+        if (toNotifyClaim != null) {
             if (profileService.getOrCreate(player.getUniqueId(), player.getName()).autoShowBorders()) {
-                claimVisualService.showClaim(player, toClaim);
+                claimVisualService.showClaim(player, toNotifyClaim);
             }
-            sendActionBar(player, enterMessage(player, toClaim));
+            sendActionBar(player, enterMessage(player, toNotifyClaim));
         }
         cleanupSession(playerId, session);
         return false;
@@ -385,7 +390,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private boolean isBlockedEntry(Player player, Claim claim) {
         return claim != null
             && !claim.owner().equals(player.getUniqueId())
-            && !player.hasPermission("coreclaim.admin")
+            && !AdminAccess.hasForceBypass(player)
             && (claim.isDenied(player.getUniqueId()) || (claim.denyAll() && !claim.isTrusted(player.getUniqueId())));
     }
 
@@ -418,6 +423,10 @@ public final class ClaimEnterLeaveListener implements Listener {
             session.currentClaimId = resolved.id();
         }
         return resolved;
+    }
+
+    private Claim resolveNotifyClaim(Location location) {
+        return location == null ? null : claimService.findClaim(location).orElse(null);
     }
 
     private void cleanupSession(UUID playerId, PlayerFlightSession session) {

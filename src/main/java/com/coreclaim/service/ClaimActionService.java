@@ -6,6 +6,7 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.model.ClaimPermission;
+import com.coreclaim.util.AdminAccess;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import org.bukkit.Bukkit;
@@ -151,7 +152,7 @@ public final class ClaimActionService {
     }
 
     public boolean hideClaimCore(Player player, Claim claim) {
-        if (!claim.owner().equals(player.getUniqueId()) && !hasAdminForcePermission(player)) {
+        if (!claim.owner().equals(player.getUniqueId()) && !AdminAccess.hasClaimManageAccess(player)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -316,15 +317,11 @@ public final class ClaimActionService {
 
     public boolean canEditClaim(Player player, Claim claim) {
         return claim.owner().equals(player.getUniqueId())
-            || hasAdminForcePermission(player)
-            || player.hasPermission("coreclaim.admin.claim.manage")
-            || player.hasPermission("coreclaim.admin.member.manage")
-            || player.hasPermission("coreclaim.admin.permission.manage")
-            || player.hasPermission("coreclaim.admin.flag.manage");
+            || AdminAccess.hasClaimEditAccess(player);
     }
 
     private boolean hasAdminForcePermission(Player player) {
-        return player.hasPermission("coreclaim.admin") || player.hasPermission("coreclaim.admin.force");
+        return AdminAccess.hasForceBypass(player);
     }
 
     public static String formatMoney(double value) {

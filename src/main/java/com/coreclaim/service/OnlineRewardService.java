@@ -4,15 +4,15 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.PlayerProfile;
 import com.coreclaim.platform.PlatformScheduler;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.entity.Player;
 
 public final class OnlineRewardService {
 
-    private static final Set<Integer> STARTER_COUNTDOWN_REMINDERS = Set.of(20, 10, 5, 1);
+    private static final List<Integer> STARTER_COUNTDOWN_REMINDERS = List.of(20, 10, 5, 1);
 
     private final CoreClaimPlugin plugin;
     private final PlatformScheduler platformScheduler;
@@ -50,6 +50,7 @@ public final class OnlineRewardService {
             taskHandle.cancel();
             taskHandle = null;
         }
+        flushOnlinePlayers();
         sessions.clear();
     }
 
@@ -72,16 +73,17 @@ public final class OnlineRewardService {
         }
 
         sessions.put(player.getUniqueId(), new StarterRewardSession());
-        int current = profile.onlineMinutes();
+        long currentSeconds = profile.onlineSeconds();
         int requiredMinutes = plugin.settings().starterRewardMinutes();
+        long requiredSeconds = requiredMinutes * 60L;
 
         if (!profile.starterCoreGranted()) {
-            if (current >= requiredMinutes) {
+            if (currentSeconds >= requiredSeconds) {
                 grantStarterCore(player, profile, requiredMinutes);
                 return;
             }
 
-            int remaining = Math.max(1, requiredMinutes - current);
+            int remaining = remainingStarterRewardMinutes(currentSeconds, requiredMinutes);
             player.sendMessage(chatMessage(
                 "starter-core-join-reminder",
                 "&b&l领地: &7累计在线满 &e{minutes} &7分钟可获得第一块领地核心，当前还差 &e{remaining} &7分钟。",
@@ -123,6 +125,8 @@ public final class OnlineRewardService {
             return;
         }
         long now = System.currentTimeMillis();
+        PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+        updateOnlineSeconds(profile, now);
         String groupKey = plugin.groups().resolve(player).key();
         boolean permissionExempt = plugin.settings().isInactiveClaimCleanupPermissionExempt(player);
         profileService.updatePresence(player.getUniqueId(), player.getName(), now, groupKey, permissionExempt);
@@ -142,10 +146,12 @@ public final class OnlineRewardService {
     }
 
     private void tickPlayer(Player player) {
+        long now = System.currentTimeMillis();
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
-        profile.setLastSeenAt(System.currentTimeMillis());
-        profile.addOnlineMinutes(1);
-        if (profileService.usesSharedDatabase()) {
+        long previousSeconds = profile.onlineSeconds();
+        long addedSeconds = updateOnlineSeconds(profile, now);
+        long currentSeconds = profile.onlineSeconds();
+        if (profileService.usesSharedDatabase() && addedSeconds > 0L) {
             profileService.saveProfile(profile);
         }
 
@@ -154,32 +160,72 @@ public final class OnlineRewardService {
             return;
         }
 
-        int current = profile.onlineMinutes();
         int requiredMinutes = plugin.settings().starterRewardMinutes();
+        long requiredSeconds = requiredMinutes * 60L;
         if (profile.starterCoreGranted()) {
             return;
         }
 
-        if (shouldSendStarterCountdownReminder(current, requiredMinutes)) {
-            int remaining = requiredMinutes - current;
+        Integer reminder = crossedStarterReminder(previousSeconds, currentSeconds, requiredMinutes);
+        if (reminder != null) {
             player.sendMessage(plugin.message(
                 "starter-core-reminder",
                 "{minutes}", String.valueOf(requiredMinutes),
-                "{remaining}", String.valueOf(remaining)
+                "{remaining}", String.valueOf(reminder)
             ));
         }
 
-        if (current >= requiredMinutes) {
+        if (currentSeconds >= requiredSeconds) {
             grantStarterCore(player, profile, requiredMinutes);
         }
     }
 
-    private boolean shouldSendStarterCountdownReminder(int currentMinutes, int requiredMinutes) {
-        if (currentMinutes <= 0 || currentMinutes >= requiredMinutes) {
-            return false;
+    private Integer crossedStarterReminder(long previousSeconds, long currentSeconds, int requiredMinutes) {
+        int previousMinutes = (int) Math.max(0L, previousSeconds / 60L);
+        int currentMinutes = (int) Math.max(0L, currentSeconds / 60L);
+        if (currentMinutes <= 0 || currentMinutes >= requiredMinutes || currentMinutes <= previousMinutes) {
+            return null;
         }
-        int remaining = requiredMinutes - currentMinutes;
-        return STARTER_COUNTDOWN_REMINDERS.contains(remaining);
+        for (int remaining : STARTER_COUNTDOWN_REMINDERS) {
+            int triggerMinutes = requiredMinutes - remaining;
+            if (previousMinutes < triggerMinutes && currentMinutes >= triggerMinutes) {
+                return remaining;
+            }
+        }
+        return null;
+    }
+
+    private int remainingStarterRewardMinutes(long currentSeconds, int requiredMinutes) {
+        long requiredSeconds = requiredMinutes * 60L;
+        long remainingSeconds = Math.max(0L, requiredSeconds - currentSeconds);
+        return remainingSeconds <= 0L ? 0 : (int) Math.max(1L, (remainingSeconds + 59L) / 60L);
+    }
+
+    private long updateOnlineSeconds(PlayerProfile profile, long now) {
+        long lastTrackedAt = profile.lastSeenAt();
+        if (lastTrackedAt <= 0L || now <= lastTrackedAt) {
+            profile.setLastSeenAt(now);
+            return 0L;
+        }
+        long elapsedSeconds = (now - lastTrackedAt) / 1000L;
+        if (elapsedSeconds <= 0L) {
+            return 0L;
+        }
+        profile.addOnlineSeconds(elapsedSeconds);
+        profile.setLastSeenAt(lastTrackedAt + elapsedSeconds * 1000L);
+        return elapsedSeconds;
+    }
+
+    private void flushOnlinePlayers() {
+        long now = System.currentTimeMillis();
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
+            long addedSeconds = updateOnlineSeconds(profile, now);
+            if (addedSeconds > 0L) {
+                profile.setLastSeenAt(now);
+                profileService.saveProfile(profile);
+            }
+        }
     }
 
     private void grantStarterCore(Player player, PlayerProfile profile, int requiredMinutes) {

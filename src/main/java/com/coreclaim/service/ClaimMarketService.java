@@ -6,6 +6,7 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimSaleListing;
 import com.coreclaim.storage.DatabaseManager;
+import com.coreclaim.util.AdminAccess;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -148,11 +149,11 @@ public final class ClaimMarketService {
                 return false;
             }
         }
-        if (!claim.owner().equals(seller.getUniqueId()) && !seller.hasPermission("coreclaim.admin")) {
+        if (!claim.owner().equals(seller.getUniqueId()) && !AdminAccess.hasMarketManageAccess(seller)) {
             seller.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
-        if (claim.systemManaged() && !seller.hasPermission("coreclaim.admin")) {
+        if (claim.systemManaged() && !AdminAccess.hasMarketManageAccess(seller)) {
             seller.sendMessage(chatMessage("system-claim-market-denied", "&c&l! &7系统领地不能由普通玩家管理市场状态。"));
             return false;
         }

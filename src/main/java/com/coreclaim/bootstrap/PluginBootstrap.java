@@ -1,0 +1,154 @@
+package com.coreclaim.bootstrap;
+
+import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.config.GroupConfig;
+import com.coreclaim.config.PluginConfig;
+import com.coreclaim.economy.EconomyHook;
+import com.coreclaim.gui.MenuService;
+import com.coreclaim.item.ClaimCoreFactory;
+import com.coreclaim.platform.PlatformScheduler;
+import com.coreclaim.service.ClaimActionService;
+import com.coreclaim.service.ClaimCleanupService;
+import com.coreclaim.service.ClaimInputService;
+import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimSyncService;
+import com.coreclaim.service.ClaimTransferService;
+import com.coreclaim.service.ClaimVisualService;
+import com.coreclaim.service.CrossServerTeleportService;
+import com.coreclaim.service.ExplosionAuthorizationService;
+import com.coreclaim.service.HologramService;
+import com.coreclaim.service.OnlineRewardService;
+import com.coreclaim.service.PendingClaimService;
+import com.coreclaim.service.ProfileService;
+import com.coreclaim.service.RemovalConfirmationService;
+import com.coreclaim.storage.DatabaseManager;
+
+public final class PluginBootstrap {
+
+    public BootstrapResult initialize(CoreClaimPlugin plugin, PluginConfig pluginConfig, GroupConfig groupConfig) {
+        PlatformScheduler platformScheduler = new PlatformScheduler(plugin);
+        DatabaseManager databaseManager = new DatabaseManager(plugin);
+        ClaimCoreFactory claimCoreFactory = new ClaimCoreFactory(plugin);
+        ProfileService profileService = new ProfileService(databaseManager);
+        ClaimService claimService = new ClaimService(plugin, databaseManager, profileService);
+        EconomyHook economyHook = new EconomyHook(plugin);
+        HologramService hologramService = new HologramService(plugin);
+        ClaimCleanupService claimCleanupService = new ClaimCleanupService(
+            plugin,
+            databaseManager,
+            claimService,
+            profileService,
+            hologramService,
+            platformScheduler
+        );
+        claimService.setClaimCleanupService(claimCleanupService);
+        ClaimVisualService claimVisualService = new ClaimVisualService(plugin);
+        ClaimSyncService claimSyncService = new ClaimSyncService(plugin, databaseManager, claimService, hologramService);
+        claimService.setClaimSyncPublisher(claimSyncService);
+        CrossServerTeleportService crossServerTeleportService = new CrossServerTeleportService(
+            plugin,
+            databaseManager,
+            claimService,
+            claimVisualService
+        );
+        OnlineRewardService onlineRewardService = new OnlineRewardService(
+            plugin,
+            platformScheduler,
+            profileService,
+            claimService,
+            claimCoreFactory,
+            claimCleanupService
+        );
+        PendingClaimService pendingClaimService = new PendingClaimService(
+            plugin,
+            claimService,
+            profileService,
+            claimCoreFactory,
+            hologramService,
+            claimVisualService,
+            economyHook,
+            onlineRewardService
+        );
+        ClaimActionService claimActionService = new ClaimActionService(
+            plugin,
+            claimService,
+            hologramService,
+            claimVisualService,
+            economyHook,
+            crossServerTeleportService
+        );
+        ClaimSelectionService claimSelectionService = new ClaimSelectionService(
+            plugin,
+            claimService,
+            profileService,
+            claimVisualService,
+            hologramService,
+            economyHook,
+            onlineRewardService
+        );
+        ClaimInputService claimInputService = new ClaimInputService(plugin, claimService, profileService);
+        ClaimTransferService claimTransferService = new ClaimTransferService(plugin, claimService, profileService);
+        RemovalConfirmationService removalConfirmationService = new RemovalConfirmationService(plugin, claimActionService, claimService);
+        ExplosionAuthorizationService explosionAuthorizationService = new ExplosionAuthorizationService();
+        MenuService menuService = new MenuService(
+            plugin,
+            claimService,
+            profileService,
+            claimActionService,
+            removalConfirmationService,
+            claimInputService,
+            claimSelectionService
+        );
+        return new BootstrapResult(
+            pluginConfig,
+            groupConfig,
+            platformScheduler,
+            databaseManager,
+            claimCoreFactory,
+            profileService,
+            claimService,
+            economyHook,
+            hologramService,
+            claimCleanupService,
+            pendingClaimService,
+            claimActionService,
+            claimVisualService,
+            crossServerTeleportService,
+            claimSyncService,
+            claimSelectionService,
+            claimInputService,
+            claimTransferService,
+            menuService,
+            onlineRewardService,
+            removalConfirmationService,
+            explosionAuthorizationService
+        );
+    }
+
+    public record BootstrapResult(
+        PluginConfig pluginConfig,
+        GroupConfig groupConfig,
+        PlatformScheduler platformScheduler,
+        DatabaseManager databaseManager,
+        ClaimCoreFactory claimCoreFactory,
+        ProfileService profileService,
+        ClaimService claimService,
+        EconomyHook economyHook,
+        HologramService hologramService,
+        ClaimCleanupService claimCleanupService,
+        PendingClaimService pendingClaimService,
+        ClaimActionService claimActionService,
+        ClaimVisualService claimVisualService,
+        CrossServerTeleportService crossServerTeleportService,
+        ClaimSyncService claimSyncService,
+        ClaimSelectionService claimSelectionService,
+        ClaimInputService claimInputService,
+        ClaimTransferService claimTransferService,
+        MenuService menuService,
+        OnlineRewardService onlineRewardService,
+        RemovalConfirmationService removalConfirmationService,
+        ExplosionAuthorizationService explosionAuthorizationService
+    ) {
+    }
+}

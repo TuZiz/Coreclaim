@@ -3,6 +3,7 @@ package com.coreclaim.service;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.platform.PlatformScheduler;
+import com.coreclaim.util.AdminAccess;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,8 +87,7 @@ public final class ClaimInputService {
             return;
         }
         if (!claim.owner().equals(player.getUniqueId())
-            && !player.hasPermission("coreclaim.admin")
-            && !player.hasPermission("coreclaim.admin.force")) {
+            && !AdminAccess.hasClaimEditAccess(player)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
         }

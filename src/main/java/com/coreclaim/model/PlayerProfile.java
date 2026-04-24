@@ -10,7 +10,7 @@ public final class PlayerProfile {
     private final UUID uuid;
     private String lastKnownName;
     private int activityPoints;
-    private int onlineMinutes;
+    private long onlineSeconds;
     private boolean starterCoreGranted;
     private boolean starterCoreReclaimed;
     private boolean starterCoreUsed;
@@ -25,6 +25,7 @@ public final class PlayerProfile {
         String lastKnownName,
         int activityPoints,
         int onlineMinutes,
+        long onlineSeconds,
         boolean starterCoreGranted,
         boolean starterCoreReclaimed,
         boolean starterCoreUsed,
@@ -36,7 +37,7 @@ public final class PlayerProfile {
         this.uuid = uuid;
         this.lastKnownName = lastKnownName;
         this.activityPoints = Math.max(0, activityPoints);
-        this.onlineMinutes = Math.max(0, onlineMinutes);
+        this.onlineSeconds = Math.max(0L, onlineSeconds > 0L ? onlineSeconds : onlineMinutes * 60L);
         this.starterCoreGranted = starterCoreGranted;
         this.starterCoreReclaimed = starterCoreReclaimed;
         this.starterCoreUsed = starterCoreUsed;
@@ -69,11 +70,22 @@ public final class PlayerProfile {
     }
 
     public synchronized int onlineMinutes() {
-        return onlineMinutes;
+        return (int) Math.max(0L, onlineSeconds / 60L);
     }
 
     public synchronized void addOnlineMinutes(int minutes) {
-        this.onlineMinutes = Math.max(0, this.onlineMinutes + minutes);
+        addOnlineSeconds(minutes * 60L);
+    }
+
+    public synchronized long onlineSeconds() {
+        return onlineSeconds;
+    }
+
+    public synchronized void addOnlineSeconds(long seconds) {
+        if (seconds <= 0L) {
+            return;
+        }
+        this.onlineSeconds = Math.max(0L, this.onlineSeconds + seconds);
     }
 
     public synchronized boolean starterCoreGranted() {

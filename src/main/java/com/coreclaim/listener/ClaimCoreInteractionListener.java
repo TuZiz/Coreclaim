@@ -6,6 +6,7 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.PendingClaimService;
+import com.coreclaim.util.AdminAccess;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,6 +15,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 public final class ClaimCoreInteractionListener implements Listener {
 
@@ -42,6 +44,9 @@ public final class ClaimCoreInteractionListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
             return;
         }
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         Block block = event.getClickedBlock();
         if (block.getType() != plugin.settings().coreMaterial()) {
             return;
@@ -53,7 +58,9 @@ public final class ClaimCoreInteractionListener implements Listener {
             .orElse(null);
         if (claim != null) {
             event.setCancelled(true);
-            if (!claim.owner().equals(player.getUniqueId()) && !player.hasPermission("coreclaim.admin")) {
+            if (!claim.owner().equals(player.getUniqueId())
+                && !AdminAccess.hasViewAccess(player)
+                && !AdminAccess.hasClaimEditAccess(player)) {
                 player.sendMessage(plugin.message("trust-no-permission"));
                 return;
             }

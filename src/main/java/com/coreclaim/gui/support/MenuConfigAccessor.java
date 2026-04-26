@@ -23,7 +23,7 @@ public final class MenuConfigAccessor {
     }
 
     public int menuSize(String menuKey) {
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
+        List<String> layout = layout(menuKey);
         if (!layout.isEmpty()) {
             return layout.size() * 9;
         }
@@ -57,7 +57,7 @@ public final class MenuConfigAccessor {
             return result;
         }
         char symbol = rawChar.charAt(0);
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
+        List<String> layout = layout(menuKey);
         for (int row = 0; row < layout.size(); row++) {
             String line = padLayout.apply(layout.get(row));
             for (int column = 0; column < 9; column++) {
@@ -67,5 +67,18 @@ public final class MenuConfigAccessor {
             }
         }
         return result;
+    }
+
+    private List<String> layout(String menuKey) {
+        FileConfiguration menu = menu(menuKey);
+        List<String> layout = menu.getStringList("Shape");
+        if (!layout.isEmpty()) {
+            return layout;
+        }
+        layout = menu.getStringList("GuiPlain");
+        if (!layout.isEmpty()) {
+            return layout;
+        }
+        return menu.getStringList("layout");
     }
 }

@@ -1,0 +1,123 @@
+layout-version: 1
+title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4选择格数 - {direction}'
+Shape:
+  - "#########"
+  - "####I####"
+  - "#ABCDEF##"
+  - "###M#Q###"
+  - "####K####"
+  - "#########"
+items:
+  filler:
+    char: "#"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1310
+
+  info:
+    char: "I"
+    material: MAP
+    custom-model-data: 1311
+    name: '&#FFD166&l扩建预览'
+    lore:
+      - ''
+      - ' &#CBD5E1方向: &#F8FAFC{direction}'
+      - ' &#CBD5E1本次扩建: &#55FFAA{amount} &#CBD5E1格'
+      - ' &#CBD5E1当前该方向: &#FFD166{current}'
+      - ' &#CBD5E1目标该方向: &#FFD166{target}'
+      - ' &#CBD5E1最大可选: &#4CC9F0{max} &#CBD5E1格'
+      - ''
+      - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{depth}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
+      - ' &#CBD5E1状态: {status}'
+      - ''
+      - ' &#F8FAFC调整格数后点击确认进入二次确认'
+
+  minus-10:
+    char: "A"
+    material: REDSTONE
+    custom-model-data: 1312
+    name: '&#FF6B6B-10 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+    sound: UI_BUTTON_CLICK
+
+  minus-5:
+    char: "B"
+    material: REDSTONE
+    custom-model-data: 1313
+    name: '&#FF6B6B-5 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+    sound: UI_BUTTON_CLICK
+
+  minus-1:
+    char: "C"
+    material: REDSTONE
+    custom-model-data: 1314
+    name: '&#FF6B6B-1 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+    sound: UI_BUTTON_CLICK
+
+  plus-1:
+    char: "D"
+    material: EMERALD
+    custom-model-data: 1315
+    name: '&#55FFAA+1 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+      - ' &#55FFAA用于只扩建一格'
+    sound: UI_BUTTON_CLICK
+
+  plus-5:
+    char: "E"
+    material: EMERALD
+    custom-model-data: 1316
+    name: '&#55FFAA+5 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+    sound: UI_BUTTON_CLICK
+
+  plus-10:
+    char: "F"
+    material: EMERALD
+    custom-model-data: 1317
+    name: '&#55FFAA+10 格'
+    lore:
+      - ' &#CBD5E1当前选择: &#F8FAFC{amount} &#CBD5E1格'
+    sound: UI_BUTTON_CLICK
+
+  max:
+    char: "M"
+    material: DIAMOND
+    custom-model-data: 1318
+    name: '&#4CC9F0&l选择最大可扩'
+    lore:
+      - ''
+      - ' &#CBD5E1当前方向最多可选: &#4CC9F0{max} &#CBD5E1格'
+      - ' &#CBD5E1如果存在重叠，确认页会阻止扣费'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+
+  confirm:
+    char: "Q"
+    material: LIME_CONCRETE
+    custom-model-data: 1319
+    glow: true
+    name: '&#55FFAA&l进入二次确认'
+    lore:
+      - ''
+      - ' &#CBD5E1方向: &#F8FAFC{direction}'
+      - ' &#CBD5E1格数: &#55FFAA{amount}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
+      - ' &#CBD5E1状态: {status}'
+      - ''
+      - ' &#FFD166点击查看最终确认页'
+    sound: UI_BUTTON_CLICK
+
+  back:
+    char: "K"
+    material: BARRIER
+    custom-model-data: 1320
+    name: '&#FF6B6B&l返回方向选择'
+    sound: UI_BUTTON_CLICK

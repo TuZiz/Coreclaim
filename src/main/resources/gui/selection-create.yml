@@ -1,6 +1,6 @@
 layout-version: 3
-title: '&8[&6创建&8] &6&l选区创建确认 - {name}'
-GuiPlain:
+title: '&#475569[&#F59E0B创建&#475569] &#F59E0B&l选区创建确认 - {name}'
+Shape:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "FFFFFFFFF"
@@ -19,33 +19,33 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1710
-    name: '&e&l创建概览'
+    name: '&#FFD166&l创建概览'
     lore:
       - ''
-      - ' &7领地名称: &b{name}'
-      - ' &7创建世界: &e{world}'
-      - ' &7核心坐标: &f({center_x}, {center_y}, {center_z})'
+      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
+      - ' &#CBD5E1创建世界: &#FFD166{world}'
+      - ' &#CBD5E1核心坐标: &#F8FAFC({center_x}, {center_y}, {center_z})'
       - ''
-      - ' &7宽度: &e{width}'
-      - ' &7高度: &e{height}'
-      - ' &7深度: &e{depth}'
-      - ' &7占地面积: &e{area}'
-      - ' &7总体积: &e{volume}'
-      - ' &7预计花费: &6{cost}'
+      - ' &#CBD5E1宽度: &#FFD166{width}'
+      - ' &#CBD5E1高度: &#FFD166{height}'
+      - ' &#CBD5E1深度: &#FFD166{depth}'
+      - ' &#CBD5E1占地面积: &#FFD166{area}'
+      - ' &#CBD5E1总体积: &#FFD166{volume}'
+      - ' &#CBD5E1预计花费: &#F59E0B{cost}'
       - ''
-      - ' &7当前状态: {status}'
-      - ' &7普通金锄头可直接选区'
-      - ' &7确认前会再次校验范围与价格'
+      - ' &#CBD5E1当前状态: {status}'
+      - ' &#CBD5E1普通金锄头可直接选区'
+      - ' &#CBD5E1确认前会再次校验范围与价格'
 
   refresh:
     char: "R"
     material: CLOCK
     custom-model-data: 1715
-    name: '&e&l刷新预览'
+    name: '&#FFD166&l刷新预览'
     lore:
       - ''
-      - ' &7重新读取当前选区信息'
-      - ' &7适合刚修改完选区后使用'
+      - ' &#CBD5E1重新读取当前选区信息'
+      - ' &#CBD5E1适合刚修改完选区后使用'
     sound: UI_BUTTON_CLICK
 
   confirm:
@@ -53,23 +53,23 @@ items:
     material: EMERALD
     custom-model-data: 1717
     glow: true
-    name: '&a&l确认创建'
+    name: '&#55FFAA&l确认创建'
     lore:
       - ''
-      - ' &7领地名称: &b{name}'
-      - ' &7最终尺寸: &e{width}x{height}x{depth}'
-      - ' &7预计花费: &6{cost}'
+      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
+      - ' &#CBD5E1最终尺寸: &#FFD166{width}x{height}x{depth}'
+      - ' &#CBD5E1预计花费: &#F59E0B{cost}'
       - ''
-      - ' &e点击正式创建领地'
+      - ' &#FFD166点击正式创建领地'
     sound: ENTITY_PLAYER_LEVELUP
 
   cancel:
     char: "B"
     material: BARRIER
     custom-model-data: 1716
-    name: '&c&l取消创建'
+    name: '&#FF6B6B&l取消创建'
     lore:
       - ''
-      - ' &7关闭本次创建确认页'
-      - ' &7并清空当前选区'
+      - ' &#CBD5E1关闭本次创建确认页'
+      - ' &#CBD5E1并清空当前选区'
     sound: UI_BUTTON_CLICK

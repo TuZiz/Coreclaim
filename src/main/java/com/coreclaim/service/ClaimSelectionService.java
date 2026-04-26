@@ -126,9 +126,8 @@ public final class ClaimSelectionService {
         SelectionSession session = sessions.computeIfAbsent(player.getUniqueId(), ignored -> new SelectionSession());
         session.pos1 = blockLocation(location);
         session.world = location.getWorld().getName();
-        player.sendMessage(chatMessage(
+        player.sendMessage(plugin.message(
             "selection-pos1-set",
-            "&a&l点 1: &7已设置为 &f({x}, {y}, {z})",
             "{x}", String.valueOf(session.pos1.getBlockX()),
             "{y}", String.valueOf(session.pos1.getBlockY()),
             "{z}", String.valueOf(session.pos1.getBlockZ())
@@ -143,21 +142,19 @@ public final class ClaimSelectionService {
         }
         SelectionSession session = sessions.computeIfAbsent(player.getUniqueId(), ignored -> new SelectionSession());
         if (session.pos1 == null) {
-            player.sendMessage(chatMessage("selection-pos1-missing", "&c&l! &7请先设置第一个点。"));
+            player.sendMessage(plugin.message("selection-pos1-missing"));
             return false;
         }
         if (!session.world.equalsIgnoreCase(location.getWorld().getName())) {
-            player.sendMessage(chatMessage(
+            player.sendMessage(plugin.message(
                 "selection-world-mismatch",
-                "&c&l! &7第二个点必须和第一个点在同一世界 &b{world}&7。",
                 "{world}", session.world
             ));
             return false;
         }
         session.pos2 = blockLocation(location);
-        player.sendMessage(chatMessage(
+        player.sendMessage(plugin.message(
             "selection-pos2-set",
-            "&b&l点 2: &7已设置为 &f({x}, {y}, {z})",
             "{x}", String.valueOf(session.pos2.getBlockX()),
             "{y}", String.valueOf(session.pos2.getBlockY()),
             "{z}", String.valueOf(session.pos2.getBlockZ())
@@ -169,7 +166,7 @@ public final class ClaimSelectionService {
     public boolean createClaim(Player player, String rawName) {
         SelectionPreview preview = preview(player);
         if (preview == null || !preview.ready()) {
-            player.sendMessage(chatMessage("selection-missing-points", "&c&l! &7请先完成两个对角点的选择。"));
+            player.sendMessage(plugin.message("selection-missing-points"));
             return false;
         }
         if (!preview.allowed()) {
@@ -234,30 +231,17 @@ public final class ClaimSelectionService {
         clear(player.getUniqueId());
         onlineRewardService.markOrdinaryClaimCreated(player);
 
-        String configured = plugin.messagesConfig().getString("selection-create-success", "");
-        if (configured != null && configured.contains("{height}")) {
-            player.sendMessage(chatMessage(
-                "selection-create-success",
-                "&a&l创建成功: &7领地 &e{name} &7已创建，大小 &b{width}x{height}x{depth} &7，花费 &6{cost}&7。",
-                "{name}", claim.name(),
-                "{width}", String.valueOf(claim.width()),
-                "{height}", String.valueOf(claim.height()),
-                "{depth}", String.valueOf(claim.depth()),
-                "{cost}", MONEY.format(preview.cost())
-            ));
-        } else {
-            player.sendMessage(plugin.color("&8[&6Claim&8] &f&a&l创建成功: &7领地 &e"
-                + claim.name()
-                + " &7已创建，大小 &b"
-                + claim.width() + "x" + claim.height() + "x" + claim.depth()
-                + " &7，体积 &f" + preview.volume()
-                + " &7，花费 &6" + MONEY.format(preview.cost()) + "&7。"));
-        }
+        player.sendMessage(plugin.message(
+            "selection-create-success",
+            "{name}", claim.name(),
+            "{width}", String.valueOf(claim.width()),
+            "{height}", String.valueOf(claim.height()),
+            "{depth}", String.valueOf(claim.depth()),
+            "{volume}", String.valueOf(preview.volume()),
+            "{cost}", MONEY.format(preview.cost())
+        ));
         if (firstOrdinaryClaim) {
-            player.sendMessage(chatMessage(
-                "second-claim-selection-tip",
-                "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
-            ));
+            player.sendMessage(plugin.message("second-claim-selection-tip"));
         }
         return true;
     }
@@ -265,7 +249,7 @@ public final class ClaimSelectionService {
     public boolean createSystemClaim(Player player, String rawName) {
         SelectionPreview preview = preview(player, true);
         if (preview == null || !preview.ready()) {
-            player.sendMessage(chatMessage("selection-missing-points", "&c&l! &7请先完成两个对角点的选择。"));
+            player.sendMessage(plugin.message("selection-missing-points"));
             return false;
         }
         if (!preview.allowed()) {
@@ -310,9 +294,8 @@ public final class ClaimSelectionService {
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);
         clear(player.getUniqueId());
-        player.sendMessage(chatMessage(
+        player.sendMessage(plugin.message(
             "selection-create-system-success",
-            "&a&l系统领地: &7已创建 &e{name} &7，大小 &b{width}x{height}x{depth} &7，已标记为 &6[SYSTEM]&7。",
             "{name}", claim.name(),
             "{width}", String.valueOf(claim.width()),
             "{height}", String.valueOf(claim.height()),
@@ -383,7 +366,7 @@ public final class ClaimSelectionService {
         if (Math.max(Math.max(east, west), Math.max(north, south)) > group.maxDistance()) {
             return SelectionPreview.denied(
                 width, height, depth, area, volume, cost, minX, maxX, minY, maxY, minZ, maxZ, coreLocation, east, south, west, north,
-                chatMessage("selection-too-large", "&c&l! &7选区过大，当前组允许的最大边长为 &e{max}&7。", "{max}", String.valueOf(group.maxDistance() * 2 + 1))
+                plugin.message("selection-too-large", "{max}", String.valueOf(group.maxDistance() * 2 + 1))
             );
         }
 
@@ -419,9 +402,8 @@ public final class ClaimSelectionService {
         if (selectionGapSuggestion != null) {
             return SelectionPreview.denied(
                 width, height, depth, area, volume, cost, minX, maxX, minY, maxY, minZ, maxZ, coreLocation, east, south, west, north,
-                appendMoveSuggestion(chatMessage(
+                appendMoveSuggestion(plugin.message(
                     "selection-claim-too-close",
-                    "&c&l! &7锄头圈地之间至少需要保留 &e{gap} &7格间隔。",
                     "{gap}",
                     String.valueOf(plugin.settings().selectionMinimumGap())
                 ), selectionGapSuggestion)
@@ -442,9 +424,8 @@ public final class ClaimSelectionService {
         if (fullHeightGapSuggestion != null) {
             return SelectionPreview.denied(
                 width, height, depth, area, volume, cost, minX, maxX, minY, maxY, minZ, maxZ, coreLocation, east, south, west, north,
-                appendMoveSuggestion(chatMessage(
+                appendMoveSuggestion(plugin.message(
                     "selection-near-core-claim",
-                    "&c&l! &7锄头圈地不能贴着核心领地创建，至少保留 &e{gap} &7格。",
                     "{gap}",
                     String.valueOf(plugin.settings().selectionMinimumGap())
                 ), fullHeightGapSuggestion)
@@ -454,7 +435,7 @@ public final class ClaimSelectionService {
         if (coreY >= world.getMaxHeight() || !coreLocation.getBlock().getType().isAir()) {
             return SelectionPreview.denied(
                 width, height, depth, area, volume, cost, minX, maxX, minY, maxY, minZ, maxZ, coreLocation, east, south, west, north,
-                chatMessage("selection-core-blocked", "&c&l! &7选区中心位置被占用，请整体平移后再试。")
+                plugin.message("selection-core-blocked")
             );
         }
 
@@ -467,7 +448,7 @@ public final class ClaimSelectionService {
             return;
         }
         if (!preview.ready()) {
-            sendActionBar(player, plainMessage("selection-actionbar-pos1", "&e已设置点 1 &8| &7请继续右键选择点 2"));
+            sendActionBar(player, plugin.plainMessage("selection-actionbar-pos1"));
             return;
         }
         sendActionBar(player, previewActionBar(preview));
@@ -530,34 +511,24 @@ public final class ClaimSelectionService {
     }
 
     private String previewActionBar(SelectionPreview preview) {
-        String status = preview.allowed() ? "" : plugin.color(" &8| &c" + stripPrefix(preview.failureMessage()));
-        String configured = plugin.messagesConfig().getString("selection-actionbar-preview", "");
-        if (configured != null && configured.contains("{height}")) {
-            return plainMessage(
-                "selection-actionbar-preview",
-                "&d选区 &f{width}x{height}x{depth} &8| &7体积 &f{volume} &8| &6价格 &e{cost}{status}",
-                "{width}", String.valueOf(preview.width()),
-                "{height}", String.valueOf(preview.height()),
-                "{depth}", String.valueOf(preview.depth()),
-                "{volume}", String.valueOf(preview.volume()),
-                "{cost}", MONEY.format(preview.cost()),
-                "{status}", status
-            );
-        }
-        return plugin.color("&d选区 &f"
-            + preview.width() + "x" + preview.height() + "x" + preview.depth()
-            + " &8| &7体积 &f" + preview.volume()
-            + " &8| &6价格 &e" + MONEY.format(preview.cost())
-            + status);
+        String status = preview.allowed() ? "" : plugin.color(" &#475569| &#FF6B6B" + stripPrefix(preview.failureMessage()));
+        return plugin.plainMessage(
+            "selection-actionbar-preview",
+            "{width}", String.valueOf(preview.width()),
+            "{height}", String.valueOf(preview.height()),
+            "{depth}", String.valueOf(preview.depth()),
+            "{volume}", String.valueOf(preview.volume()),
+            "{cost}", MONEY.format(preview.cost()),
+            "{status}", status
+        );
     }
 
     private String appendMoveSuggestion(String message, MoveSuggestion suggestion) {
         if (message == null || message.isBlank() || suggestion == null) {
             return message;
         }
-        return message + plainMessage(
+        return message + plugin.plainMessage(
             "selection-move-suggestion",
-            " &7建议向 &e{direction} &7移动 &e{blocks} &7格。",
             "{direction}", directionDisplay(suggestion.direction()),
             "{blocks}", String.valueOf(suggestion.blocks())
         );
@@ -570,26 +541,6 @@ public final class ClaimSelectionService {
             case WEST -> "西";
             case NORTH -> "北";
         };
-    }
-
-    private String chatMessage(String path, String fallback, String... replacements) {
-        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
-        String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
-        String message = plugin.color(prefix + body);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-        }
-        return message;
-    }
-
-    private String plainMessage(String path, String fallback, String... replacements) {
-        String message = plugin.color(plugin.messagesConfig().contains(path)
-            ? plugin.messagesConfig().getString(path, fallback)
-            : fallback);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-        }
-        return message;
     }
 
     private String stripPrefix(String message) {

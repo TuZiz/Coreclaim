@@ -1,0 +1,66 @@
+layout-version: 1
+title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4确认扩建 - {direction}'
+Shape:
+  - "#########"
+  - "####I####"
+  - "#########"
+  - "###Q#B###"
+  - "####C####"
+  - "#########"
+items:
+  filler:
+    char: "#"
+    material: GRAY_STAINED_GLASS_PANE
+    name: ' '
+    custom-model-data: 1321
+
+  info:
+    char: "I"
+    material: COMPASS
+    custom-model-data: 1322
+    name: '&#FFD166&l最终扩建确认'
+    lore:
+      - ''
+      - ' &#CBD5E1领地: &#F8FAFC{name}'
+      - ' &#CBD5E1方向: &#F8FAFC{direction}'
+      - ' &#CBD5E1扩建格数: &#55FFAA{amount}'
+      - ' &#CBD5E1当前该方向: &#FFD166{current}'
+      - ' &#CBD5E1目标该方向: &#FFD166{target}'
+      - ''
+      - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{depth}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
+      - ' &#CBD5E1状态: {status}'
+      - ''
+      - ' &#FF6B6B确认后才会扣费并修改领地边界'
+
+  confirm:
+    char: "Q"
+    material: EMERALD_BLOCK
+    custom-model-data: 1323
+    glow: true
+    name: '&#55FFAA&l确认扩建'
+    lore:
+      - ''
+      - ' &#CBD5E1方向: &#F8FAFC{direction}'
+      - ' &#CBD5E1格数: &#55FFAA{amount}'
+      - ' &#CBD5E1花费: &#F59E0B{price}'
+      - ' &#CBD5E1状态: {status}'
+      - ''
+      - ' &#FFD166点击执行扩建'
+    sound: ENTITY_PLAYER_LEVELUP
+
+  back:
+    char: "B"
+    material: ARROW
+    custom-model-data: 1324
+    name: '&#FFD166&l返回修改格数'
+    sound: UI_BUTTON_CLICK
+
+  cancel:
+    char: "C"
+    material: BARRIER
+    custom-model-data: 1325
+    name: '&#FF6B6B&l取消扩建'
+    lore:
+      - ' &#CBD5E1返回扩建方向选择'
+    sound: UI_BUTTON_CLICK

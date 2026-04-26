@@ -157,6 +157,50 @@ public final class MenuService {
         player.openInventory(inventory);
     }
 
+    public void openClaimExpandAmountMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
+        int normalizedAmount = normalizeExpansionAmount(player, claim, direction, amount);
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, direction, normalizedAmount);
+        ClaimExpandAmountHolder holder = new ClaimExpandAmountHolder(claim.id(), direction, normalizedAmount);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-expand-amount"), menuTitle("claim-expand-amount",
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction)
+        ));
+        holder.inventory = inventory;
+        fill(inventory, "claim-expand-amount", "filler");
+
+        String[] replacements = expansionReplacements(player, claim, direction, normalizedAmount, preview);
+        inventory.setItem(slot("claim-expand-amount", "info"), configuredItem("claim-expand-amount", "info", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-10"), configuredItem("claim-expand-amount", "minus-10", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-5"), configuredItem("claim-expand-amount", "minus-5", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-1"), configuredItem("claim-expand-amount", "minus-1", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-1"), configuredItem("claim-expand-amount", "plus-1", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-5"), configuredItem("claim-expand-amount", "plus-5", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-10"), configuredItem("claim-expand-amount", "plus-10", replacements));
+        inventory.setItem(slot("claim-expand-amount", "max"), configuredItem("claim-expand-amount", "max", replacements));
+        inventory.setItem(slot("claim-expand-amount", "confirm"), configuredItem("claim-expand-amount", "confirm", replacements));
+        inventory.setItem(slot("claim-expand-amount", "back"), configuredItem("claim-expand-amount", "back", replacements));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimExpandConfirmMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
+        int normalizedAmount = normalizeExpansionAmount(player, claim, direction, amount);
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, direction, normalizedAmount);
+        ClaimExpandConfirmHolder holder = new ClaimExpandConfirmHolder(claim.id(), direction, normalizedAmount);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-expand-confirm"), menuTitle("claim-expand-confirm",
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction)
+        ));
+        holder.inventory = inventory;
+        fill(inventory, "claim-expand-confirm", "filler");
+
+        String[] replacements = expansionReplacements(player, claim, direction, normalizedAmount, preview);
+        inventory.setItem(slot("claim-expand-confirm", "info"), configuredItem("claim-expand-confirm", "info", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "confirm"), configuredItem("claim-expand-confirm", "confirm", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "back"), configuredItem("claim-expand-confirm", "back", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "cancel"), configuredItem("claim-expand-confirm", "cancel", replacements));
+        player.openInventory(inventory);
+    }
+
     public void openCoreMenu(Player player, Claim claim) {
         CoreMenuHolder holder = new CoreMenuHolder(claim.id());
         Inventory inventory = Bukkit.createInventory(holder, menuSize("core"), menuTitle("core", "{name}", claim.name()));
@@ -360,7 +404,7 @@ public final class MenuService {
             }
             ClaimFlagState state = claim.flagState(flag);
             inventory.setItem(slot("claim-permissions", itemKey), configuredItem("claim-permissions", itemKey,
-                "{state}", flagStateText(state)
+                "{state}", flagStateText(flag, state)
             ));
         }
         inventory.setItem(slot("claim-permissions", "disable-all"), configuredItem("claim-permissions", "disable-all"));
@@ -374,7 +418,7 @@ public final class MenuService {
         holder.inventory = inventory;
         fill(inventory, "selection-create", "filler");
 
-        String status = preview.allowed() ? "&a\u53ef\u521b\u5efa" : "&c" + stripMessagePrefix(preview.failureMessage());
+        String status = preview.allowed() ? "&#55FFAA\u53ef\u521b\u5efa" : "&#FF6B6B" + stripMessagePrefix(preview.failureMessage());
         inventory.setItem(slot("selection-create", "info"), configuredItem("selection-create", "info",
             "{name}", claimName,
             "{world}", preview.coreLocation() == null || preview.coreLocation().getWorld() == null ? player.getWorld().getName() : preview.coreLocation().getWorld().getName(),
@@ -418,6 +462,10 @@ public final class MenuService {
             handleClaimListMenu(player, claimListHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimManageHolder claimManageHolder) {
             handleClaimManageMenu(player, claimManageHolder, slot);
+        } else if (holder instanceof ClaimExpandAmountHolder claimExpandAmountHolder) {
+            handleClaimExpandAmountMenu(player, claimExpandAmountHolder, slot);
+        } else if (holder instanceof ClaimExpandConfirmHolder claimExpandConfirmHolder) {
+            handleClaimExpandConfirmMenu(player, claimExpandConfirmHolder, slot);
         } else if (holder instanceof CoreMenuHolder coreMenuHolder) {
             handleCoreMenu(player, coreMenuHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimViewHolder claimViewHolder) {
@@ -488,30 +536,22 @@ public final class MenuService {
 
         if (slot == slot("claim-manage", "expand-north")) {
             playConfiguredSound(player, "claim-manage", "expand-north");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.NORTH, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.NORTH, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-south")) {
             playConfiguredSound(player, "claim-manage", "expand-south");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.SOUTH, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.SOUTH, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-west")) {
             playConfiguredSound(player, "claim-manage", "expand-west");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.WEST, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.WEST, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-east")) {
             playConfiguredSound(player, "claim-manage", "expand-east");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.EAST, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.EAST, 1);
             return;
         }
         if (slot == slot("claim-manage", "delete")) {
@@ -528,6 +568,113 @@ public final class MenuService {
         if (slot == slot("claim-manage", "back")) {
             playConfiguredSound(player, "claim-manage", "back");
             openCoreMenu(player, claim);
+        }
+    }
+
+    private void handleClaimExpandAmountMenu(Player player, ClaimExpandAmountHolder holder, int slot) {
+        Claim claim = claimService.findClaimByIdFresh(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+        if (!claimActionService.canManageClaim(player, claim)) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
+
+        if (slot == slot("claim-expand-amount", "minus-10")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-10");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 10);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "minus-5")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-5");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 5);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "minus-1")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-1");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 1);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-1")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-1");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 1);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-5")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-5");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 5);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-10")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-10");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 10);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "max")) {
+            playConfiguredSound(player, "claim-expand-amount", "max");
+            openClaimExpandAmountMenu(player, claim, holder.direction, maxExpansionAmount(player, claim, holder.direction));
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "confirm")) {
+            playConfiguredSound(player, "claim-expand-amount", "confirm");
+            openClaimExpandConfirmMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "back")) {
+            playConfiguredSound(player, "claim-expand-amount", "back");
+            openClaimManageMenu(player, claim);
+        }
+    }
+
+    private void handleClaimExpandConfirmMenu(Player player, ClaimExpandConfirmHolder holder, int slot) {
+        Claim claim = claimService.findClaimByIdFresh(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+        if (!claimActionService.canManageClaim(player, claim)) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
+
+        if (slot == slot("claim-expand-confirm", "back")) {
+            playConfiguredSound(player, "claim-expand-confirm", "back");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (slot == slot("claim-expand-confirm", "cancel")) {
+            playConfiguredSound(player, "claim-expand-confirm", "cancel");
+            openClaimManageMenu(player, claim);
+            return;
+        }
+        if (slot != slot("claim-expand-confirm", "confirm")) {
+            return;
+        }
+
+        playConfiguredSound(player, "claim-expand-confirm", "confirm");
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, holder.direction, holder.amount);
+        if (!preview.allowed()) {
+            player.sendMessage(plugin.message(preview.hitMax() ? "claim-max-size" : "claim-overlap"));
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (!claimActionService.canPayExpansionCost(player, preview)) {
+            String key = claimActionService.hasExpansionEconomy(preview) ? "economy-not-enough" : "economy-missing";
+            player.sendMessage(plugin.message(key, "{cost}", ClaimActionService.formatMoney(preview.cost())));
+            openClaimExpandConfirmMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (claimActionService.expandClaim(player, claim, holder.direction, holder.amount)) {
+            Claim updated = claimService.findClaimByIdFresh(claim.id()).orElse(claim);
+            openClaimManageMenu(player, updated);
+        } else {
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
         }
     }
 
@@ -624,7 +771,7 @@ public final class MenuService {
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (!claimActionService.canEditClaim(player, claim)) {
+        if (!claimActionService.canManageMembers(player, claim)) {
             player.closeInventory();
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
@@ -674,7 +821,7 @@ public final class MenuService {
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (!claimActionService.canEditClaim(player, claim)) {
+        if (!claimActionService.canManageMembers(player, claim)) {
             player.closeInventory();
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
@@ -704,7 +851,7 @@ public final class MenuService {
                 return;
             }
             if (claim.isDenied(targetId)) {
-                player.sendMessage(plugin.color("&c\u8be5\u73a9\u5bb6\u4ecd\u5728 deny \u5217\u8868\u4e2d\uff0c\u8bf7\u5148\u89e3\u9664 deny \u518d\u8fdb\u884c\u6388\u6743\u3002"));
+                player.sendMessage(plugin.color("&#FF6B6B\u8be5\u73a9\u5bb6\u4ecd\u5728 deny \u5217\u8868\u4e2d\uff0c\u8bf7\u5148\u89e3\u9664 deny \u518d\u8fdb\u884c\u6388\u6743\u3002"));
                 openTrustOnlineAddMenu(player, claim, holder.page, holder.returnPage);
                 return;
             }
@@ -777,6 +924,10 @@ public final class MenuService {
         for (ClaimFlag flag : ClaimFlag.values()) {
             String itemKey = flagItemKey(flag);
             if (hasItem("claim-permissions", itemKey) && slot == slot("claim-permissions", itemKey)) {
+                if (!claimActionService.canManageFlags(player, claim)) {
+                    player.sendMessage(plugin.message("trust-no-permission"));
+                    return;
+                }
                 playConfiguredSound(player, "claim-permissions", itemKey);
                 ClaimFlagState currentState = claim.flagState(flag);
                 ClaimFlagState nextState = rightClick ? ClaimFlagState.UNSET : currentState.next();
@@ -801,7 +952,7 @@ public final class MenuService {
             playConfiguredSound(player, "selection-create", "refresh");
             if (preview == null || !preview.ready()) {
                 player.closeInventory();
-                player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c\u8bf7\u5148\u91cd\u65b0\u9009\u62e9\u4e24\u4e2a\u5bf9\u89d2\u70b9\u3002"));
+                player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&#475569[&#F59E0BClaim&#475569] &#F8FAFC") + "&#FF6B6B\u8bf7\u5148\u91cd\u65b0\u9009\u62e9\u4e24\u4e2a\u5bf9\u89d2\u70b9\u3002"));
                 return;
             }
             openSelectionCreateMenu(player, holder.claimName, preview);
@@ -824,12 +975,20 @@ public final class MenuService {
     }
 
     private void togglePermission(Player player, Claim claim, ClaimPermission permission, String itemKey) {
+        if (!claimActionService.canManagePermissions(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         playConfiguredSound(player, "claim-permissions", itemKey);
         claimService.updatePermission(claim, permission, !claim.permission(permission), player.getUniqueId());
         openClaimPermissionsMenu(player, claim);
     }
 
     private void setAllPermissions(Player player, Claim claim, boolean allowed, String itemKey) {
+        if (!claimActionService.canManagePermissions(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         playConfiguredSound(player, "claim-permissions", itemKey);
         for (ClaimPermission permission : ClaimPermission.values()) {
             claimService.updatePermission(claim, permission, allowed, player.getUniqueId());
@@ -931,14 +1090,14 @@ public final class MenuService {
     }
 
     private void sendClaimViewDetails(Player player, Claim claim) {
-        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u540d\u79f0: &e" + claim.name()));
-        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u4e3b\u4eba: &b" + claim.ownerName()));
-        player.sendMessage(plugin.color("&6[Claim] &f\u6240\u5c5e\u533a\u670d: &e" + claimService.displayServerId(claim)));
-        player.sendMessage(plugin.color("&6[Claim] &f\u6240\u5728\u4e16\u754c: &e" + claim.world()));
-        player.sendMessage(plugin.color("&6[Claim] &f\u6838\u5fc3\u5750\u6807: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-        player.sendMessage(plugin.color("&6[Claim] &f\u9886\u5730\u5927\u5c0f: &e" + claim.width() + "x" + claim.depth() + " &7(\u9762\u79ef " + claim.area() + ")"));
-        player.sendMessage(plugin.color("&6[Claim] &f\u4f20\u9001\u70b9: " + (claim.hasTeleportPoint() ? "&a\u5df2\u8bbe\u7f6e" : "&e\u672a\u8bbe\u7f6e\uff0c\u9ed8\u8ba4\u56de\u6838\u5fc3")));
-        player.sendMessage(plugin.color("&6[Claim] &f\u6210\u5458\u6570\u91cf: &e" + claim.trustedCount()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u540d\u79f0: &#FFD166" + claim.name()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u4e3b\u4eba: &#4CC9F0" + claim.ownerName()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6240\u5c5e\u533a\u670d: &#FFD166" + claimService.displayServerId(claim)));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6240\u5728\u4e16\u754c: &#FFD166" + claim.world()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6838\u5fc3\u5750\u6807: &#F8FAFC" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u5927\u5c0f: &#FFD166" + claim.width() + "x" + claim.depth() + " &#CBD5E1(\u9762\u79ef " + claim.area() + ")"));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u4f20\u9001\u70b9: " + (claim.hasTeleportPoint() ? "&#55FFAA\u5df2\u8bbe\u7f6e" : "&#FFD166\u672a\u8bbe\u7f6e\uff0c\u9ed8\u8ba4\u56de\u6838\u5fc3")));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6210\u5458\u6570\u91cf: &#FFD166" + claim.trustedCount()));
     }
 
     private String relationText(ClaimListRelation relation) {
@@ -961,6 +1120,17 @@ public final class MenuService {
         return textFormatter.flagStateText(state);
     }
 
+    private String flagStateText(ClaimFlag flag, ClaimFlagState state) {
+        if (flag != ClaimFlag.TIME_CYCLE) {
+            return flagStateText(state);
+        }
+        return switch (state) {
+            case ALLOW -> "&#FFD166\u767d\u5929";
+            case DENY -> "&#60A5FA\u591c\u665a";
+            case UNSET -> "&#CBD5E1\u8ddf\u968f\u4e16\u754c\u65f6\u95f4";
+        };
+    }
+
     private int countCustomFlags(Claim claim) {
         int count = 0;
         for (ClaimFlag flag : ClaimFlag.values()) {
@@ -977,6 +1147,63 @@ public final class MenuService {
 
     private String playerName(UUID playerId) {
         return textFormatter.playerName(playerId);
+    }
+
+    private int normalizeExpansionAmount(Player player, Claim claim, ClaimDirection direction, int requestedAmount) {
+        int maxAmount = maxExpansionAmount(player, claim, direction);
+        if (maxAmount <= 0) {
+            return 1;
+        }
+        return Math.max(1, Math.min(requestedAmount, maxAmount));
+    }
+
+    private int maxExpansionAmount(Player player, Claim claim, ClaimDirection direction) {
+        ClaimGroup group = plugin.groups().resolve(player);
+        return Math.max(0, group.maxDistance() - claim.distance(direction));
+    }
+
+    private String[] expansionReplacements(Player player, Claim claim, ClaimDirection direction, int amount, ClaimActionService.ExpansionPreview preview) {
+        int maxAmount = maxExpansionAmount(player, claim, direction);
+        return new String[] {
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction),
+            "{amount}", String.valueOf(amount),
+            "{max}", String.valueOf(maxAmount),
+            "{current}", String.valueOf(claim.distance(direction)),
+            "{target}", String.valueOf(preview.targetDistance()),
+            "{price}", preview.costText(),
+            "{width}", String.valueOf(preview.width()),
+            "{depth}", String.valueOf(preview.depth()),
+            "{status}", expansionStatusText(player, preview)
+        };
+    }
+
+    private String expansionStatusText(Player player, ClaimActionService.ExpansionPreview preview) {
+        if (preview.hitMax()) {
+            return "&#FF6B6B已到达该方向上限";
+        }
+        if (preview.overlap()) {
+            return "&#FF6B6B扩建后会与其他领地重叠";
+        }
+        if (!preview.allowed()) {
+            return "&#FF6B6B当前无法扩建";
+        }
+        if (!claimActionService.hasExpansionEconomy(preview)) {
+            return "&#FF6B6B经济系统不可用";
+        }
+        if (!claimActionService.canPayExpansionCost(player, preview)) {
+            return "&#FF6B6B余额不足";
+        }
+        return "&#55FFAA可以扩建";
+    }
+
+    private String directionLabel(ClaimDirection direction) {
+        return switch (direction) {
+            case NORTH -> "北";
+            case SOUTH -> "南";
+            case WEST -> "西";
+            case EAST -> "东";
+        };
     }
 
     private List<Player> availableOnlineTrustTargets(Player viewer, Claim claim) {
@@ -1025,6 +1252,30 @@ public final class MenuService {
     private static final class ClaimManageHolder extends BaseHolder {
         private final int claimId;
         private ClaimManageHolder(int claimId) { this.claimId = claimId; }
+    }
+
+    private static final class ClaimExpandAmountHolder extends BaseHolder {
+        private final int claimId;
+        private final ClaimDirection direction;
+        private final int amount;
+
+        private ClaimExpandAmountHolder(int claimId, ClaimDirection direction, int amount) {
+            this.claimId = claimId;
+            this.direction = direction;
+            this.amount = amount;
+        }
+    }
+
+    private static final class ClaimExpandConfirmHolder extends BaseHolder {
+        private final int claimId;
+        private final ClaimDirection direction;
+        private final int amount;
+
+        private ClaimExpandConfirmHolder(int claimId, ClaimDirection direction, int amount) {
+            this.claimId = claimId;
+            this.direction = direction;
+            this.amount = amount;
+        }
     }
 
     private static final class CoreMenuHolder extends BaseHolder {

@@ -19,6 +19,7 @@ new-claim-defaults:
     use-trapdoor: allow
     use-fence-gate: allow
     use-bed: allow
+    time-cycle: unset
 
 # 新建系统领地默认公共规则
 system-claim-defaults:
@@ -41,3 +42,4 @@ system-claim-defaults:
     use-trapdoor: allow
     use-fence-gate: allow
     use-bed: allow
+    time-cycle: unset

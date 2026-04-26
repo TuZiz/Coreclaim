@@ -61,6 +61,24 @@ public final class ClaimActionService {
         return buildExpansionPreview(player, claim, direction, plugin.settings().directionExpandAmount());
     }
 
+    public ExpansionPreview previewExpansion(Player player, Claim claim, ClaimDirection direction, int amount) {
+        return buildExpansionPreview(player, claim, direction, amount);
+    }
+
+    public boolean canPayExpansionCost(Player player, ExpansionPreview preview) {
+        if (preview == null || !preview.allowed()) {
+            return false;
+        }
+        if (preview.cost() <= 0D) {
+            return true;
+        }
+        return economyHook.available() && economyHook.has(player, preview.cost());
+    }
+
+    public boolean hasExpansionEconomy(ExpansionPreview preview) {
+        return preview != null && (preview.cost() <= 0D || economyHook.available());
+    }
+
     public boolean expandCurrentClaim(Player player, ClaimDirection direction) {
         Claim claim = findOwnedClaim(player);
         if (claim == null) {
@@ -71,7 +89,7 @@ public final class ClaimActionService {
     }
 
     public boolean expandClaim(Player player, Claim claim, ClaimDirection direction, int amount) {
-        if (!canEditClaim(player, claim)) {
+        if (!canManageClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -130,7 +148,7 @@ public final class ClaimActionService {
     }
 
     public boolean unclaim(Player player, Claim claim) {
-        if (!canEditClaim(player, claim)) {
+        if (!canManageClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -199,7 +217,7 @@ public final class ClaimActionService {
     }
 
     public boolean trustPlayer(Player player, Claim claim, OfflinePlayer target) {
-        if (!canEditClaim(player, claim)) {
+        if (!canManageMembers(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -233,7 +251,7 @@ public final class ClaimActionService {
     }
 
     public boolean untrustPlayer(Player player, Claim claim, OfflinePlayer target) {
-        if (!canEditClaim(player, claim)) {
+        if (!canManageMembers(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
@@ -316,8 +334,27 @@ public final class ClaimActionService {
     }
 
     public boolean canEditClaim(Player player, Claim claim) {
-        return claim.owner().equals(player.getUniqueId())
-            || AdminAccess.hasClaimEditAccess(player);
+        return canManageClaim(player, claim);
+    }
+
+    public boolean canManageClaim(Player player, Claim claim) {
+        return isOwner(player, claim) || AdminAccess.hasClaimManageAccess(player);
+    }
+
+    public boolean canManageMembers(Player player, Claim claim) {
+        return isOwner(player, claim) || AdminAccess.hasMemberManageAccess(player);
+    }
+
+    public boolean canManagePermissions(Player player, Claim claim) {
+        return isOwner(player, claim) || AdminAccess.hasPermissionManageAccess(player);
+    }
+
+    public boolean canManageFlags(Player player, Claim claim) {
+        return isOwner(player, claim) || AdminAccess.hasFlagManageAccess(player);
+    }
+
+    private boolean isOwner(Player player, Claim claim) {
+        return player != null && claim != null && claim.owner().equals(player.getUniqueId());
     }
 
     private boolean hasAdminForcePermission(Player player) {

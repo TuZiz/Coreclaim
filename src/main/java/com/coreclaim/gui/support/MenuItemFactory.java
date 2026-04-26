@@ -32,7 +32,7 @@ public final class MenuItemFactory {
     public ItemStack configuredItem(String menuKey, String itemKey, String... replacements) {
         ConfigurationSection section = configAccessor.menu(menuKey).getConfigurationSection("items." + itemKey);
         if (section == null) {
-            return item(Material.BARRIER, "&cMissing: " + menuKey + "." + itemKey);
+            return item(Material.BARRIER, "&#FF6B6BMissing: " + menuKey + "." + itemKey);
         }
         Material material = Material.matchMaterial(section.getString("material", "BARRIER"));
         if (material == null) {

@@ -10,7 +10,7 @@ public final class ResourceBootstrap {
         plugin.ensureRulesDefaults();
         plugin.ensureMessagesDefaults();
         plugin.ensureHealthyGuiResources();
-        ResourceConfig messageResource = new ResourceConfig(plugin, "messages.yml");
+        ResourceConfig messageResource = new ResourceConfig(plugin, plugin.messageResourcePath());
         ResourceConfig groupsResource = new ResourceConfig(plugin, "groups.yml");
         ResourceConfig rulesResource = new ResourceConfig(plugin, "rules.yml");
         plugin.loadMenuResources();

@@ -37,15 +37,15 @@ public final class MenuTextFormatter {
     }
 
     public String notifyStateText(String raw) {
-        return raw == null || raw.isBlank() ? "&7默认内容" : "&e已修改";
+        return raw == null || raw.isBlank() ? "&#CBD5E1默认内容" : "&#FFD166已修改";
     }
 
     public String relationText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&a我的领地" : "&b已授权领地";
+        return relation == ClaimListRelation.OWNER ? "&#55FFAA我的领地" : "&#4CC9F0已授权领地";
     }
 
     public String leftClickActionText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&7左键打开核心管理" : "&7左键查看只读详情";
+        return relation == ClaimListRelation.OWNER ? "&#CBD5E1左键打开核心管理" : "&#CBD5E1左键查看只读详情";
     }
 
     public String stripMessagePrefix(String message) {
@@ -54,19 +54,20 @@ public final class MenuTextFormatter {
     }
 
     public String stateText(boolean enabled) {
-        return enabled ? "&a允许" : "&c禁止";
+        return enabled ? "&#55FFAA允许" : "&#FF6B6B禁止";
     }
 
     public String flagStateText(ClaimFlagState state) {
         return switch (state) {
-            case ALLOW -> "&a允许";
-            case DENY -> "&c禁止";
-            case UNSET -> "&7未设置";
+            case ALLOW -> "&#55FFAA允许";
+            case DENY -> "&#FF6B6B禁止";
+            case UNSET -> "&#CBD5E1未设置";
         };
     }
 
     public String flagItemKey(ClaimFlag flag) {
         return switch (flag) {
+            case TIME_CYCLE -> "flag-time-cycle";
             case CONTAINER -> "flag-container";
             case USE_BUTTON -> "flag-use-button";
             case USE_LEVER -> "flag-use-lever";

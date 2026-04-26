@@ -159,8 +159,9 @@ public final class ProtectionRuleSupport {
     }
 
     public ClaimPermission requiredPermissionForBlockInteract(Material material, ItemStack item) {
-        if (isAxe(item) && isStrippableWood(material)) {
-            return ClaimPermission.BREAK;
+        ClaimPermission toolChangePermission = requiredPermissionForBlockToolChange(material, item);
+        if (toolChangePermission != null) {
+            return toolChangePermission;
         }
         if (isSpecialExplosiveMaterial(material)) {
             return ClaimPermission.EXPLOSION;
@@ -172,6 +173,37 @@ public final class ProtectionRuleSupport {
             return ClaimPermission.REDSTONE;
         }
         return ClaimPermission.INTERACT;
+    }
+
+    public ClaimPermission requiredPermissionForBlockToolChange(Material material, ItemStack item) {
+        if (material == null) {
+            return null;
+        }
+        if (isDirectRightClickStateBlock(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (item == null) {
+            return null;
+        }
+        if (isAxe(item) && isStrippableWood(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (isAxe(item) && isWeatheredOrWaxedCopper(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (isShovel(item) && isShovelFlattenable(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (isHoe(item) && isHoeTillable(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (isHoneycomb(item) && isWaxableCopper(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        if (isBoneMeal(item) && isBoneMealTarget(material)) {
+            return ClaimPermission.INTERACT;
+        }
+        return null;
     }
 
     public ClaimPermission requiredPermissionForEntityInteract(Player player, Entity entity) {
@@ -276,6 +308,37 @@ public final class ProtectionRuleSupport {
         return item != null && item.getType().name().endsWith("_AXE");
     }
 
+    private boolean isShovel(ItemStack item) {
+        return item != null && item.getType().name().endsWith("_SHOVEL");
+    }
+
+    private boolean isHoe(ItemStack item) {
+        return item != null && item.getType().name().endsWith("_HOE");
+    }
+
+    private boolean isHoneycomb(ItemStack item) {
+        return item != null && item.getType() == Material.HONEYCOMB;
+    }
+
+    private boolean isBoneMeal(ItemStack item) {
+        return item != null && item.getType() == Material.BONE_MEAL;
+    }
+
+    private boolean isDirectRightClickStateBlock(Material material) {
+        String name = material.name();
+        return material == Material.CAKE
+            || material == Material.CANDLE
+            || name.endsWith("_CANDLE")
+            || name.equals("CANDLE_CAKE")
+            || name.endsWith("_CANDLE_CAKE")
+            || material == Material.CAMPFIRE
+            || material == Material.SOUL_CAMPFIRE
+            || material == Material.COMPOSTER
+            || name.endsWith("CAULDRON")
+            || material == Material.BEEHIVE
+            || material == Material.BEE_NEST;
+    }
+
     private boolean isStrippableWood(Material material) {
         String name = material.name();
         if (name.startsWith("STRIPPED_")) {
@@ -286,5 +349,54 @@ public final class ProtectionRuleSupport {
             || name.endsWith("_STEM")
             || name.endsWith("_HYPHAE")
             || name.equals("BAMBOO_BLOCK");
+    }
+
+    private boolean isWeatheredOrWaxedCopper(Material material) {
+        String name = material.name();
+        return name.contains("COPPER")
+            && (name.startsWith("EXPOSED_")
+            || name.startsWith("WEATHERED_")
+            || name.startsWith("OXIDIZED_")
+            || name.startsWith("WAXED_"));
+    }
+
+    private boolean isWaxableCopper(Material material) {
+        String name = material.name();
+        if (!name.contains("COPPER") || name.startsWith("WAXED_")) {
+            return false;
+        }
+        if (name.contains("ORE") || name.startsWith("RAW_")) {
+            return false;
+        }
+        return name.equals("COPPER_BLOCK")
+            || name.endsWith("_COPPER")
+            || name.contains("CUT_COPPER")
+            || name.contains("COPPER_");
+    }
+
+    private boolean isShovelFlattenable(Material material) {
+        return switch (material.name()) {
+            case "GRASS_BLOCK", "DIRT", "PODZOL", "COARSE_DIRT", "MYCELIUM", "ROOTED_DIRT" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isHoeTillable(Material material) {
+        return switch (material.name()) {
+            case "GRASS_BLOCK", "DIRT", "DIRT_PATH", "COARSE_DIRT", "ROOTED_DIRT" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isBoneMealTarget(Material material) {
+        String name = material.name();
+        return switch (name) {
+            case "GRASS_BLOCK", "MOSS_BLOCK", "PALE_MOSS_BLOCK", "MANGROVE_PROPAGULE",
+                "WHEAT", "CARROTS", "POTATOES", "BEETROOTS", "NETHER_WART", "COCOA",
+                "SWEET_BERRY_BUSH", "CAVE_VINES", "CAVE_VINES_PLANT", "KELP", "KELP_PLANT",
+                "SEAGRASS", "SEA_PICKLE", "BAMBOO", "BAMBOO_SAPLING", "SUGAR_CANE",
+                "CACTUS", "PITCHER_CROP", "TORCHFLOWER_CROP" -> true;
+            default -> name.endsWith("_SAPLING") || name.endsWith("_NYLIUM");
+        };
     }
 }

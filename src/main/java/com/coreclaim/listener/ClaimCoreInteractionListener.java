@@ -60,7 +60,7 @@ public final class ClaimCoreInteractionListener implements Listener {
             event.setCancelled(true);
             if (!claim.owner().equals(player.getUniqueId())
                 && !AdminAccess.hasViewAccess(player)
-                && !AdminAccess.hasClaimEditAccess(player)) {
+                && !AdminAccess.hasAnyClaimWriteAccess(player)) {
                 player.sendMessage(plugin.message("trust-no-permission"));
                 return;
             }

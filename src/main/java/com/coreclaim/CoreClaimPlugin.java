@@ -33,10 +33,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,6 +50,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CoreClaimPlugin extends JavaPlugin {
 
+    public static final String MESSAGE_RESOURCE_PATH = "lang/zh_cn.yml";
+    public static final String ENGLISH_MESSAGE_RESOURCE_PATH = "lang/en_us.yml";
+    private static final String LEGACY_MESSAGE_RESOURCE_PATH = "messages.yml";
+    private static final List<String> BUNDLED_MESSAGE_RESOURCE_PATHS = List.of(MESSAGE_RESOURCE_PATH, ENGLISH_MESSAGE_RESOURCE_PATH);
     private static final Pattern AMPERSAND_HEX_PATTERN = Pattern.compile("(?i)&#([0-9A-F]{6})");
     private static final Pattern MINI_HEX_PATTERN = Pattern.compile("(?i)<#([0-9A-F]{6})>");
 
@@ -178,6 +184,22 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return messageResource.config();
     }
 
+    public String messageResourcePath() {
+        String language = getConfig().getString("language", "zh_cn");
+        if (language == null || language.isBlank()) {
+            return MESSAGE_RESOURCE_PATH;
+        }
+        String normalized = language.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        if ("zh_cn".equals(normalized)) {
+            return MESSAGE_RESOURCE_PATH;
+        }
+        if ("en_us".equals(normalized)) {
+            return ENGLISH_MESSAGE_RESOURCE_PATH;
+        }
+        getLogger().warning("Unknown language '" + language + "', falling back to zh_cn.");
+        return MESSAGE_RESOURCE_PATH;
+    }
+
     public FileConfiguration rulesConfig() {
         return rulesResource.config();
     }
@@ -224,13 +246,41 @@ public final class CoreClaimPlugin extends JavaPlugin {
     }
 
     public String message(String path, String... replacements) {
-        String prefix = messagesConfig().getString("prefix", "&6[CoreClaim] &f");
+        String prefix = messagesConfig().getString("prefix", "&#55FFAA&l[CoreClaim] &#F8FAFC");
         String body = messagesConfig().getString(path, path);
         String message = prefix + body;
         for (int index = 0; index + 1 < replacements.length; index += 2) {
             message = message.replace(replacements[index], replacements[index + 1]);
         }
         return color(message);
+    }
+
+    public String plainMessage(String path, String... replacements) {
+        String message = messagesConfig().getString(path, path);
+        for (int index = 0; index + 1 < replacements.length; index += 2) {
+            message = message.replace(replacements[index], replacements[index + 1]);
+        }
+        return color(message);
+    }
+
+    public List<String> messageList(String path, String... replacements) {
+        List<String> lines = messagesConfig().getStringList(path);
+        if (lines.isEmpty()) {
+            String single = messagesConfig().getString(path);
+            if (single == null || single.isBlank()) {
+                return List.of();
+            }
+            lines = List.of(single);
+        }
+        List<String> result = new ArrayList<>();
+        for (String line : lines) {
+            String formatted = line;
+            for (int index = 0; index + 1 < replacements.length; index += 2) {
+                formatted = formatted.replace(replacements[index], replacements[index + 1]);
+            }
+            result.add(color(formatted));
+        }
+        return result;
     }
 
     private String applyHexColors(String input, Pattern pattern) {
@@ -250,7 +300,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         ensureMessagesDefaults();
         ensureHealthyGuiResources();
         reloadConfig();
-        messageResource.reload();
+        messageResource = new ResourceConfig(this, messageResourcePath());
         groupsResource.reload();
         rulesResource.reload();
         menuResources.values().forEach(ResourceConfig::reload);
@@ -390,14 +440,23 @@ public final class CoreClaimPlugin extends JavaPlugin {
     }
 
     void ensureMessagesDefaults() {
-        try (InputStream inputStream = getResource("messages.yml")) {
+        for (String resourcePath : BUNDLED_MESSAGE_RESOURCE_PATHS) {
+            ensureMessageDefaults(resourcePath, MESSAGE_RESOURCE_PATH.equals(resourcePath));
+        }
+    }
+
+    private void ensureMessageDefaults(String resourcePath, boolean migrateLegacyMessages) {
+        try (InputStream inputStream = getResource(resourcePath)) {
             if (inputStream == null) {
                 return;
             }
             if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
                 throw new IllegalStateException("Unable to create plugin data folder.");
             }
-            File file = new File(getDataFolder(), "messages.yml");
+            File file = new File(getDataFolder(), resourcePath);
+            if (migrateLegacyMessages) {
+                migrateLegacyMessagesFile(file);
+            }
             boolean existed = file.exists();
             FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             FileConfiguration messagesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
@@ -420,12 +479,25 @@ public final class CoreClaimPlugin extends JavaPlugin {
             if (!existed || changed) {
                 messagesConfig.save(file);
                 if (!missingPaths.isEmpty()) {
-                    getLogger().info("Added missing messages defaults: " + String.join(", ", missingPaths));
+                    getLogger().info("Added missing messages defaults to " + resourcePath + ": " + String.join(", ", missingPaths));
                 }
             }
         } catch (Exception exception) {
-            getLogger().warning("Failed to prepare messages defaults: " + exception.getMessage());
+            getLogger().warning("Failed to prepare messages defaults for " + resourcePath + ": " + exception.getMessage());
         }
+    }
+
+    private void migrateLegacyMessagesFile(File targetFile) throws Exception {
+        File legacyFile = new File(getDataFolder(), LEGACY_MESSAGE_RESOURCE_PATH);
+        if (!legacyFile.exists() || targetFile.exists()) {
+            return;
+        }
+        File parent = targetFile.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw new IllegalStateException("Unable to create language directory: " + parent.getAbsolutePath());
+        }
+        Files.move(legacyFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        getLogger().info("Migrated legacy messages.yml to " + MESSAGE_RESOURCE_PATH);
     }
 
     private boolean migrateLegacySection(ConfigurationSection source, FileConfiguration target, String prefix) {
@@ -458,6 +530,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
         menuResources.put("trust-online-add", new ResourceConfig(this, "gui/trust-online-add.yml"));
         menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
         menuResources.put("selection-create", new ResourceConfig(this, "gui/selection-create.yml"));
+        menuResources.put("claim-expand-amount", new ResourceConfig(this, "gui/claim-expand-amount.yml"));
+        menuResources.put("claim-expand-confirm", new ResourceConfig(this, "gui/claim-expand-confirm.yml"));
         menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
     }
 
@@ -470,6 +544,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
             "gui/trust-online-add.yml",
             "gui/claim-permissions.yml",
             "gui/selection-create.yml",
+            "gui/claim-expand-amount.yml",
+            "gui/claim-expand-confirm.yml",
             "gui/core.yml"
         )) {
             repairCorruptedGuiResource(resource);
@@ -509,9 +585,12 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return switch (fileName) {
             case "gui/claim-list.yml" -> !content.contains("layout-version: 2");
             case "gui/claim-view.yml" -> !content.contains("layout-version: 1");
+            case "gui/claim-manage.yml" -> !content.contains("layout-version: 2");
+            case "gui/claim-expand-amount.yml" -> !content.contains("layout-version: 1");
+            case "gui/claim-expand-confirm.yml" -> !content.contains("layout-version: 1");
             case "gui/trust-online-add.yml" -> !content.contains("layout-version: 1");
-            case "gui/core.yml",
-                 "gui/claim-permissions.yml" -> !content.contains("layout-version: 5");
+            case "gui/core.yml" -> !content.contains("layout-version: 5");
+            case "gui/claim-permissions.yml" -> !content.contains("layout-version: 6");
             case "gui/trust.yml" -> !content.contains("layout-version: 4");
             case "gui/selection-create.yml" -> !content.contains("layout-version: 3");
             default -> false;

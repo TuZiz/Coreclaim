@@ -128,13 +128,22 @@ implements TabExecutor {
         Player player = (Player)sender;
         List<ClaimService.ClaimListEntry> claims = this.claimService.visibleClaimsOfFresh(player.getUniqueId());
         if (claims.isEmpty()) {
-            player.sendMessage(this.chatMessage("claim-list-empty", "&e&o\u4f60\u76ee\u524d\u8fd8\u6ca1\u6709\u53ef\u67e5\u770b\u7684\u9886\u5730\u3002", new String[0]));
+            player.sendMessage(this.plugin.message("claim-list-empty"));
             return true;
         }
-        player.sendMessage(this.plugin.color("&6[Claim] &f\u4f60\u7684\u9886\u5730\u5217\u8868:"));
+        player.sendMessage(this.plugin.message("claim-list-header"));
         for (ClaimService.ClaimListEntry entry : claims) {
             Claim claim = entry.claim();
-            player.sendMessage(this.plugin.color("&7[" + this.claimListRelationText(entry.relation()) + "&7] &e" + claim.name() + " &8| &7\u4e3b\u4eba: &b" + claim.ownerName() + " &8| &7\u6838\u5fc3: &f" + claim.centerX() + "," + claim.centerZ() + " &8| &7\u5927\u5c0f: &f" + claim.width() + "x" + claim.depth()));
+            player.sendMessage(this.plugin.message(
+                "claim-list-entry",
+                "{relation}", this.claimListRelationText(entry.relation()),
+                "{name}", claim.name(),
+                "{owner}", claim.ownerName(),
+                "{x}", String.valueOf(claim.centerX()),
+                "{z}", String.valueOf(claim.centerZ()),
+                "{width}", String.valueOf(claim.width()),
+                "{depth}", String.valueOf(claim.depth())
+            ));
         }
         return true;
     }
@@ -218,7 +227,11 @@ implements TabExecutor {
         boolean enabled;
         PlayerProfile profile = this.profileService.getOrCreate(player.getUniqueId(), player.getName());
         if (args.length == 2) {
-            player.sendMessage(this.plugin.message("show-auto-status", "{value}", profile.autoShowBorders() ? "\u5f00\u542f" : "\u5173\u95ed"));
+            player.sendMessage(this.plugin.message(
+                "show-auto-status",
+                "{value}",
+                this.plugin.plainMessage(profile.autoShowBorders() ? "show-auto-value-enabled" : "show-auto-value-disabled")
+            ));
             return true;
         }
         String mode = args[2].toLowerCase(Locale.ROOT);
@@ -243,13 +256,13 @@ implements TabExecutor {
         }
         Player player = (Player)sender;
         if (args.length < 2) {
-            player.sendMessage(this.plugin.color(this.plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c\u7528\u6cd5: &7/claim create <\u9886\u5730\u540d\u5b57>"));
+            player.sendMessage(this.plugin.message("selection-create-usage"));
             return true;
         }
         String name = String.join((CharSequence)" ", Arrays.copyOfRange(args, 1, args.length)).trim();
         ClaimSelectionService.SelectionPreview preview = this.claimSelectionService.preview(player);
         if (preview == null || !preview.ready()) {
-            player.sendMessage(this.plugin.color(this.plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c\u8bf7\u5148\u7528\u5708\u5730\u5de5\u5177\u9009\u597d\u4e24\u4e2a\u5bf9\u89d2\u70b9\u3002"));
+            player.sendMessage(this.plugin.message("claim-create-selection-required"));
             return true;
         }
         if (!preview.allowed()) {
@@ -305,11 +318,11 @@ implements TabExecutor {
             return true;
         }
         if (!this.claimService.isLocalClaim(claim)) {
-            player.sendMessage(this.chatMessage("tpset-cross-server-denied", "&c&l! &7\u8bf7\u5728\u9886\u5730\u6240\u5c5e\u533a\u670d\u5185\u8bbe\u7f6e\u4f20\u9001\u70b9\u3002", new String[0]));
+            player.sendMessage(this.plugin.message("tpset-cross-server-denied"));
             return true;
         }
         this.claimService.updateTeleportPoint(claim, player.getLocation(), player.getUniqueId());
-        player.sendMessage(this.chatMessage("claim-tpset-success", "&a&l\u4f20\u9001\u70b9: &7\u5df2\u5c06\u9886\u5730 &e{name} &7\u7684\u4f20\u9001\u70b9\u66f4\u65b0\u5230\u4f60\u5f53\u524d\u811a\u4e0b\u4f4d\u7f6e\u3002", "{name}", claim.name()));
+        player.sendMessage(this.plugin.message("claim-tpset-success", "{name}", claim.name()));
         return true;
     }
 
@@ -343,10 +356,10 @@ implements TabExecutor {
         }
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(this.plugin.color("&c\u6d63\u72b2\u7e40\u6924\u8364\u73ef\u9366\u3124\u7af4\u9367\u6940\u5f72\u7f02\u682c\u7deb\u9428\u52ef\ue56b\u9366\u677f\u5534\u93b5\u5d88\u5158\u6d63\u8de8\u6564 /claim unadd"));
+            player.sendMessage(this.plugin.message("claim-current-edit-required-unadd"));
             return true;
         }
-        if (!this.claimActionService.canEditClaim(player, claim)) {
+        if (!this.claimActionService.canManageMembers(player, claim)) {
             player.sendMessage(this.plugin.message("trust-no-permission"));
             return true;
         }
@@ -378,15 +391,15 @@ implements TabExecutor {
         }
         Player player = (Player)sender;
         if (args.length != 2) {
-            player.sendMessage(this.plugin.color("&c\u7528\u6cd5: &7/claim add <\u73a9\u5bb6>"));
+            player.sendMessage(this.plugin.message("add-usage"));
             return true;
         }
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(this.plugin.color("&c\u4f60\u5fc5\u987b\u7ad9\u5728\u4e00\u5757\u53ef\u7f16\u8f91\u7684\u9886\u5730\u5185\u624d\u80fd\u4f7f\u7528 /claim add"));
+            player.sendMessage(this.plugin.message("claim-current-edit-required-add"));
             return true;
         }
-        if (!this.claimActionService.canEditClaim(player, claim)) {
+        if (!this.claimActionService.canManageMembers(player, claim)) {
             player.sendMessage(this.plugin.message("trust-no-permission"));
             return true;
         }
@@ -410,7 +423,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length != 2) {
-            player.sendMessage(this.chatMessage("deny-usage", "&c\u7528\u6cd5: &7/claim deny <\u73a9\u5bb6> &8\u6216 &7/claim deny *", new String[0]));
+            player.sendMessage(this.plugin.message("deny-usage"));
             return true;
         }
         Claim claim = this.resolveCurrentEditableClaim(player, "/claim deny");
@@ -420,11 +433,11 @@ implements TabExecutor {
         String targetName = args[1].trim();
         if ("*".equals(targetName)) {
             if (claim.denyAll()) {
-                player.sendMessage(this.chatMessage("claim-deny-all-already-enabled", "&e&l\u5c01\u95ed\u6a21\u5f0f: &7\u8fd9\u5757\u9886\u5730\u5df2\u7ecf\u5f00\u542f deny *\u3002", new String[0]));
+                player.sendMessage(this.plugin.message("claim-deny-all-already-enabled"));
                 return true;
             }
             this.claimService.updateDenyAll(claim, true, player.getUniqueId());
-            player.sendMessage(this.chatMessage("claim-deny-all-enabled", "&a&l\u5c01\u95ed\u6a21\u5f0f: &7\u5df2\u4e3a\u9886\u5730 &e{name} &7\u5f00\u542f deny *\u3002", "{name}", claim.name()));
+            player.sendMessage(this.plugin.message("claim-deny-all-enabled", "{name}", claim.name()));
             return true;
         }
         OfflinePlayer target = this.resolveKnownPlayer(targetName);
@@ -437,10 +450,10 @@ implements TabExecutor {
             return true;
         }
         if (!this.claimService.addDeniedMember(claim, target.getUniqueId(), player.getUniqueId())) {
-            player.sendMessage(this.chatMessage("claim-deny-exists", "&e{player} &7\u5df2\u7ecf\u5728\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u91cc\u4e86\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            player.sendMessage(this.plugin.message("claim-deny-exists", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        player.sendMessage(this.chatMessage("claim-deny-added", "&a&lDeny: &7\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u52a0\u5165\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        player.sendMessage(this.plugin.message("claim-deny-added", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -455,7 +468,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length != 2) {
-            player.sendMessage(this.chatMessage("undeny-usage", "&c\u7528\u6cd5: &7/claim undeny <\u73a9\u5bb6> &8\u6216 &7/claim undeny *", new String[0]));
+            player.sendMessage(this.plugin.message("undeny-usage"));
             return true;
         }
         Claim claim = this.resolveCurrentEditableClaim(player, "/claim undeny");
@@ -465,11 +478,11 @@ implements TabExecutor {
         String targetName = args[1].trim();
         if ("*".equals(targetName)) {
             if (!claim.denyAll()) {
-                player.sendMessage(this.chatMessage("claim-deny-all-already-disabled", "&e&l\u5c01\u95ed\u6a21\u5f0f: &7\u8fd9\u5757\u9886\u5730\u5f53\u524d\u6ca1\u6709\u5f00\u542f deny *\u3002", new String[0]));
+                player.sendMessage(this.plugin.message("claim-deny-all-already-disabled"));
                 return true;
             }
             this.claimService.updateDenyAll(claim, false, player.getUniqueId());
-            player.sendMessage(this.chatMessage("claim-deny-all-disabled", "&a&l\u5c01\u95ed\u6a21\u5f0f: &7\u5df2\u4e3a\u9886\u5730 &e{name} &7\u5173\u95ed deny *\u3002", "{name}", claim.name()));
+            player.sendMessage(this.plugin.message("claim-deny-all-disabled", "{name}", claim.name()));
             return true;
         }
         OfflinePlayer target = this.resolveKnownPlayer(targetName);
@@ -478,10 +491,10 @@ implements TabExecutor {
             return true;
         }
         if (!this.claimService.removeDeniedMember(claim, target.getUniqueId(), player.getUniqueId())) {
-            player.sendMessage(this.chatMessage("claim-deny-missing", "&e{player} &7\u4e0d\u5728\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u4e2d\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            player.sendMessage(this.plugin.message("claim-deny-missing", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        player.sendMessage(this.chatMessage("claim-deny-removed", "&a&lUndeny: &7\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u4ece\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u79fb\u9664\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        player.sendMessage(this.plugin.message("claim-deny-removed", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -491,11 +504,11 @@ implements TabExecutor {
             return true;
         }
         Player player = (Player)sender;
-        if (!player.hasPermission("coreclaim.manage.flags") && !this.hasAnyAdminPermission((CommandSender)player)) {
+        if (!player.hasPermission("coreclaim.manage.flags") && !this.hasAdminFlagManagePermission((CommandSender)player)) {
             player.sendMessage(this.plugin.message("no-permission"));
             return true;
         }
-        Claim claim = this.resolveCurrentEditableClaim(player, "/claim flag");
+        Claim claim = this.resolveCurrentEditableClaim(player, "/claim flag", current -> this.claimActionService.canManageFlags(player, current));
         if (claim == null) {
             return true;
         }
@@ -504,21 +517,21 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 3) {
-            player.sendMessage(this.chatMessage("flag-usage", "&c\u7528\u6cd5: &7/claim flag <flag> <allow|deny|unset>", new String[0]));
+            player.sendMessage(this.plugin.message("flag-usage"));
             return true;
         }
         ClaimFlag flag = ClaimFlag.fromKey(args[1]);
         if (flag == null) {
-            player.sendMessage(this.chatMessage("flag-invalid", "&c\u672a\u77e5\u65d7\u6807: &e{flag}", "{flag}", args[1]));
+            player.sendMessage(this.plugin.message("flag-invalid", "{flag}", args[1]));
             return true;
         }
         ClaimFlagState state = ClaimFlagState.fromInput(args[2]);
         if (state == null) {
-            player.sendMessage(this.chatMessage("flag-state-invalid", "&c\u72b6\u6001\u53ea\u80fd\u662f &eallow &7/ &edeny &7/ &eunset", new String[0]));
+            player.sendMessage(this.plugin.message("flag-state-invalid"));
             return true;
         }
         this.claimService.updateFlagState(claim, flag, state, player.getUniqueId());
-        player.sendMessage(this.chatMessage("flag-updated", "&a\u5df2\u5c06\u9886\u5730 &e{name} &7\u7684\u65d7\u6807 &b{flag} &7\u8bbe\u7f6e\u4e3a {state}&7\u3002", "{name}", claim.name(), "{flag}", flag.key(), "{state}", this.flagStateText(state)));
+        player.sendMessage(this.plugin.message("flag-updated", "{name}", claim.name(), "{flag}", flag.key(), "{state}", this.flagStateText(flag, state)));
         return true;
     }
 
@@ -564,12 +577,12 @@ implements TabExecutor {
         }
         Player player = (Player)sender;
         if (args.length < 4 || !args[2].equalsIgnoreCase("system")) {
-            sender.sendMessage(this.chatMessage("admin-create-system-usage", "&c\u9422\u3126\u7876: &7/claim admin create system <\u68f0\u55d7\u6e74\u935a?", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-create-system-usage"));
             return true;
         }
         String claimName = this.joinArgs(args, 3);
         if (claimName.isBlank()) {
-            sender.sendMessage(this.chatMessage("admin-create-system-usage", "&c\u9422\u3126\u7876: &7/claim admin create system <\u68f0\u55d7\u6e74\u935a?", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-create-system-usage"));
             return true;
         }
         return this.claimSelectionService.createSystemClaim(player, claimName);
@@ -598,7 +611,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(this.chatMessage("admin-playerclaims-usage", "&c\u7528\u6cd5: &7/claim admin playerclaims <\u73a9\u5bb6>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-playerclaims-usage"));
             return true;
         }
         OfflinePlayer target = this.resolveKnownPlayer(this.joinArgs(args, 2));
@@ -608,7 +621,7 @@ implements TabExecutor {
         }
         List<Claim> claims = this.claimService.claimsOfFresh(target.getUniqueId(), true);
         if (claims.isEmpty()) {
-            sender.sendMessage(this.chatMessage("admin-playerclaims-empty", "&e{player} &7\u5f53\u524d\u6ca1\u6709\u4efb\u4f55\u9886\u5730\u3002", "{player}", this.displayName(target)));
+            sender.sendMessage(this.plugin.message("admin-playerclaims-empty", "{player}", this.displayName(target)));
             return true;
         }
         sender.sendMessage(this.plugin.color("&6[Claim] &f\u73a9\u5bb6 &e" + this.displayName(target) + " &f\u540d\u4e0b\u9886\u5730:"));
@@ -625,7 +638,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(this.chatMessage("admin-diagnose-usage", "&c\u7528\u6cd5: &7/claim admin diagnose <\u9886\u5730\u540d|#claimId>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-diagnose-usage"));
             return true;
         }
         Claim claim = this.resolveAdminClaimSelector(sender, this.joinArgs(args, 2));
@@ -657,7 +670,7 @@ implements TabExecutor {
         }
         if (args.length == 4 && sender instanceof Player) {
             Player player = (Player)sender;
-            claim = this.resolveCurrentAdminClaim(player, "/claim admin permission");
+            claim = this.resolveCurrentAdminClaim(player, "/claim admin permission", current -> this.claimActionService.canManagePermissions(player, current));
             if (claim == null) {
                 return true;
             }
@@ -671,26 +684,26 @@ implements TabExecutor {
             permissionInput = args[args.length - 2];
             stateInput = args[args.length - 1];
         } else {
-            sender.sendMessage(this.chatMessage("admin-permission-usage", "&c\u7528\u6cd5: &7/claim admin permission <permission> <allow|deny>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-permission-usage"));
             return true;
         }
         ClaimPermission permission = this.parsePermission(permissionInput);
         if (permission == null) {
-            sender.sendMessage(this.chatMessage("admin-permission-invalid", "&c\u672a\u77e5\u9ed8\u8ba4\u6743\u9650: &e{permission}", "{permission}", permissionInput));
+            sender.sendMessage(this.plugin.message("admin-permission-invalid", "{permission}", permissionInput));
             return true;
         }
         if (permission == ClaimPermission.CONTAINER) {
-            sender.sendMessage(this.chatMessage("admin-permission-container-deprecated", "&eContainer access is now controlled by &7/claim admin flag container <allow|deny|unset>&e.", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-permission-container-deprecated"));
             return true;
         }
         Boolean allowed = this.parseAllowDeny(stateInput);
         if (allowed == null) {
-            sender.sendMessage(this.chatMessage("admin-permission-state-invalid", "&c\u72b6\u6001\u53ea\u80fd\u662f &eallow &7\u6216 &edeny", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-permission-state-invalid"));
             return true;
         }
         UUID actorId = this.actorId(sender);
         this.claimService.updatePermission(claim, permission, allowed, actorId);
-        sender.sendMessage(this.chatMessage("admin-permission-updated", "&a\u5df2\u5c06\u9886\u5730 &e{name} &7\u7684\u9ed8\u8ba4\u6743\u9650 &b{permission} &7\u8bbe\u7f6e\u4e3a {state}&7\u3002", "{name}", claim.name(), "{permission}", permission.name().toLowerCase(Locale.ROOT), "{state}", this.stateText(allowed)));
+        sender.sendMessage(this.plugin.message("admin-permission-updated", "{name}", claim.name(), "{permission}", permission.name().toLowerCase(Locale.ROOT), "{state}", this.stateText(allowed)));
         return true;
     }
 
@@ -704,7 +717,7 @@ implements TabExecutor {
         }
         if (args.length == 4 && sender instanceof Player) {
             Player player = (Player)sender;
-            claim = this.resolveCurrentAdminClaim(player, "/claim admin flag");
+            claim = this.resolveCurrentAdminClaim(player, "/claim admin flag", current -> this.claimActionService.canManageFlags(player, current));
             if (claim == null) {
                 return true;
             }
@@ -718,22 +731,22 @@ implements TabExecutor {
             flagInput = args[args.length - 2];
             stateInput = args[args.length - 1];
         } else {
-            sender.sendMessage(this.chatMessage("admin-flag-usage", "&c\u7528\u6cd5: &7/claim admin flag <flag> <allow|deny|unset>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-flag-usage"));
             return true;
         }
         ClaimFlag flag = ClaimFlag.fromKey(flagInput);
         if (flag == null) {
-            sender.sendMessage(this.chatMessage("admin-flag-invalid", "&c\u672a\u77e5\u65d7\u6807: &e{flag}", "{flag}", flagInput));
+            sender.sendMessage(this.plugin.message("admin-flag-invalid", "{flag}", flagInput));
             return true;
         }
         ClaimFlagState state = ClaimFlagState.fromInput(stateInput);
         if (state == null) {
-            sender.sendMessage(this.chatMessage("admin-flag-state-invalid", "&c\u72b6\u6001\u53ea\u80fd\u662f &eallow &7/ &edeny &7/ &eunset", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-flag-state-invalid"));
             return true;
         }
         UUID actorId = this.actorId(sender);
         this.claimService.updateFlagState(claim, flag, state, actorId);
-        sender.sendMessage(this.chatMessage("admin-flag-updated", "&a\u5df2\u5c06\u9886\u5730 &e{name} &7\u7684\u65d7\u6807 &b{flag} &7\u8bbe\u7f6e\u4e3a {state}&7\u3002", "{name}", claim.name(), "{flag}", flag.key(), "{state}", this.flagStateText(state)));
+        sender.sendMessage(this.plugin.message("admin-flag-updated", "{name}", claim.name(), "{flag}", flag.key(), "{state}", this.flagStateText(flag, state)));
         return true;
     }
 
@@ -746,7 +759,7 @@ implements TabExecutor {
         }
         if (args.length == 3 && sender instanceof Player) {
             Player player = (Player)sender;
-            claim = this.resolveCurrentAdminClaim(player, "/claim admin deny");
+            claim = this.resolveCurrentAdminClaim(player, "/claim admin deny", current -> this.claimActionService.canManageMembers(player, current));
             if (claim == null) {
                 return true;
             }
@@ -758,13 +771,13 @@ implements TabExecutor {
             }
             targetArg = args[args.length - 1];
         } else {
-            sender.sendMessage(this.chatMessage("admin-deny-usage", "&c\u7528\u6cd5: &7/claim admin deny <\u73a9\u5bb6|*>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-deny-usage"));
             return true;
         }
         if ("*".equals(targetArg)) {
             UUID actorId = this.actorId(sender);
             this.claimService.updateDenyAll(claim, true, actorId);
-            sender.sendMessage(this.chatMessage("admin-deny-all-enabled", "&a\u5df2\u4e3a\u9886\u5730 &e{name} &7\u5f00\u542f deny *\u3002", "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-deny-all-enabled", "{name}", claim.name()));
             return true;
         }
         OfflinePlayer target = this.resolveKnownPlayer(targetArg);
@@ -774,10 +787,10 @@ implements TabExecutor {
         }
         UUID actorId = this.actorId(sender);
         if (!this.claimService.addDeniedMember(claim, target.getUniqueId(), actorId)) {
-            sender.sendMessage(this.chatMessage("admin-deny-exists", "&e{player} &7\u5df2\u7ecf\u5728\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u4e2d\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-deny-exists", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        sender.sendMessage(this.chatMessage("admin-deny-added", "&a\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u52a0\u5165\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        sender.sendMessage(this.plugin.message("admin-deny-added", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -790,7 +803,7 @@ implements TabExecutor {
         }
         if (args.length == 3 && sender instanceof Player) {
             Player player = (Player)sender;
-            claim = this.resolveCurrentAdminClaim(player, "/claim admin undeny");
+            claim = this.resolveCurrentAdminClaim(player, "/claim admin undeny", current -> this.claimActionService.canManageMembers(player, current));
             if (claim == null) {
                 return true;
             }
@@ -802,13 +815,13 @@ implements TabExecutor {
             }
             targetArg = args[args.length - 1];
         } else {
-            sender.sendMessage(this.chatMessage("admin-undeny-usage", "&c\u7528\u6cd5: &7/claim admin undeny <\u73a9\u5bb6|*>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-undeny-usage"));
             return true;
         }
         if ("*".equals(targetArg)) {
             UUID actorId = this.actorId(sender);
             this.claimService.updateDenyAll(claim, false, actorId);
-            sender.sendMessage(this.chatMessage("admin-deny-all-disabled", "&a\u5df2\u4e3a\u9886\u5730 &e{name} &7\u5173\u95ed deny *\u3002", "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-deny-all-disabled", "{name}", claim.name()));
             return true;
         }
         OfflinePlayer target = this.resolveKnownPlayer(targetArg);
@@ -818,10 +831,10 @@ implements TabExecutor {
         }
         UUID actorId = this.actorId(sender);
         if (!this.claimService.removeDeniedMember(claim, target.getUniqueId(), actorId)) {
-            sender.sendMessage(this.chatMessage("admin-deny-missing", "&e{player} &7\u4e0d\u5728\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u4e2d\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-deny-missing", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        sender.sendMessage(this.chatMessage("admin-deny-removed", "&a\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u4ece\u9886\u5730 &e{name} &7\u7684 deny \u5217\u8868\u79fb\u9664\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        sender.sendMessage(this.plugin.message("admin-deny-removed", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -831,7 +844,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(this.chatMessage("admin-add-usage", "&c\u7528\u6cd5: &7/claim admin add <\u73a9\u5bb6>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-add-usage"));
             return true;
         }
         if (!(sender instanceof Player)) {
@@ -839,7 +852,7 @@ implements TabExecutor {
             return true;
         }
         Player player = (Player)sender;
-        Claim claim = this.resolveCurrentAdminClaim(player, "/claim admin add");
+        Claim claim = this.resolveCurrentAdminClaim(player, "/claim admin add", current -> this.claimActionService.canManageMembers(player, current));
         if (claim == null) {
             return true;
         }
@@ -849,10 +862,10 @@ implements TabExecutor {
             return true;
         }
         if (!this.claimService.addTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
-            sender.sendMessage(this.chatMessage("admin-trust-exists", "&e{player} &7\u5df2\u7ecf\u662f\u9886\u5730 &e{name} &7\u7684\u6210\u5458\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-trust-exists", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        sender.sendMessage(this.chatMessage("admin-trust-added", "&a\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u52a0\u5165\u9886\u5730 &e{name} &7\u7684\u6210\u5458\u5217\u8868\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        sender.sendMessage(this.plugin.message("admin-trust-added", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -866,9 +879,9 @@ implements TabExecutor {
             claim = this.resolveAdminClaimSelector(sender, this.joinArgs(args, 2));
         } else if (sender instanceof Player) {
             Player player = (Player)sender;
-            claim = this.resolveCurrentAdminClaim(player, "/claim admin remove");
+            claim = this.resolveCurrentAdminClaim(player, "/claim admin remove", current -> this.claimActionService.canManageClaim(player, current));
         } else {
-            sender.sendMessage(this.chatMessage("admin-remove-usage", "&c\u7528\u6cd5: &7/claim admin remove [\u9886\u5730\u540d|#claimId]", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-remove-usage"));
             return true;
         }
         if (claim == null) {
@@ -897,7 +910,7 @@ implements TabExecutor {
             return true;
         }
         Player player = (Player)sender;
-        Claim claim = this.resolveCurrentAdminClaim(player, "/claim admin unadd");
+        Claim claim = this.resolveCurrentAdminClaim(player, "/claim admin unadd", current -> this.claimActionService.canManageMembers(player, current));
         if (claim == null) {
             return true;
         }
@@ -907,10 +920,10 @@ implements TabExecutor {
             return true;
         }
         if (!this.claimService.removeTrustedMember(claim, target.getUniqueId(), player.getUniqueId())) {
-            sender.sendMessage(this.chatMessage("admin-untrust-missing", "&e{player} &7\u4e0d\u5728\u9886\u5730 &e{name} &7\u7684\u6210\u5458\u5217\u8868\u4e2d\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+            sender.sendMessage(this.plugin.message("admin-untrust-missing", "{player}", this.displayName(target), "{name}", claim.name()));
             return true;
         }
-        sender.sendMessage(this.chatMessage("admin-untrust-removed", "&a\u5df2\u5c06\u73a9\u5bb6 &e{player} &7\u4ece\u9886\u5730 &e{name} &7\u7684\u6210\u5458\u5217\u8868\u79fb\u9664\u3002", "{player}", this.displayName(target), "{name}", claim.name()));
+        sender.sendMessage(this.plugin.message("admin-untrust-removed", "{player}", this.displayName(target), "{name}", claim.name()));
         return true;
     }
 
@@ -920,7 +933,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 3) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-usage", "&c\u7528\u6cd5: &7/claim admin cleanup <list|run|skip|baseline> ...", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-usage"));
             return true;
         }
         return switch (args[2].toLowerCase(Locale.ROOT)) {
@@ -929,7 +942,7 @@ implements TabExecutor {
             case "skip" -> this.handleAdminCleanupSkip(sender, args);
             case "baseline" -> this.handleAdminCleanupBaseline(sender, args);
             default -> {
-                sender.sendMessage(this.chatMessage("admin-cleanup-usage", "&c\u7528\u6cd5: &7/claim admin cleanup <list|run|skip|baseline> ...", new String[0]));
+                sender.sendMessage(this.plugin.message("admin-cleanup-usage"));
                 yield true;
             }
         };
@@ -938,11 +951,11 @@ implements TabExecutor {
     private boolean handleAdminCleanupList(CommandSender sender) {
         ClaimCleanupService.CleanupSnapshot snapshot = this.claimCleanupService.snapshot();
         if (!this.plugin.settings().inactiveClaimCleanupEnabled()) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-disabled", "&e\u81ea\u52a8\u7a7a\u5730\u6e05\u7406\u5f53\u524d\u5904\u4e8e\u5173\u95ed\u72b6\u6001\uff0c\u4e0b\u9762\u663e\u793a\u7684\u662f\u624b\u52a8\u626b\u63cf\u89c6\u56fe\u3002", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-disabled"));
         }
-        sender.sendMessage(this.chatMessage("admin-cleanup-list-header", "&6\u7a7a\u5730\u6e05\u7406: &7\u5019\u9009 &e{candidates} &7| \u5bbd\u9650\u4e2d &e{grace} &7| \u65e7\u5730\u5f85\u57fa\u7ebf &e{legacy}", "{candidates}", String.valueOf(snapshot.candidates().size()), "{grace}", String.valueOf(snapshot.graceClaims().size()), "{legacy}", String.valueOf(snapshot.legacyClaims().size())));
+        sender.sendMessage(this.plugin.message("admin-cleanup-list-header", "{candidates}", String.valueOf(snapshot.candidates().size()), "{grace}", String.valueOf(snapshot.graceClaims().size()), "{legacy}", String.valueOf(snapshot.legacyClaims().size())));
         if (snapshot.candidates().isEmpty() && snapshot.graceClaims().isEmpty() && snapshot.legacyClaims().isEmpty()) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-list-empty", "&7\u5f53\u524d\u6ca1\u6709\u4efb\u4f55\u7a7a\u5730\u6e05\u7406\u5019\u9009\u3002", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-list-empty"));
             return true;
         }
         this.sendCleanupEntries(sender, "\u5019\u9009\u5220\u9664", snapshot.candidates(), false);
@@ -953,13 +966,13 @@ implements TabExecutor {
 
     private boolean handleAdminCleanupRun(CommandSender sender) {
         ClaimCleanupService.CleanupRunResult result = this.claimCleanupService.runScanNow();
-        sender.sendMessage(this.chatMessage("admin-cleanup-run-result", "&a\u7a7a\u5730\u6e05\u7406: &7\u672c\u6b21\u626b\u63cf &e{scanned} &7\u5757\uff0c\u672c\u6b21\u6253\u6807 &e{marked} &7\u5757\uff0c\u5220\u9664 &e{deleted} &7\u5757\uff0c\u64a4\u9500\u5bbd\u9650 &e{revoked} &7\u5757\u3002\u5f53\u524d\u5019\u9009 &e{candidates} &7\u5757\uff0c\u5bbd\u9650\u4e2d &e{grace} &7\u5757\u3002", "{scanned}", String.valueOf(result.scannedClaims()), "{marked}", String.valueOf(result.markedGraceClaims()), "{deleted}", String.valueOf(result.deletedClaims()), "{revoked}", String.valueOf(result.revokedGraceClaims()), "{candidates}", String.valueOf(result.candidates()), "{grace}", String.valueOf(result.graceClaims())));
+        sender.sendMessage(this.plugin.message("admin-cleanup-run-result", "{scanned}", String.valueOf(result.scannedClaims()), "{marked}", String.valueOf(result.markedGraceClaims()), "{deleted}", String.valueOf(result.deletedClaims()), "{revoked}", String.valueOf(result.revokedGraceClaims()), "{candidates}", String.valueOf(result.candidates()), "{grace}", String.valueOf(result.graceClaims())));
         return true;
     }
 
     private boolean handleAdminCleanupSkip(CommandSender sender, String[] args) {
         if (args.length < 4) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-skip-usage", "&c\u7528\u6cd5: &7/claim admin cleanup skip <\u9886\u5730\u540d|#claimId>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-skip-usage"));
             return true;
         }
         Claim claim = this.resolveAdminClaimSelector(sender, this.joinArgs(args, 3));
@@ -967,18 +980,18 @@ implements TabExecutor {
             return true;
         }
         this.claimCleanupService.skipClaim(claim);
-        sender.sendMessage(this.chatMessage("admin-cleanup-skip-success", "&a\u7a7a\u5730\u6e05\u7406: &7\u5df2\u5c06\u9886\u5730 &e{name} &7\u6807\u8bb0\u4e3a\u6c38\u4e45\u8df3\u8fc7\u81ea\u52a8\u6e05\u7406\u3002", "{name}", claim.name()));
+        sender.sendMessage(this.plugin.message("admin-cleanup-skip-success", "{name}", claim.name()));
         return true;
     }
 
     private boolean handleAdminCleanupBaseline(CommandSender sender, String[] args) {
         if (args.length < 5) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-baseline-usage", "&c\u7528\u6cd5: &7/claim admin cleanup baseline <\u9886\u5730\u540d|#claimId> <empty|used|skip>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-baseline-usage"));
             return true;
         }
         ClaimCleanupService.BaselineMode mode = ClaimCleanupService.BaselineMode.fromInput(args[args.length - 1]);
         if (mode == null) {
-            sender.sendMessage(this.chatMessage("admin-cleanup-baseline-usage", "&c\u7528\u6cd5: &7/claim admin cleanup baseline <\u9886\u5730\u540d|#claimId> <empty|used|skip>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-cleanup-baseline-usage"));
             return true;
         }
         Claim claim = this.resolveAdminClaimSelector(sender, this.joinArgs(args, 3, args.length - 1));
@@ -986,7 +999,7 @@ implements TabExecutor {
             return true;
         }
         this.claimCleanupService.baselineClaim(claim, mode);
-        sender.sendMessage(this.chatMessage("admin-cleanup-baseline-success", "&a\u7a7a\u5730\u6e05\u7406: &7\u5df2\u5c06\u9886\u5730 &e{name} &7\u57fa\u7ebf\u8bbe\u4e3a &b{mode}&7\u3002", "{name}", claim.name(), "{mode}", this.cleanupBaselineModeText(mode)));
+        sender.sendMessage(this.plugin.message("admin-cleanup-baseline-success", "{name}", claim.name(), "{mode}", this.cleanupBaselineModeText(mode)));
         return true;
     }
 
@@ -997,7 +1010,7 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 4) {
-            sender.sendMessage(this.chatMessage("admin-setserver-usage", "&c\u7528\u6cd5: &7/claim admin setserver <claimId> <serverId>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-setserver-usage"));
             return true;
         }
         int claimId = this.parseClaimId(args[2], sender);
@@ -1006,15 +1019,15 @@ implements TabExecutor {
         }
         String string = targetServerId = args[3] == null ? "" : args[3].trim();
         if (targetServerId.isEmpty()) {
-            sender.sendMessage(this.chatMessage("admin-setserver-usage", "&c\u7528\u6cd5: &7/claim admin setserver <claimId> <serverId>", new String[0]));
+            sender.sendMessage(this.plugin.message("admin-setserver-usage"));
             return true;
         }
         Claim claim = this.claimService.updateClaimServerId(claimId, targetServerId).orElse(null);
         if (claim == null) {
-            sender.sendMessage(this.chatMessage("claim-server-update-failed", "&c&l\u5931\u8d25: &7\u627e\u4e0d\u5230 ID \u4e3a &e{id} &7\u7684\u9886\u5730\uff0c\u6216 server_id \u66f4\u65b0\u5931\u8d25\u3002", "{id}", String.valueOf(claimId)));
+            sender.sendMessage(this.plugin.message("claim-server-update-failed", "{id}", String.valueOf(claimId)));
             return true;
         }
-        sender.sendMessage(this.chatMessage("claim-server-updated", "&a&l\u5df2\u4fee\u590d: &7\u5df2\u5c06\u9886\u5730 &b{name} &7(#&f{id}&7) \u7684 server_id \u66f4\u65b0\u4e3a &e{server}&7\u3002", "{id}", String.valueOf(claim.id()), "{name}", claim.name(), "{server}", this.claimService.displayServerId(claim)));
+        sender.sendMessage(this.plugin.message("claim-server-updated", "{id}", String.valueOf(claim.id()), "{name}", claim.name(), "{server}", this.claimService.displayServerId(claim)));
         return true;
     }
 
@@ -1042,7 +1055,7 @@ implements TabExecutor {
             }
         }
         this.menuService.openCoreMenu(player, claim);
-        player.sendMessage(this.chatMessage("admin-edit-opened", "&a\u7ba1\u7406\u5458\u6a21\u5f0f: &7\u5df2\u6253\u5f00\u9886\u5730 &e{name} &7\u7684\u7f16\u8f91\u83dc\u5355\u3002", "{name}", claim.name()));
+        player.sendMessage(this.plugin.message("admin-edit-opened", "{name}", claim.name()));
         return true;
     }
 
@@ -1113,7 +1126,11 @@ implements TabExecutor {
         PlayerProfile profile = this.profileService.getOrCreate(target.getUniqueId(), name);
         switch (action) {
             case "get": {
-                sender.sendMessage(this.plugin.color("&6[Claim] &f" + profile.lastKnownName() + " \u9428\u52ec\u693f\u74ba\u51a8\u5bb3\u6d93?&e" + profile.activityPoints()));
+                sender.sendMessage(this.plugin.message(
+                    "activity-get",
+                    "{player}", profile.lastKnownName(),
+                    "{value}", String.valueOf(profile.activityPoints())
+                ));
                 break;
             }
             case "set": {
@@ -1222,13 +1239,13 @@ implements TabExecutor {
         try {
             int value = Integer.parseInt(raw);
             if (value <= 0) {
-                sender.sendMessage(this.chatMessage("claim-id-invalid", "&c\u9886\u5730 ID &e{value} &7\u65e0\u6548\uff0c\u8bf7\u8f93\u5165\u5927\u4e8e 0 \u7684\u6570\u5b57\u3002", "{value}", raw));
+                sender.sendMessage(this.plugin.message("claim-id-invalid", "{value}", raw));
                 return -1;
             }
             return value;
         }
         catch (NumberFormatException exception) {
-            sender.sendMessage(this.chatMessage("claim-id-invalid", "&c\u9886\u5730 ID &e{value} &7\u65e0\u6548\uff0c\u8bf7\u8f93\u5165\u5927\u4e8e 0 \u7684\u6570\u5b57\u3002", "{value}", raw));
+            sender.sendMessage(this.plugin.message("claim-id-invalid", "{value}", raw));
             return -1;
         }
     }
@@ -1253,12 +1270,16 @@ implements TabExecutor {
     }
 
     private Claim resolveCurrentAdminClaim(Player player, String usageLabel) {
+        return this.resolveCurrentAdminClaim(player, usageLabel, current -> this.claimActionService.canManageClaim(player, current));
+    }
+
+    private Claim resolveCurrentAdminClaim(Player player, String usageLabel, Predicate<Claim> accessCheck) {
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(this.plugin.color("&c\u6d63\u72b2\u7e40\u6924\u8364\u73ef\u9366\u3124\u7af4\u9367\u6940\u5f72\u7ee0\uff04\u608a\u9428\u52ef\ue56b\u9366\u677f\u5534\u93b5\u5d88\u5158\u6d63\u8de8\u6564 " + usageLabel));
+            player.sendMessage(this.plugin.message("claim-current-admin-required", "{usage}", usageLabel));
             return null;
         }
-        if (!this.claimActionService.canEditClaim(player, claim)) {
+        if (!accessCheck.test(claim)) {
             player.sendMessage(this.plugin.message("trust-no-permission"));
             return null;
         }
@@ -1318,12 +1339,16 @@ implements TabExecutor {
     }
 
     private Claim resolveCurrentEditableClaim(Player player, String usageLabel) {
+        return this.resolveCurrentEditableClaim(player, usageLabel, current -> this.claimActionService.canManageClaim(player, current));
+    }
+
+    private Claim resolveCurrentEditableClaim(Player player, String usageLabel, Predicate<Claim> accessCheck) {
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
         if (claim == null) {
-            player.sendMessage(this.plugin.color("&c\u6d63\u72b2\u7e40\u6924\u8364\u73ef\u9366\u3124\u7af4\u9367\u6940\u5f72\u7f02\u682c\u7deb\u9428\u52ef\ue56b\u9366\u677f\u5534\u93b5\u5d88\u5158\u6d63\u8de8\u6564 " + usageLabel));
+            player.sendMessage(this.plugin.message("claim-current-edit-required", "{usage}", usageLabel));
             return null;
         }
-        if (!this.claimActionService.canEditClaim(player, claim)) {
+        if (!accessCheck.test(claim)) {
             player.sendMessage(this.plugin.message("trust-no-permission"));
             return null;
         }
@@ -1415,45 +1440,44 @@ implements TabExecutor {
             boolean bl = canSeeSensitive = claim.owner().equals(player.getUniqueId()) || this.hasAdminViewPermission((CommandSender)player);
         }
         if (adminView) {
-            sender.sendMessage(this.plugin.color("&6[Claim] &fClaim ID: &e" + claim.id()));
-            sender.sendMessage(this.plugin.color("&6[Claim] &fServer ID: &e" + this.claimService.displayServerId(claim)));
-            sender.sendMessage(this.plugin.color("&6[Claim] &f\u7cfb\u7edf\u9886\u5730: " + (claim.systemManaged() ? "&6\u662f" : "&7\u5426")));
-            sender.sendMessage(this.plugin.color("&6[Claim] &f\u8ba1\u5165\u914d\u989d: " + (this.claimService.countsTowardQuota(claim) ? "&a\u662f" : "&c\u5426")));
+            sender.sendMessage(this.plugin.message("claim-detail-claim-id", "{id}", String.valueOf(claim.id())));
+            sender.sendMessage(this.plugin.message("claim-detail-server-id", "{server}", this.claimService.displayServerId(claim)));
+            sender.sendMessage(this.plugin.message("claim-detail-system", "{value}", claim.systemManaged() ? this.plugin.plainMessage("state-yes") : this.plugin.plainMessage("state-no")));
+            sender.sendMessage(this.plugin.message("claim-detail-quota", "{value}", this.claimService.countsTowardQuota(claim) ? this.plugin.plainMessage("state-yes") : this.plugin.plainMessage("state-no")));
         }
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u9886\u5730\u540d\u79f0: &e" + (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name()));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u9886\u5730\u4e3b\u4eba: &b" + claim.ownerName()));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u6240\u5728\u4e16\u754c: &e" + claim.world()));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u6838\u5fc3\u5750\u6807: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u9886\u5730\u5927\u5c0f: &e" + claim.width() + "x" + claim.depth() + " &7(\u9762\u79ef " + claim.area() + ")"));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u8fb9\u754c\u8303\u56f4: &7X " + claim.minX() + " ~ " + claim.maxX() + " &8| &7Z " + claim.minZ() + " ~ " + claim.maxZ()));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u9ad8\u5ea6\u6a21\u5f0f: " + (String)(claim.fullHeight() ? "&a\u5168\u9ad8\u5ea6\u4fdd\u62a4" : "&b\u9009\u533a\u9ad8\u5ea6 &7(Y " + claim.minY() + " ~ " + claim.maxY() + ", \u9ad8 " + claim.height() + ")")));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u4f20\u9001\u70b9: " + (String)(claim.hasTeleportPoint() ? "&a\u81ea\u5b9a\u4e49 &7(" + this.formatTeleportPoint(claim) + ")" : "&e\u6838\u5fc3")));
-        sender.sendMessage(this.plugin.color("&6[Claim] &fDeny \u72b6\u6001: &c" + claim.deniedMembers().size() + " &7\u4eba &8| &fdeny *: " + (claim.denyAll() ? "&c\u5f00\u542f" : "&a\u5173\u95ed")));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u89c4\u5219\u6765\u6e90: " + this.ruleSourceSummary(claim)));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u9ed8\u8ba4\u6743\u9650: &7\u653e\u7f6e " + this.stateText(claim.permission(ClaimPermission.PLACE)) + " &8| &7\u7834\u574f " + this.stateText(claim.permission(ClaimPermission.BREAK)) + " &8| &7\u4ea4\u4e92 " + this.stateText(claim.permission(ClaimPermission.INTERACT)) + " &8| &7\u4f20\u9001 " + this.stateText(claim.permission(ClaimPermission.TELEPORT)) + " &8| &7\u98de\u884c " + this.stateText(claim.permission(ClaimPermission.FLIGHT))));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u4ea4\u4e92\u65d7\u6807: " + this.summarizeFlags(claim)));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u6838\u5fc3\u663e\u793a: " + (claim.coreVisible() ? "&a\u663e\u793a\u4e2d" : "&c\u5df2\u9690\u85cf")));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u8fdb\u5165\u63d0\u793a: &b" + this.previewMessage(claim.enterMessage(), claim, "\u9ed8\u8ba4\u8fdb\u5165\u63d0\u793a")));
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u79bb\u5f00\u63d0\u793a: &e" + this.previewMessage(claim.leaveMessage(), claim, "\u9ed8\u8ba4\u79bb\u5f00\u63d0\u793a")));
+        sender.sendMessage(this.plugin.message("claim-detail-name", "{name}", (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name()));
+        sender.sendMessage(this.plugin.message("claim-detail-owner", "{owner}", claim.ownerName()));
+        sender.sendMessage(this.plugin.message("claim-detail-world", "{world}", claim.world()));
+        sender.sendMessage(this.plugin.message("claim-detail-core", "{x}", String.valueOf(claim.centerX()), "{y}", String.valueOf(claim.centerY()), "{z}", String.valueOf(claim.centerZ())));
+        sender.sendMessage(this.plugin.message("claim-detail-size", "{width}", String.valueOf(claim.width()), "{depth}", String.valueOf(claim.depth()), "{area}", String.valueOf(claim.area())));
+        sender.sendMessage(this.plugin.message("claim-detail-bounds", "{min_x}", String.valueOf(claim.minX()), "{max_x}", String.valueOf(claim.maxX()), "{min_z}", String.valueOf(claim.minZ()), "{max_z}", String.valueOf(claim.maxZ())));
+        sender.sendMessage(claim.fullHeight()
+            ? this.plugin.message("claim-detail-height-full")
+            : this.plugin.message("claim-detail-height-selection", "{min_y}", String.valueOf(claim.minY()), "{max_y}", String.valueOf(claim.maxY()), "{height}", String.valueOf(claim.height())));
+        sender.sendMessage(claim.hasTeleportPoint()
+            ? this.plugin.message("claim-detail-teleport-custom", "{point}", this.formatTeleportPoint(claim))
+            : this.plugin.message("claim-detail-teleport-core"));
+        sender.sendMessage(this.plugin.message("claim-detail-deny", "{denied}", String.valueOf(claim.deniedMembers().size()), "{deny_all}", claim.denyAll() ? this.plugin.plainMessage("state-enabled") : this.plugin.plainMessage("state-disabled")));
+        sender.sendMessage(this.plugin.message("claim-detail-rules", "{source}", this.ruleSourceSummary(claim)));
+        sender.sendMessage(this.plugin.message("claim-detail-permissions", "{place}", this.stateText(claim.permission(ClaimPermission.PLACE)), "{break}", this.stateText(claim.permission(ClaimPermission.BREAK)), "{interact}", this.stateText(claim.permission(ClaimPermission.INTERACT)), "{teleport}", this.stateText(claim.permission(ClaimPermission.TELEPORT)), "{flight}", this.stateText(claim.permission(ClaimPermission.FLIGHT))));
+        sender.sendMessage(this.plugin.message("claim-detail-flags", "{flags}", this.summarizeFlags(claim)));
+        sender.sendMessage(this.plugin.message("claim-detail-core-visible", "{value}", claim.coreVisible() ? this.plugin.plainMessage("state-core-visible") : this.plugin.plainMessage("state-core-hidden")));
+        sender.sendMessage(this.plugin.message("claim-detail-enter-message", "{message}", this.previewMessage(claim.enterMessage(), claim, this.plugin.plainMessage("claim-detail-default-enter"))));
+        sender.sendMessage(this.plugin.message("claim-detail-leave-message", "{message}", this.previewMessage(claim.leaveMessage(), claim, this.plugin.plainMessage("claim-detail-default-leave"))));
         if (canSeeSensitive) {
-            sender.sendMessage(this.plugin.color("&6[Claim] &f\u6210\u5458\u5217\u8868: " + this.joinPlayerNames(claim.trustedMembers())));
-            sender.sendMessage(this.plugin.color("&6[Claim] &fDenied \u73a9\u5bb6: " + this.joinPlayerNames(claim.deniedMembers())));
+            sender.sendMessage(this.plugin.message("claim-detail-trusted", "{players}", this.joinPlayerNames(claim.trustedMembers())));
+            sender.sendMessage(this.plugin.message("claim-detail-denied", "{players}", this.joinPlayerNames(claim.deniedMembers())));
         }
         if (adminView && claim.hasTeleportPoint()) {
-            sender.sendMessage(this.plugin.color("&6[Claim] &fTP Yaw/Pitch: &e" + this.formatYawPitch(claim.teleportYaw()) + " &8/ &e" + this.formatYawPitch(claim.teleportPitch())));
+            sender.sendMessage(this.plugin.message("claim-detail-teleport-yaw-pitch", "{yaw}", this.formatYawPitch(claim.teleportYaw()), "{pitch}", this.formatYawPitch(claim.teleportPitch())));
         }
     }
 
     private void sendFlagSummary(CommandSender sender, Claim claim) {
-        sender.sendMessage(this.plugin.color("&6[Claim] &f\u4ea4\u4e92\u65d7\u6807 - &e" + claim.name()));
-        sender.sendMessage(this.plugin.color("&7- container: " + this.flagStateText(claim.flagState(ClaimFlag.CONTAINER))));
-        sender.sendMessage(this.plugin.color("&7- use-button: " + this.flagStateText(claim.flagState(ClaimFlag.USE_BUTTON))));
-        sender.sendMessage(this.plugin.color("&7- use-lever: " + this.flagStateText(claim.flagState(ClaimFlag.USE_LEVER))));
-        sender.sendMessage(this.plugin.color("&7- use-pressure-plate: " + this.flagStateText(claim.flagState(ClaimFlag.USE_PRESSURE_PLATE))));
-        sender.sendMessage(this.plugin.color("&7- use-door: " + this.flagStateText(claim.flagState(ClaimFlag.USE_DOOR))));
-        sender.sendMessage(this.plugin.color("&7- use-trapdoor: " + this.flagStateText(claim.flagState(ClaimFlag.USE_TRAPDOOR))));
-        sender.sendMessage(this.plugin.color("&7- use-fence-gate: " + this.flagStateText(claim.flagState(ClaimFlag.USE_FENCE_GATE))));
-        sender.sendMessage(this.plugin.color("&7- use-bed: " + this.flagStateText(claim.flagState(ClaimFlag.USE_BED))));
+        sender.sendMessage(this.plugin.message("flag-summary-header", "{name}", claim.name()));
+        for (ClaimFlag flag : ClaimFlag.values()) {
+            sender.sendMessage(this.plugin.message("flag-summary-entry", "{flag}", flag.key(), "{state}", this.flagStateText(flag, claim.flagState(flag))));
+        }
     }
 
     private String summarizeFlags(Claim claim) {
@@ -1461,34 +1485,34 @@ implements TabExecutor {
         for (ClaimFlag flag : ClaimFlag.values()) {
             ClaimFlagState state = claim.flagState(flag);
             if (state == ClaimFlagState.UNSET) continue;
-            summary.add("&b" + flag.key() + "&7=" + this.flagStateText(state));
+            summary.add("&#4CC9F0" + flag.key() + "&#94A3B8=" + this.flagStateText(flag, state));
         }
-        return summary.isEmpty() ? "&7\u672a\u8bbe\u7f6e" : String.join(this.plugin.color("&8, "), summary);
+        return summary.isEmpty() ? this.plugin.plainMessage("state-not-set") : String.join(this.plugin.color("&#475569, "), summary);
     }
 
     private String flagStateText(ClaimFlagState state) {
         return switch (state) {
             default -> throw new IncompatibleClassChangeError();
-            case ALLOW -> "&a\u5141\u8bb8";
-            case DENY -> "&c\u7981\u6b62";
-            case UNSET -> "&7\u672a\u8bbe\u7f6e";
+            case ALLOW -> this.plugin.plainMessage("state-allow");
+            case DENY -> this.plugin.plainMessage("state-deny");
+            case UNSET -> this.plugin.plainMessage("state-unset");
+        };
+    }
+
+    private String flagStateText(ClaimFlag flag, ClaimFlagState state) {
+        if (flag != ClaimFlag.TIME_CYCLE) {
+            return this.flagStateText(state);
+        }
+        return switch (state) {
+            default -> throw new IncompatibleClassChangeError();
+            case ALLOW -> this.plugin.plainMessage("state-time-day");
+            case DENY -> this.plugin.plainMessage("state-time-night");
+            case UNSET -> this.plugin.plainMessage("state-time-world");
         };
     }
 
     private String previewMessage(String raw, Claim claim, String fallback) {
         return (raw == null || raw.isBlank() ? fallback : raw).replace("%claim_name%", claim.name()).replace("{claim_name}", claim.name()).replace("%owner%", claim.ownerName()).replace("{owner}", claim.ownerName()).replace("{name}", claim.name());
-    }
-
-    private String chatMessage(String path, String fallback, String ... replacements) {
-        String prefix = this.plugin.messagesConfig().getString("prefix", "&6[CoreClaim] &f");
-        String body = this.plugin.messagesConfig().getString(path, fallback);
-        String message = this.plugin.color(prefix + body);
-        int index = 0;
-        while (index + 1 < replacements.length) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-            index += 2;
-        }
-        return message;
     }
 
     private String stateText(boolean enabled) {
@@ -1684,7 +1708,7 @@ implements TabExecutor {
 
     private List<String> currentEditableClaimMemberNames(Player player) {
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
-        if (claim == null || !this.claimActionService.canEditClaim(player, claim)) {
+        if (claim == null || !this.claimActionService.canManageMembers(player, claim)) {
             return List.of();
         }
         return this.trustedMemberNames(claim);
@@ -1692,7 +1716,7 @@ implements TabExecutor {
 
     private List<String> currentAdminClaimMemberNames(Player player) {
         Claim claim = this.claimActionService.findCurrentPresenceClaim(player);
-        if (claim == null || !this.claimActionService.canEditClaim(player, claim)) {
+        if (claim == null || !this.claimActionService.canManageMembers(player, claim)) {
             return List.of();
         }
         return this.trustedMemberNames(claim);
@@ -1710,38 +1734,13 @@ implements TabExecutor {
     }
 
     private void sendModernHelp(CommandSender sender) {
-        sender.sendMessage(this.plugin.color("&6Claim \u547d\u4ee4:"));
-        sender.sendMessage(this.plugin.color("&e/claim &7\u67e5\u770b\u73a9\u5bb6\u5e2e\u52a9"));
-        sender.sendMessage(this.plugin.color("&e/claim info &7\u67e5\u770b\u811a\u4e0b\u5f53\u524d\u9886\u5730\u8be6\u60c5"));
-        sender.sendMessage(this.plugin.color("&e/claim list &7\u67e5\u770b\u4f60\u5f53\u524d\u62e5\u6709\u7684\u9886\u5730\u5217\u8868"));
-        sender.sendMessage(this.plugin.color("&e/claim menu &7\u6253\u5f00\u9886\u5730\u83dc\u5355"));
-        sender.sendMessage(this.plugin.color("&e/claim create <\u9886\u5730\u540d> &7\u5148\u7528\u666e\u901a\u91d1\u9504\u5934\u5de6\u952e\u70b9 1\u3001\u53f3\u952e\u70b9 2\uff0c\u518d\u521b\u5efa"));
-        sender.sendMessage(this.plugin.color("&e/claim tp <\u9886\u5730\u540d> &7\u4f20\u9001\u5230\u4f60\u6709\u6743\u9650\u8fdb\u5165\u7684\u9886\u5730"));
-        sender.sendMessage(this.plugin.color("&e/claim tpset &7\u628a\u811a\u4e0b\u4f4d\u7f6e\u8bbe\u4e3a\u5f53\u524d\u9886\u5730\u4f20\u9001\u70b9"));
-        sender.sendMessage(this.plugin.color("&e/claim add <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u7ed9\u8fd9\u5757\u9886\u5730\u52a0\u6210\u5458"));
-        sender.sendMessage(this.plugin.color("&e/claim unadd <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u79fb\u9664\u8fd9\u5757\u9886\u5730\u6210\u5458"));
-        sender.sendMessage(this.plugin.color("&e/claim remove <\u9886\u5730\u540d> &7\u5220\u9664\u4f60\u62e5\u6709\u7684\u9886\u5730"));
-        sender.sendMessage(this.plugin.color("&e/claim deny <\u73a9\u5bb6> \u6216 /claim deny * &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u8bbe\u7f6e deny"));
-        sender.sendMessage(this.plugin.color("&e/claim undeny <\u73a9\u5bb6> \u6216 /claim undeny * &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u53d6\u6d88 deny"));
-        sender.sendMessage(this.plugin.color("&e/claim flag [list] &7\u67e5\u770b\u6216\u8c03\u6574\u811a\u4e0b\u9886\u5730\u7684\u4ea4\u4e92\u65d7\u6807"));
-        sender.sendMessage(this.plugin.color("&7\u9996\u5757\u9886\u5730\uff1a\u5728\u7ebf &e" + this.plugin.settings().starterRewardMinutes() + " &7\u5206\u949f\u4f1a\u81ea\u52a8\u53d1\u65b0\u4eba\u6838\u5fc3\uff08\u9ed8\u8ba4\u5168\u683c\u4fdd\u62a4\uff09\uff0c\u4e5f\u53ef\u4ee5\u76f4\u63a5\u7528\u666e\u901a\u91d1\u9504\u5934\u9009\u533a\u521b\u5efa\u3002"));
+        for (String line : this.plugin.messageList("help-player", "{starter_minutes}", String.valueOf(this.plugin.settings().starterRewardMinutes()))) {
+            sender.sendMessage(line);
+        }
         if (this.hasAnyAdminPermission(sender)) {
-            sender.sendMessage(this.plugin.color("&6\u7ba1\u7406\u5458:"));
-            sender.sendMessage(this.plugin.color("&e/claim admin create system <\u9886\u5730\u540d> &7\u6309\u5f53\u524d\u9009\u533a\u521b\u5efa\u7cfb\u7edf\u9886\u5730"));
-            sender.sendMessage(this.plugin.color("&e/claim admin info <\u9886\u5730\u540d|#claimId> &7\u67e5\u770b\u9886\u5730\u5b8c\u6574\u8be6\u60c5"));
-            sender.sendMessage(this.plugin.color("&e/claim admin playerclaims <\u73a9\u5bb6> &7\u67e5\u770b\u73a9\u5bb6\u540d\u4e0b\u5168\u90e8\u9886\u5730"));
-            sender.sendMessage(this.plugin.color("&e/claim admin diagnose <\u9886\u5730\u540d|#claimId> &7\u67e5\u770b\u8de8\u670d\u4e0e TP \u8bca\u65ad"));
-            sender.sendMessage(this.plugin.color("&e/claim admin add <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u5f3a\u5236\u6dfb\u52a0\u6210\u5458"));
-            sender.sendMessage(this.plugin.color("&e/claim admin remove [\u9886\u5730\u540d|#claimId] &7\u5220\u9664\u811a\u4e0b\u6216\u6307\u5b9a\u9886\u5730"));
-            sender.sendMessage(this.plugin.color("&e/claim admin unadd <\u73a9\u5bb6> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u5f3a\u5236\u79fb\u9664\u6210\u5458"));
-            sender.sendMessage(this.plugin.color("&e/claim admin deny <\u73a9\u5bb6> \u6216 /claim admin deny * &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u5f3a\u5236\u6539 deny"));
-            sender.sendMessage(this.plugin.color("&e/claim admin undeny <\u73a9\u5bb6> \u6216 /claim admin undeny * &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u53d6\u6d88 deny"));
-            sender.sendMessage(this.plugin.color("&e/claim admin permission <permission> <allow|deny> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u5f3a\u5236\u6539\u9ed8\u8ba4\u6743\u9650"));
-            sender.sendMessage(this.plugin.color("&e/claim admin flag <flag> <allow|deny|unset> &7\u7ad9\u5728\u5f53\u524d\u9886\u5730\u5185\u5f3a\u5236\u6539\u4ea4\u4e92\u65d7\u6807"));
-            sender.sendMessage(this.plugin.color("&e/claim admin setserver <claimId> <serverId> &7\u4fee\u590d\u65e7\u9886\u5730\u7684\u8de8\u670d server_id"));
-            sender.sendMessage(this.plugin.color("&e/claim activity <get|set|add|take> <\u73a9\u5bb6> [\u503c] &7\u7ba1\u7406\u6d3b\u8dc3\u503c"));
-            sender.sendMessage(this.plugin.color("&e/claim reload &7\u91cd\u8f7d\u914d\u7f6e\u4e0e\u7f13\u5b58"));
-            sender.sendMessage(this.plugin.color("&e/claim givecore <\u73a9\u5bb6> [\u6570\u91cf] &7\u624b\u52a8\u53d1\u653e\u9886\u5730\u6838\u5fc3"));
+            for (String line : this.plugin.messageList("help-admin")) {
+                sender.sendMessage(line);
+            }
         }
     }
 

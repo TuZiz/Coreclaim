@@ -30,7 +30,7 @@ public final class ClaimTransferService {
             return false;
         }
         if (claim.systemManaged()) {
-            sender.sendMessage(chatMessage("system-claim-transfer-denied", "&c&l! &7系统领地不能被普通转让。"));
+            sender.sendMessage(plugin.message("system-claim-transfer-denied"));
             return false;
         }
         if (!claim.owner().equals(sender.getUniqueId())) {
@@ -133,7 +133,7 @@ public final class ClaimTransferService {
             return false;
         }
         if (claim.systemManaged()) {
-            sender.sendMessage(chatMessage("system-claim-transfer-denied", "&c&l! &7系统领地不能被转让。"));
+            sender.sendMessage(plugin.message("system-claim-transfer-denied"));
             return false;
         }
         if (target == null || !target.isOnline()) {
@@ -175,16 +175,6 @@ public final class ClaimTransferService {
         ClaimGroup group = plugin.groups().resolve(target);
         int maxClaims = group.maxClaims();
         return claimService.countClaims(target.getUniqueId()) < maxClaims;
-    }
-
-    private String chatMessage(String path, String fallback, String... replacements) {
-        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
-        String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
-        String message = plugin.color(prefix + body);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-        }
-        return message;
     }
 
     private void expire(PendingTransfer request) {

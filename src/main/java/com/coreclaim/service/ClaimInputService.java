@@ -4,6 +4,7 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.util.AdminAccess;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,41 +31,44 @@ public final class ClaimInputService {
     }
 
     public void requestRename(Player player, Claim claim) {
+        if (!canManageClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.RENAME));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
-        player.sendMessage(plugin.color(
-            "&6[Claim] &f请在聊天栏输入新的领地名字，输入 &c取消 &f可终止。&7("
-                + plugin.settings().chatInputTimeoutSeconds() + " 秒后自动取消)"
-        ));
+        player.sendMessage(plugin.message("input-rename-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
     }
 
     public void requestEnterMessage(Player player, Claim claim) {
+        if (!canManageClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.ENTER_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
-        player.sendMessage(plugin.color("&8[Claim] &7可用变量: &f{claim_name} &7/ &f{owner} &7/ &f{name} &8(也支持 %claim_name% / %owner%)"));
-        player.sendMessage(plugin.color(
-            "&6[Claim] &f请在聊天栏输入进入提示，输入 &e清空 &f恢复默认，输入 &c取消 &f可终止。&7("
-                + plugin.settings().chatInputTimeoutSeconds() + " 秒后自动取消)"
-        ));
+        player.sendMessage(plugin.plainMessage("input-notify-vars"));
+        player.sendMessage(plugin.message("input-enter-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
     }
 
     public void requestLeaveMessage(Player player, Claim claim) {
+        if (!canManageClaim(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.LEAVE_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
-        player.sendMessage(plugin.color("&8[Claim] &7可用变量: &f{claim_name} &7/ &f{owner} &7/ &f{name} &8(也支持 %claim_name% / %owner%)"));
-        player.sendMessage(plugin.color(
-            "&6[Claim] &f请在聊天栏输入离开提示，输入 &e清空 &f恢复默认，输入 &c取消 &f可终止。&7("
-                + plugin.settings().chatInputTimeoutSeconds() + " 秒后自动取消)"
-        ));
+        player.sendMessage(plugin.plainMessage("input-notify-vars"));
+        player.sendMessage(plugin.message("input-leave-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
     }
 
     public void cancel(Player player, boolean notify) {
         cancelTimeout(player.getUniqueId());
         if (pendingInputs.remove(player.getUniqueId()) != null && notify) {
-            player.sendMessage(plugin.color("&6[Claim] &f已取消当前设置输入。"));
+            player.sendMessage(plugin.message("input-cancelled"));
         }
     }
 
@@ -77,7 +81,7 @@ public final class ClaimInputService {
 
         String message = rawMessage == null ? "" : rawMessage.trim();
         if (isCancel(message)) {
-            player.sendMessage(plugin.color("&6[Claim] &f已取消当前设置输入。"));
+            player.sendMessage(plugin.message("input-cancelled"));
             return;
         }
 
@@ -86,8 +90,7 @@ public final class ClaimInputService {
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (!claim.owner().equals(player.getUniqueId())
-            && !AdminAccess.hasClaimEditAccess(player)) {
+        if (!canManageClaim(player, claim)) {
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
         }
@@ -101,11 +104,11 @@ public final class ClaimInputService {
 
     private void handleRename(Player player, Claim claim, String message) {
         if (message.isBlank()) {
-            player.sendMessage(plugin.color("&6[Claim] &c领地名字不能为空。"));
+            player.sendMessage(plugin.message("claim-name-empty"));
             return;
         }
         if (message.length() > plugin.settings().claimNameMaxLength()) {
-            player.sendMessage(plugin.color("&6[Claim] &c领地名字太长，最多 " + plugin.settings().claimNameMaxLength() + " 个字符。"));
+            player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return;
         }
         if (claimService.isClaimNameTaken(message, claim.id())) {
@@ -118,43 +121,48 @@ public final class ClaimInputService {
             player.sendMessage(plugin.message("claim-name-exists", "{name}", message.trim()));
             return;
         }
-        player.sendMessage(plugin.color("&6[Claim] &a已将领地重命名为 &e" + message.trim() + "&a。"));
+        player.sendMessage(plugin.message("input-rename-success", "{name}", message.trim()));
     }
 
     private void handleEnterMessage(Player player, Claim claim, String message) {
         if (isClear(message)) {
             claimService.updateEnterMessage(claim, "", player.getUniqueId());
-            player.sendMessage(plugin.color("&6[Claim] &a已恢复默认进入提示。"));
+            player.sendMessage(plugin.message("input-enter-cleared"));
             return;
         }
         if (message.isBlank()) {
-            player.sendMessage(plugin.color("&6[Claim] &c进入提示不能为空，或输入 &e清空 &c恢复默认。"));
+            player.sendMessage(plugin.message("input-enter-empty"));
             return;
         }
         if (message.length() > NOTIFY_MAX_LENGTH) {
-            player.sendMessage(plugin.color("&6[Claim] &c进入提示太长，最多 " + NOTIFY_MAX_LENGTH + " 个字符。"));
+            player.sendMessage(plugin.message("input-enter-too-long", "{max}", String.valueOf(NOTIFY_MAX_LENGTH)));
             return;
         }
         claimService.updateEnterMessage(claim, message, player.getUniqueId());
-        player.sendMessage(plugin.color("&6[Claim] &a已更新进入提示。"));
+        player.sendMessage(plugin.message("input-enter-success"));
     }
 
     private void handleLeaveMessage(Player player, Claim claim, String message) {
         if (isClear(message)) {
             claimService.updateLeaveMessage(claim, "", player.getUniqueId());
-            player.sendMessage(plugin.color("&6[Claim] &a已恢复默认离开提示。"));
+            player.sendMessage(plugin.message("input-leave-cleared"));
             return;
         }
         if (message.isBlank()) {
-            player.sendMessage(plugin.color("&6[Claim] &c离开提示不能为空，或输入 &e清空 &c恢复默认。"));
+            player.sendMessage(plugin.message("input-leave-empty"));
             return;
         }
         if (message.length() > NOTIFY_MAX_LENGTH) {
-            player.sendMessage(plugin.color("&6[Claim] &c离开提示太长，最多 " + NOTIFY_MAX_LENGTH + " 个字符。"));
+            player.sendMessage(plugin.message("input-leave-too-long", "{max}", String.valueOf(NOTIFY_MAX_LENGTH)));
             return;
         }
         claimService.updateLeaveMessage(claim, message, player.getUniqueId());
-        player.sendMessage(plugin.color("&6[Claim] &a已更新离开提示。"));
+        player.sendMessage(plugin.message("input-leave-success"));
+    }
+
+    private boolean canManageClaim(Player player, Claim claim) {
+        return player != null && claim != null
+            && (claim.owner().equals(player.getUniqueId()) || AdminAccess.hasClaimManageAccess(player));
     }
 
     private void scheduleTimeout(UUID playerId) {
@@ -184,11 +192,24 @@ public final class ClaimInputService {
     }
 
     private boolean isCancel(String message) {
-        return "取消".equals(message) || "cancel".equalsIgnoreCase(message);
+        return matchesKeyword(message, "input-cancel-keywords", "cancel");
     }
 
     private boolean isClear(String message) {
-        return "清空".equals(message) || "clear".equalsIgnoreCase(message);
+        return matchesKeyword(message, "input-clear-keywords", "clear");
+    }
+
+    private boolean matchesKeyword(String message, String path, String fallback) {
+        List<String> keywords = plugin.messagesConfig().getStringList(path);
+        if (keywords.isEmpty()) {
+            keywords = List.of(fallback);
+        }
+        for (String keyword : keywords) {
+            if (keyword.equalsIgnoreCase(message)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record PendingInput(int claimId, InputMode mode) {

@@ -82,12 +82,11 @@ public final class AdminAccess {
         return hasForceBypass(permissible) || hasExact(permissible, "coreclaim.admin.reward.givecore");
     }
 
-    public static boolean hasClaimEditAccess(Permissible permissible) {
-        return hasForceBypass(permissible)
-            || hasExact(permissible, "coreclaim.admin.claim.manage")
-            || hasExact(permissible, "coreclaim.admin.member.manage")
-            || hasExact(permissible, "coreclaim.admin.permission.manage")
-            || hasExact(permissible, "coreclaim.admin.flag.manage");
+    public static boolean hasAnyClaimWriteAccess(Permissible permissible) {
+        return hasClaimManageAccess(permissible)
+            || hasMemberManageAccess(permissible)
+            || hasPermissionManageAccess(permissible)
+            || hasFlagManageAccess(permissible);
     }
 
     private static boolean hasBaseAdmin(Permissible permissible) {

@@ -1,9 +1,5 @@
 package com.coreclaim.model;
 
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -23,34 +19,17 @@ public final class Claim {
     private final int maxY;
     private final boolean fullHeight;
     private final long createdAt;
-    private final Set<UUID> trustedMembers = new LinkedHashSet<>();
-    private final Set<UUID> blacklistedMembers = new LinkedHashSet<>();
-    private final Map<UUID, ClaimMemberSettings> memberSettings = new LinkedHashMap<>();
-    private final EnumMap<ClaimFlag, ClaimFlagState> flagStates = new EnumMap<>(ClaimFlag.class);
+    private final ClaimMembers members = new ClaimMembers();
+    private final ClaimFlagStates flags = new ClaimFlagStates();
+    private final ClaimPermissionState permissionState;
+    private final ClaimTeleportPoint teleportPoint;
+    private final ClaimBounds bounds;
     private String name;
     private boolean coreVisible;
-    private int east;
-    private int south;
-    private int west;
-    private int north;
     private String enterMessage;
     private String leaveMessage;
-    private boolean allowPlace;
-    private boolean allowBreak;
-    private boolean allowInteract;
-    private boolean allowContainer;
-    private boolean allowRedstone;
-    private boolean allowExplosion;
-    private boolean allowBucket;
-    private boolean allowTeleport;
-    private boolean allowFlight;
     private final boolean systemManaged;
     private boolean denyAll;
-    private Double teleportX;
-    private Double teleportY;
-    private Double teleportZ;
-    private Float teleportYaw;
-    private Float teleportPitch;
     private long lastExpandedAt;
 
     public Claim(
@@ -104,30 +83,25 @@ public final class Claim {
         this.minY = Math.min(minY, maxY);
         this.maxY = Math.max(minY, maxY);
         this.fullHeight = fullHeight;
-        this.east = east;
-        this.south = south;
-        this.west = west;
-        this.north = north;
+        this.bounds = new ClaimBounds(centerX, centerZ, east, south, west, north);
         this.createdAt = createdAt;
         this.coreVisible = coreVisible;
         this.enterMessage = enterMessage == null ? "" : enterMessage;
         this.leaveMessage = leaveMessage == null ? "" : leaveMessage;
-        this.allowPlace = allowPlace;
-        this.allowBreak = allowBreak;
-        this.allowInteract = allowInteract;
-        this.allowContainer = allowContainer;
-        this.allowRedstone = allowRedstone;
-        this.allowExplosion = allowExplosion;
-        this.allowBucket = allowBucket;
-        this.allowTeleport = allowTeleport;
-        this.allowFlight = allowFlight;
+        this.permissionState = new ClaimPermissionState(
+            allowPlace,
+            allowBreak,
+            allowInteract,
+            allowContainer,
+            allowRedstone,
+            allowExplosion,
+            allowBucket,
+            allowTeleport,
+            allowFlight
+        );
         this.systemManaged = systemManaged;
         this.denyAll = denyAll;
-        this.teleportX = teleportX;
-        this.teleportY = teleportY;
-        this.teleportZ = teleportZ;
-        this.teleportYaw = teleportYaw;
-        this.teleportPitch = teleportPitch;
+        this.teleportPoint = new ClaimTeleportPoint(teleportX, teleportY, teleportZ, teleportYaw, teleportPitch);
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
     }
 
@@ -204,26 +178,23 @@ public final class Claim {
     }
 
     public synchronized int east() {
-        return east;
+        return bounds.east();
     }
 
     public synchronized int south() {
-        return south;
+        return bounds.south();
     }
 
     public synchronized int west() {
-        return west;
+        return bounds.west();
     }
 
     public synchronized int north() {
-        return north;
+        return bounds.north();
     }
 
     public synchronized void setBounds(int east, int south, int west, int north) {
-        this.east = east;
-        this.south = south;
-        this.west = west;
-        this.north = north;
+        bounds.set(east, south, west, north);
     }
 
     public long createdAt() {
@@ -235,57 +206,51 @@ public final class Claim {
     }
 
     public synchronized boolean isTrusted(UUID playerId) {
-        return trustedMembers.contains(playerId);
+        return members.isTrusted(playerId);
     }
 
     public synchronized boolean canAccess(UUID playerId) {
-        return owner.equals(playerId) || (trustedMembers.contains(playerId) && !blacklistedMembers.contains(playerId));
+        return members.canAccess(owner, playerId);
     }
 
     public synchronized boolean addTrustedMember(UUID playerId) {
-        if (owner.equals(playerId)) {
-            return false;
-        }
-        return trustedMembers.add(playerId);
+        return members.addTrustedMember(owner, playerId);
     }
 
     public synchronized boolean removeTrustedMember(UUID playerId) {
-        return trustedMembers.remove(playerId);
+        return members.removeTrustedMember(playerId);
     }
 
     public synchronized Set<UUID> trustedMembers() {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(trustedMembers));
+        return members.trustedMembers();
     }
 
     public synchronized void clearTrustedMembers() {
-        trustedMembers.clear();
+        members.clearTrustedMembers();
     }
 
     public synchronized int trustedCount() {
-        return trustedMembers.size();
+        return members.trustedCount();
     }
 
     public synchronized boolean addDeniedMember(UUID playerId) {
-        if (owner.equals(playerId)) {
-            return false;
-        }
-        return blacklistedMembers.add(playerId);
+        return members.addDeniedMember(owner, playerId);
     }
 
     public synchronized boolean removeDeniedMember(UUID playerId) {
-        return blacklistedMembers.remove(playerId);
+        return members.removeDeniedMember(playerId);
     }
 
     public synchronized boolean isDenied(UUID playerId) {
-        return blacklistedMembers.contains(playerId);
+        return members.isDenied(playerId);
     }
 
     public synchronized Set<UUID> deniedMembers() {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(blacklistedMembers));
+        return members.deniedMembers();
     }
 
     public synchronized void clearDeniedMembers() {
-        blacklistedMembers.clear();
+        members.clearDeniedMembers();
     }
 
     public synchronized boolean denyAll() {
@@ -301,97 +266,75 @@ public final class Claim {
     }
 
     public synchronized boolean hasTeleportPoint() {
-        return teleportX != null && teleportY != null && teleportZ != null;
+        return teleportPoint.exists();
     }
 
     public synchronized Double teleportX() {
-        return teleportX;
+        return teleportPoint.x();
     }
 
     public synchronized Double teleportY() {
-        return teleportY;
+        return teleportPoint.y();
     }
 
     public synchronized Double teleportZ() {
-        return teleportZ;
+        return teleportPoint.z();
     }
 
     public synchronized Float teleportYaw() {
-        return teleportYaw;
+        return teleportPoint.yaw();
     }
 
     public synchronized Float teleportPitch() {
-        return teleportPitch;
+        return teleportPoint.pitch();
     }
 
     public synchronized void setTeleportPoint(double x, double y, double z, float yaw, float pitch) {
-        this.teleportX = x;
-        this.teleportY = y;
-        this.teleportZ = z;
-        this.teleportYaw = yaw;
-        this.teleportPitch = pitch;
+        teleportPoint.set(x, y, z, yaw, pitch);
     }
 
     public synchronized void clearTeleportPoint() {
-        teleportX = null;
-        teleportY = null;
-        teleportZ = null;
-        teleportYaw = null;
-        teleportPitch = null;
+        teleportPoint.clear();
     }
 
     public synchronized ClaimFlagState flagState(ClaimFlag flag) {
-        return flagStates.getOrDefault(flag, ClaimFlagState.UNSET);
+        return flags.flagState(flag);
     }
 
     public synchronized void setFlagState(ClaimFlag flag, ClaimFlagState state) {
-        if (flag == null) {
-            return;
-        }
-        if (state == null || state == ClaimFlagState.UNSET) {
-            flagStates.remove(flag);
-            return;
-        }
-        flagStates.put(flag, state);
+        flags.setFlagState(flag, state);
     }
 
     public synchronized void clearFlagState(ClaimFlag flag) {
-        if (flag == null) {
-            return;
-        }
-        flagStates.remove(flag);
+        flags.clearFlagState(flag);
     }
 
     public synchronized Map<ClaimFlag, ClaimFlagState> flagStates() {
-        return Collections.unmodifiableMap(new EnumMap<>(flagStates));
+        return flags.flagStates();
     }
 
     public synchronized ClaimMemberSettings memberSettings(UUID playerId) {
-        return memberSettings.get(playerId);
+        return members.memberSettings(playerId);
     }
 
     public synchronized void setMemberSettings(UUID playerId, ClaimMemberSettings settings) {
-        if (playerId == null || settings == null) {
-            return;
-        }
-        memberSettings.put(playerId, settings);
+        members.setMemberSettings(playerId, settings);
     }
 
     public synchronized void removeMemberSettings(UUID playerId) {
-        memberSettings.remove(playerId);
+        members.removeMemberSettings(playerId);
     }
 
     public synchronized Map<UUID, ClaimMemberSettings> memberSettings() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(memberSettings));
+        return members.memberSettings();
     }
 
     public synchronized void clearMemberSettings() {
-        memberSettings.clear();
+        members.clearMemberSettings();
     }
 
     public synchronized boolean memberPermission(UUID playerId, ClaimPermission permission, boolean fallback) {
-        ClaimMemberSettings settings = memberSettings.get(playerId);
-        return settings == null ? fallback : settings.permission(permission);
+        return members.memberPermission(playerId, permission, fallback);
     }
 
     public synchronized String enterMessage() {
@@ -411,67 +354,11 @@ public final class Claim {
     }
 
     public synchronized boolean permission(ClaimPermission permission) {
-        if (permission == ClaimPermission.PLACE) {
-            return allowPlace;
-        }
-        if (permission == ClaimPermission.BREAK) {
-            return allowBreak;
-        }
-        if (permission == ClaimPermission.INTERACT) {
-            return allowInteract;
-        }
-        if (permission == ClaimPermission.CONTAINER) {
-            return allowContainer;
-        }
-        if (permission == ClaimPermission.REDSTONE) {
-            return allowRedstone;
-        }
-        if (permission == ClaimPermission.EXPLOSION) {
-            return allowExplosion;
-        }
-        if (permission == ClaimPermission.BUCKET) {
-            return allowBucket;
-        }
-        if (permission == ClaimPermission.TELEPORT) {
-            return allowTeleport;
-        }
-        return allowFlight;
+        return permissionState.allowed(permission);
     }
 
     public synchronized void setPermission(ClaimPermission permission, boolean allowed) {
-        if (permission == ClaimPermission.PLACE) {
-            allowPlace = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.BREAK) {
-            allowBreak = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.INTERACT) {
-            allowInteract = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.CONTAINER) {
-            allowContainer = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.REDSTONE) {
-            allowRedstone = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.EXPLOSION) {
-            allowExplosion = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.BUCKET) {
-            allowBucket = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.TELEPORT) {
-            allowTeleport = allowed;
-            return;
-        }
-        allowFlight = allowed;
+        permissionState.setAllowed(permission, allowed);
     }
 
     public synchronized long lastExpandedAt() {
@@ -483,48 +370,39 @@ public final class Claim {
     }
 
     public synchronized int minX() {
-        return centerX - west;
+        return bounds.minX();
     }
 
     public synchronized int maxX() {
-        return centerX + east;
+        return bounds.maxX();
     }
 
     public synchronized int minZ() {
-        return centerZ - north;
+        return bounds.minZ();
     }
 
     public synchronized int maxZ() {
-        return centerZ + south;
+        return bounds.maxZ();
     }
 
     public synchronized int width() {
-        return east + west + 1;
+        return bounds.width();
     }
 
     public synchronized int depth() {
-        return north + south + 1;
+        return bounds.depth();
     }
 
     public synchronized long area() {
-        return (long) width() * depth();
+        return bounds.area();
     }
 
     public synchronized int displayRadius() {
-        return Math.max(Math.max(east, west), Math.max(north, south));
+        return bounds.displayRadius();
     }
 
     public synchronized int distance(ClaimDirection direction) {
-        if (direction == ClaimDirection.EAST) {
-            return east;
-        }
-        if (direction == ClaimDirection.SOUTH) {
-            return south;
-        }
-        if (direction == ClaimDirection.WEST) {
-            return west;
-        }
-        return north;
+        return bounds.distance(direction);
     }
 
     public boolean contains(Location location) {

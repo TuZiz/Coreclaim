@@ -54,14 +54,18 @@ public final class MenuTextFormatter {
     }
 
     public String stateText(boolean enabled) {
-        return enabled ? "&#55FFAA允许" : "&#FF6B6B禁止";
+        return plugin.plainMessage(enabled ? "state-allow" : "state-deny");
+    }
+
+    public String defaultStateText(boolean enabled) {
+        return plugin.plainMessage(enabled ? "state-default-allow" : "state-default-deny");
     }
 
     public String flagStateText(ClaimFlagState state) {
         return switch (state) {
-            case ALLOW -> "&#55FFAA允许";
-            case DENY -> "&#FF6B6B禁止";
-            case UNSET -> "&#CBD5E1未设置";
+            case ALLOW -> plugin.plainMessage("state-allow");
+            case DENY -> plugin.plainMessage("state-deny");
+            case UNSET -> plugin.plainMessage("state-unset");
         };
     }
 

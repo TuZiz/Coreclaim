@@ -1,5 +1,9 @@
 package com.coreclaim.service;
 
+import static com.coreclaim.service.ClaimCleanupStateSupport.clearGrace;
+import static com.coreclaim.service.ClaimCleanupStateSupport.hasGrace;
+import static com.coreclaim.service.ClaimCleanupStateSupport.reasonFromState;
+
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimCleanupReason;
@@ -9,9 +13,7 @@ import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.storage.DatabaseManager;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,11 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ClaimCleanupService {
 
     private final CoreClaimPlugin plugin;
-    private final DatabaseManager databaseManager;
     private final ClaimService claimService;
     private final ProfileService profileService;
     private final HologramService hologramService;
     private final PlatformScheduler platformScheduler;
+    private final ClaimCleanupStateRepository stateRepository;
     private final Map<Integer, ClaimCleanupState> states = new ConcurrentHashMap<>();
     private PlatformScheduler.TaskHandle scanTask;
 
@@ -36,11 +38,11 @@ public final class ClaimCleanupService {
         PlatformScheduler platformScheduler
     ) {
         this.plugin = plugin;
-        this.databaseManager = databaseManager;
         this.claimService = claimService;
         this.profileService = profileService;
         this.hologramService = hologramService;
         this.platformScheduler = platformScheduler;
+        this.stateRepository = new ClaimCleanupStateRepository(databaseManager);
         reload();
     }
 
@@ -77,7 +79,7 @@ public final class ClaimCleanupService {
             next.setLastReason(ClaimCleanupReason.NONE.key());
             return next;
         });
-        persistState(state);
+        stateRepository.persistState(state);
     }
 
     public void removeTracking(int claimId) {
@@ -112,7 +114,7 @@ public final class ClaimCleanupService {
             }
             clearGrace(state);
             state.setLastReason(reasonFromState(state).key());
-            persistState(state);
+            stateRepository.persistState(state);
         }
     }
 
@@ -136,7 +138,7 @@ public final class ClaimCleanupService {
                 if (hasGrace(evaluation.state())) {
                     clearGrace(evaluation.state());
                     evaluation.state().setLastReason(reasonFromState(evaluation.state()).key());
-                    persistState(evaluation.state());
+                    stateRepository.persistState(evaluation.state());
                     revoked++;
                 }
                 continue;
@@ -146,7 +148,7 @@ public final class ClaimCleanupService {
                 if (hasGrace(evaluation.state())) {
                     clearGrace(evaluation.state());
                     evaluation.state().setLastReason(evaluation.reason().key());
-                    persistState(evaluation.state());
+                    stateRepository.persistState(evaluation.state());
                     revoked++;
                 }
                 continue;
@@ -157,13 +159,13 @@ public final class ClaimCleanupService {
                 evaluation.state().setGraceMarkedAt(now);
                 evaluation.state().setDeleteAfterAt(deleteAfterAt);
                 evaluation.state().setLastReason(evaluation.reason().key());
-                persistState(evaluation.state());
+                stateRepository.persistState(evaluation.state());
                 marked++;
                 continue;
             }
 
             evaluation.state().setLastReason(evaluation.reason().key());
-            persistState(evaluation.state());
+            stateRepository.persistState(evaluation.state());
             if (evaluation.state().getDeleteAfterAt() > now) {
                 continue;
             }
@@ -172,7 +174,7 @@ public final class ClaimCleanupService {
             if (!rechecked.eligible() || rechecked.shouldSkip() || rechecked.state().isLegacyUnknown()) {
                 clearGrace(rechecked.state());
                 rechecked.state().setLastReason(rechecked.reason().key());
-                persistState(rechecked.state());
+                stateRepository.persistState(rechecked.state());
                 revoked++;
                 continue;
             }
@@ -234,11 +236,11 @@ public final class ClaimCleanupService {
         state.setLegacyUnknown(false);
         clearGrace(state);
         state.setLastReason(ClaimCleanupReason.NONE.key());
-        persistState(state);
+        stateRepository.persistState(state);
         return state;
     }
 
-    public ClaimCleanupState baselineClaim(Claim claim, BaselineMode mode) {
+    public ClaimCleanupState baselineClaim(Claim claim, ClaimCleanupBaselineMode mode) {
         if (claim == null || mode == null) {
             return null;
         }
@@ -259,7 +261,7 @@ public final class ClaimCleanupService {
             case SKIP -> state.setSkipCleanup(true);
         }
         state.setLastReason(reasonFromState(state).key());
-        persistState(state);
+        stateRepository.persistState(state);
         return state;
     }
 
@@ -287,7 +289,7 @@ public final class ClaimCleanupService {
             changed = true;
         }
         if (changed) {
-            persistState(state);
+            stateRepository.persistState(state);
         }
     }
 
@@ -302,30 +304,7 @@ public final class ClaimCleanupService {
     }
 
     private void loadStates() {
-        Map<Integer, ClaimCleanupState> loaded = databaseManager.query(
-            """
-            SELECT claim_id, has_build_evidence, has_interaction_evidence, grace_marked_at,
-                   delete_after_at, skip_cleanup, legacy_unknown, last_reason
-            FROM claim_cleanup_state
-            """,
-            statement -> {
-            },
-            resultSet -> {
-                Map<Integer, ClaimCleanupState> result = new HashMap<>();
-                while (resultSet.next()) {
-                    ClaimCleanupState state = new ClaimCleanupState(resultSet.getInt("claim_id"));
-                    state.setHasBuildEvidence(resultSet.getInt("has_build_evidence") == 1);
-                    state.setHasInteractionEvidence(resultSet.getInt("has_interaction_evidence") == 1);
-                    state.setGraceMarkedAt(resultSet.getLong("grace_marked_at"));
-                    state.setDeleteAfterAt(resultSet.getLong("delete_after_at"));
-                    state.setSkipCleanup(resultSet.getInt("skip_cleanup") == 1);
-                    state.setLegacyUnknown(resultSet.getInt("legacy_unknown") == 1);
-                    state.setLastReason(normalizeReasonKey(resultSet.getString("last_reason")));
-                    result.put(state.getClaimId(), state);
-                }
-                return result;
-            }
-        );
+        Map<Integer, ClaimCleanupState> loaded = stateRepository.loadStates();
         states.clear();
         states.putAll(loaded);
     }
@@ -341,55 +320,14 @@ public final class ClaimCleanupService {
             ClaimCleanupState created = new ClaimCleanupState(claimId);
             created.setLegacyUnknown(defaultLegacyUnknown);
             created.setLastReason(ClaimCleanupReason.NONE.key());
-            persistState(created);
+            stateRepository.persistState(created);
             return created;
         });
         if (state.getLastReason() == null) {
             state.setLastReason(ClaimCleanupReason.NONE.key());
-            persistState(state);
+            stateRepository.persistState(state);
         }
         return state;
-    }
-
-    private void persistState(ClaimCleanupState state) {
-        if (state == null) {
-            return;
-        }
-        databaseManager.update(
-            databaseManager.insertIgnoreSql(
-                "claim_cleanup_state",
-                "claim_id, has_build_evidence, has_interaction_evidence, grace_marked_at, delete_after_at, skip_cleanup, legacy_unknown, last_reason",
-                "?, ?, ?, ?, ?, ?, ?, ?"
-            ),
-            statement -> {
-                statement.setInt(1, state.getClaimId());
-                statement.setInt(2, state.hasBuildEvidence() ? 1 : 0);
-                statement.setInt(3, state.hasInteractionEvidence() ? 1 : 0);
-                statement.setLong(4, state.getGraceMarkedAt());
-                statement.setLong(5, state.getDeleteAfterAt());
-                statement.setInt(6, state.isSkipCleanup() ? 1 : 0);
-                statement.setInt(7, state.isLegacyUnknown() ? 1 : 0);
-                statement.setString(8, normalizeReasonKey(state.getLastReason()));
-            }
-        );
-        databaseManager.update(
-            """
-            UPDATE claim_cleanup_state
-            SET has_build_evidence = ?, has_interaction_evidence = ?, grace_marked_at = ?, delete_after_at = ?,
-                skip_cleanup = ?, legacy_unknown = ?, last_reason = ?
-            WHERE claim_id = ?
-            """,
-            statement -> {
-                statement.setInt(1, state.hasBuildEvidence() ? 1 : 0);
-                statement.setInt(2, state.hasInteractionEvidence() ? 1 : 0);
-                statement.setLong(3, state.getGraceMarkedAt());
-                statement.setLong(4, state.getDeleteAfterAt());
-                statement.setInt(5, state.isSkipCleanup() ? 1 : 0);
-                statement.setInt(6, state.isLegacyUnknown() ? 1 : 0);
-                statement.setString(7, normalizeReasonKey(state.getLastReason()));
-                statement.setInt(8, state.getClaimId());
-            }
-        );
     }
 
     private void reschedule() {
@@ -441,55 +379,12 @@ public final class ClaimCleanupService {
         return profile == null ? 0L : profile.lastSeenAt();
     }
 
-    private ClaimCleanupReason reasonFromState(ClaimCleanupState state) {
-        if (state == null) {
-            return ClaimCleanupReason.NONE;
-        }
-        return ClaimCleanupReason.fromEvidence(state.hasBuildEvidence(), state.hasInteractionEvidence());
-    }
-
     private long inactiveThresholdMillis() {
         return Math.max(1L, plugin.settings().inactiveClaimCleanupDays()) * 24L * 60L * 60L * 1000L;
     }
 
     private long gracePeriodMillis() {
         return Math.max(1L, plugin.settings().inactiveClaimCleanupGraceDays()) * 24L * 60L * 60L * 1000L;
-    }
-
-    private boolean hasGrace(ClaimCleanupState state) {
-        return state != null && (state.getGraceMarkedAt() > 0L || state.getDeleteAfterAt() > 0L);
-    }
-
-    private void clearGrace(ClaimCleanupState state) {
-        if (state == null) {
-            return;
-        }
-        state.setGraceMarkedAt(0L);
-        state.setDeleteAfterAt(0L);
-    }
-
-    private String normalizeReasonKey(String rawReason) {
-        if (rawReason == null || rawReason.isBlank()) {
-            return ClaimCleanupReason.NONE.key();
-        }
-        return ClaimCleanupReason.fromKey(rawReason).key();
-    }
-
-    public enum BaselineMode {
-        EMPTY,
-        USED,
-        SKIP;
-
-        public static BaselineMode fromInput(String rawInput) {
-            if (rawInput == null || rawInput.isBlank()) {
-                return null;
-            }
-            try {
-                return valueOf(rawInput.trim().toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException ignored) {
-                return null;
-            }
-        }
     }
 
     public record CleanupEntry(Claim claim, ClaimCleanupState state, ClaimCleanupReason reason, long lastSeenAt) {

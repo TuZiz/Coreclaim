@@ -1,22 +1,23 @@
 layout-version: 3
 title: '&#475569[&#F59E0B创建&#475569] &#F59E0B&l选区创建确认 - {name}'
+
 Shape:
-  - "FFFFFFFFF"
-  - "FFFFIFFFF"
-  - "FFFFFFFFF"
-  - "FFFRFCFFF"
-  - "FFFFFFFFF"
-  - "FFFFBFFFF"
+  - 'FFFFFFFFF'
+  - 'FFFFIFFFF'
+  - 'FFFFFFFFF'
+  - 'FFFRFCFFF'
+  - 'FFFFFFFFF'
+  - 'FFFFBFFFF'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1600
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: BOOK
     custom-model-data: 1710
     name: '&#FFD166&l创建概览'
@@ -38,7 +39,7 @@ items:
       - ' &#CBD5E1确认前会再次校验范围与价格'
 
   refresh:
-    char: "R"
+    char: 'R'
     material: CLOCK
     custom-model-data: 1715
     name: '&#FFD166&l刷新预览'
@@ -49,10 +50,9 @@ items:
     sound: UI_BUTTON_CLICK
 
   confirm:
-    char: "C"
+    char: 'C'
     material: EMERALD
     custom-model-data: 1717
-    glow: true
     name: '&#55FFAA&l确认创建'
     lore:
       - ''
@@ -62,9 +62,10 @@ items:
       - ''
       - ' &#FFD166点击正式创建领地'
     sound: ENTITY_PLAYER_LEVELUP
+    glow: true
 
   cancel:
-    char: "B"
+    char: 'B'
     material: BARRIER
     custom-model-data: 1716
     name: '&#FF6B6B&l取消创建'

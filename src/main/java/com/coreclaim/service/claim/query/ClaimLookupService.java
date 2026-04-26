@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -245,18 +244,18 @@ public final class ClaimLookupService {
     }
 
     public List<Claim> findClaimsByName(String rawName) {
-        String normalizedName = normalizeClaimName(rawName);
+        String normalizedName = ClaimNameNormalizer.normalize(rawName);
         if (normalizedName == null) {
             return List.of();
         }
         return runtime.claims().values().stream()
-            .filter(claim -> normalizedName.equals(normalizeClaimName(claim.name())))
+            .filter(claim -> normalizedName.equals(ClaimNameNormalizer.normalize(claim.name())))
             .sorted(Comparator.comparingInt(Claim::id))
             .toList();
     }
 
     public List<Claim> findClaimsByNameFresh(String rawName) {
-        String normalizedName = normalizeClaimName(rawName);
+        String normalizedName = ClaimNameNormalizer.normalize(rawName);
         if (normalizedName == null || !runtime.databaseManager().isMySql()) {
             return findClaimsByName(rawName);
         }
@@ -277,7 +276,7 @@ public final class ClaimLookupService {
         }
         Set<Integer> idSet = Set.copyOf(freshIds);
         for (Claim cachedClaim : new ArrayList<>(runtime.claims().values())) {
-            if (normalizedName.equals(normalizeClaimName(cachedClaim.name())) && !idSet.contains(cachedClaim.id())) {
+            if (normalizedName.equals(ClaimNameNormalizer.normalize(cachedClaim.name())) && !idSet.contains(cachedClaim.id())) {
                 reloadClaim(cachedClaim.id());
             }
         }
@@ -297,7 +296,7 @@ public final class ClaimLookupService {
     }
 
     public boolean isClaimNameTaken(String rawName, Integer excludedClaimId) {
-        String normalizedName = normalizeClaimName(rawName);
+        String normalizedName = ClaimNameNormalizer.normalize(rawName);
         if (normalizedName == null) {
             return false;
         }
@@ -319,7 +318,7 @@ public final class ClaimLookupService {
             if (excludedClaimId != null && excludedClaimId == claim.id()) {
                 continue;
             }
-            if (normalizedName.equals(normalizeClaimName(claim.name()))) {
+            if (normalizedName.equals(ClaimNameNormalizer.normalize(claim.name()))) {
                 return true;
             }
         }
@@ -327,8 +326,8 @@ public final class ClaimLookupService {
     }
 
     public String validateAvailableClaimName(String rawName, Integer excludedClaimId) {
-        String sanitizedName = sanitizeClaimName(rawName);
-        String normalizedName = normalizeClaimName(sanitizedName);
+        String sanitizedName = ClaimNameNormalizer.sanitize(rawName);
+        String normalizedName = ClaimNameNormalizer.normalize(sanitizedName);
         if (normalizedName == null) {
             throw new IllegalArgumentException("claim-name-empty");
         }
@@ -339,33 +338,11 @@ public final class ClaimLookupService {
     }
 
     public boolean overlaps(String world, int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Integer ignoredId, boolean fullHeight) {
-        for (Claim claim : runtime.claims().values()) {
-            if (!isLocalClaim(claim)) {
-                continue;
-            }
-            if (claim.overlaps(world, minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight)) {
-                return true;
-            }
-        }
-        return false;
+        return ClaimSpatialQuery.overlaps(runtime.claims().values(), this::isLocalClaim, world, minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight);
     }
 
     public boolean hasCoreWithinSpacing(String world, int centerX, int centerZ, int spacing, Integer ignoredId) {
-        for (Claim claim : runtime.claims().values()) {
-            if (!isLocalClaim(claim)) {
-                continue;
-            }
-            if (!claim.world().equals(world)) {
-                continue;
-            }
-            if (ignoredId != null && ignoredId == claim.id()) {
-                continue;
-            }
-            if (Math.abs(claim.centerX() - centerX) < spacing && Math.abs(claim.centerZ() - centerZ) < spacing) {
-                return true;
-            }
-        }
-        return false;
+        return ClaimSpatialQuery.hasCoreWithinSpacing(runtime.claims().values(), this::isLocalClaim, world, centerX, centerZ, spacing, ignoredId);
     }
 
     public boolean hasClaimWithinGap(
@@ -381,53 +358,11 @@ public final class ClaimLookupService {
         boolean fullHeight,
         Predicate<Claim> filter
     ) {
-        int expandedMinX = minX - Math.max(0, gap);
-        int expandedMaxX = maxX + Math.max(0, gap);
-        int expandedMinZ = minZ - Math.max(0, gap);
-        int expandedMaxZ = maxZ + Math.max(0, gap);
-        for (Claim claim : runtime.claims().values()) {
-            if (!isLocalClaim(claim)) {
-                continue;
-            }
-            if (filter != null && !filter.test(claim)) {
-                continue;
-            }
-            if (claim.overlaps(world, expandedMinX, expandedMaxX, minY, maxY, expandedMinZ, expandedMaxZ, ignoredId, fullHeight)) {
-                return true;
-            }
-        }
-        return false;
+        return ClaimSpatialQuery.hasClaimWithinGap(runtime.claims().values(), this::isLocalClaim, world, minX, maxX, minY, maxY, minZ, maxZ, gap, ignoredId, fullHeight, filter);
     }
 
     public void rebuildClaimChunkIndex() {
-        Map<String, Map<Long, List<Claim>>> rebuilt = new HashMap<>();
-        for (Claim claim : runtime.claims().values()) {
-            if (!isLocalClaim(claim)) {
-                continue;
-            }
-            Map<Long, List<Claim>> worldIndex = rebuilt.computeIfAbsent(claim.world(), ignored -> new HashMap<>());
-            int minChunkX = claim.minX() >> 4;
-            int maxChunkX = claim.maxX() >> 4;
-            int minChunkZ = claim.minZ() >> 4;
-            int maxChunkZ = claim.maxZ() >> 4;
-            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-                for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                    worldIndex.computeIfAbsent(chunkKey(chunkX, chunkZ), ignored -> new ArrayList<>()).add(claim);
-                }
-            }
-        }
-
-        Map<String, Map<Long, List<Claim>>> finalized = new HashMap<>();
-        for (Map.Entry<String, Map<Long, List<Claim>>> worldEntry : rebuilt.entrySet()) {
-            Map<Long, List<Claim>> buckets = new HashMap<>();
-            for (Map.Entry<Long, List<Claim>> bucketEntry : worldEntry.getValue().entrySet()) {
-                List<Claim> candidates = bucketEntry.getValue();
-                candidates.sort(Comparator.comparingLong(Claim::area));
-                buckets.put(bucketEntry.getKey(), List.copyOf(candidates));
-            }
-            finalized.put(worldEntry.getKey(), Map.copyOf(buckets));
-        }
-        runtime.setClaimChunkIndex(Map.copyOf(finalized));
+        runtime.setClaimChunkIndex(ClaimChunkIndex.rebuild(runtime.claims().values(), this::isLocalClaim));
     }
 
     private String effectiveServerId(String explicitServerId) {
@@ -438,18 +373,7 @@ public final class ClaimLookupService {
     }
 
     private List<Claim> claimCandidates(Location location) {
-        if (location == null || location.getWorld() == null) {
-            return List.of();
-        }
-        Map<Long, List<Claim>> worldIndex = runtime.claimChunkIndex().get(location.getWorld().getName());
-        if (worldIndex == null || worldIndex.isEmpty()) {
-            return List.of();
-        }
-        List<Claim> candidates = worldIndex.get(chunkKey(location.getBlockX() >> 4, location.getBlockZ() >> 4));
-        if (candidates == null || candidates.isEmpty()) {
-            return List.of();
-        }
-        return candidates;
+        return ClaimChunkIndex.candidates(runtime.claimChunkIndex(), location);
     }
 
     private Optional<ClaimService.ClaimListEntry> toClaimListEntry(Claim claim, UUID playerId, boolean includeSystem) {
@@ -476,29 +400,6 @@ public final class ClaimLookupService {
             .comparingInt((ClaimService.ClaimListEntry entry) -> entry.relation() == ClaimService.ClaimListRelation.OWNER ? 0 : 1)
             .thenComparingInt(entry -> entry.claim().id()));
         return entries;
-    }
-
-    private String normalizeClaimName(String rawName) {
-        String sanitizedName = sanitizeClaimName(rawName);
-        if (sanitizedName == null) {
-            return null;
-        }
-        return sanitizedName.toLowerCase(Locale.ROOT);
-    }
-
-    private String sanitizeClaimName(String rawName) {
-        if (rawName == null) {
-            return null;
-        }
-        String trimmed = rawName.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        return trimmed.replaceAll("\\s+", " ");
-    }
-
-    private long chunkKey(int chunkX, int chunkZ) {
-        return (((long) chunkX) << 32) ^ (chunkZ & 0xffffffffL);
     }
 
     private record ClaimListRow(int claimId, ClaimService.ClaimListRelation relation) {

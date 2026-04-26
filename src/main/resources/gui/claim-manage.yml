@@ -1,21 +1,23 @@
 layout-version: 2
 title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4&l扩建控制台 - {name}'
+
 Shape:
-  - "FFFFFFFFF"
-  - "FFFFNFFFF"
-  - "FFWFIFEFF"
-  - "FFFFSFFFF"
-  - "FFFFFFFFF"
-  - "FFFBFDFFF"
+  - 'FFFFFFFFF'
+  - 'FFFFNFFFF'
+  - 'FFWFIFEFF'
+  - 'FFFFSFFFF'
+  - 'FFFFFFFFF'
+  - 'FFFBFDFFF'
+
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1300
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: COMPASS
     custom-model-data: 1301
     name: '&#FFD166&l扩建控制台'
@@ -31,10 +33,9 @@ items:
       - ' &#55FFAA可以只扩建 1 格，确认后才会扣费'
 
   expand-north:
-    char: "N"
+    char: 'N'
     material: ARROW
     custom-model-data: 1302
-    glow: true
     name: '&#06B6D4&l选择向北扩建'
     lore:
       - ''
@@ -45,12 +46,12 @@ items:
       - ''
       - ' &#FFD166点击选择具体格数'
     sound: UI_BUTTON_CLICK
+    glow: true
 
   expand-west:
-    char: "W"
+    char: 'W'
     material: ARROW
     custom-model-data: 1303
-    glow: true
     name: '&#06B6D4&l选择向西扩建'
     lore:
       - ''
@@ -61,12 +62,12 @@ items:
       - ''
       - ' &#FFD166点击选择具体格数'
     sound: UI_BUTTON_CLICK
+    glow: true
 
   expand-east:
-    char: "E"
+    char: 'E'
     material: ARROW
     custom-model-data: 1304
-    glow: true
     name: '&#06B6D4&l选择向东扩建'
     lore:
       - ''
@@ -77,12 +78,12 @@ items:
       - ''
       - ' &#FFD166点击选择具体格数'
     sound: UI_BUTTON_CLICK
+    glow: true
 
   expand-south:
-    char: "S"
+    char: 'S'
     material: ARROW
     custom-model-data: 1305
-    glow: true
     name: '&#06B6D4&l选择向南扩建'
     lore:
       - ''
@@ -93,16 +94,17 @@ items:
       - ''
       - ' &#FFD166点击选择具体格数'
     sound: UI_BUTTON_CLICK
+    glow: true
 
   back:
-    char: "B"
+    char: 'B'
     material: BARRIER
     custom-model-data: 1307
     name: '&#FF6B6B&l返回核心菜单'
     sound: UI_BUTTON_CLICK
 
   delete:
-    char: "D"
+    char: 'D'
     material: LAVA_BUCKET
     custom-model-data: 1308
     name: '&#FF6B6B&l删除领地'

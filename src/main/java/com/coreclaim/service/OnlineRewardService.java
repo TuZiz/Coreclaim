@@ -240,7 +240,7 @@ public final class OnlineRewardService {
     }
 
     private String chatMessage(String path, String fallback, String... replacements) {
-        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
+        String prefix = plugin.messagesConfig().getString("prefix", "&#64748B[&#A7F3D0Claim&#64748B] &#CBD5E1");
         String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
         String message = plugin.color(prefix + body);
         for (int index = 0; index + 1 < replacements.length; index += 2) {

@@ -1,22 +1,23 @@
 layout-version: 1
 title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l只读详情 - {name}'
+
 Shape:
-  - "FFFFFFFFF"
-  - "FFFFIFFFF"
-  - "FFFDTFFFF"
-  - "FFFFFFFFF"
-  - "FFFFBFFFF"
-  - "FFFFXFFFF"
+  - 'FFFFFFFFF'
+  - 'FFFFIFFFF'
+  - 'FFFDFTFFF'
+  - 'FFFFFFFFF'
+  - 'FFFFBFFFF'
+  - 'FFFFXFFFF'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1600
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: BOOK
     custom-model-data: 1601
     name: '&#FFD166&l授权领地详情'
@@ -35,7 +36,7 @@ items:
       - ' &#CBD5E1当前界面为只读查看'
 
   details:
-    char: "D"
+    char: 'D'
     material: PAPER
     custom-model-data: 1602
     name: '&#4CC9F0&l查看详细'
@@ -48,10 +49,9 @@ items:
     sound: UI_BUTTON_CLICK
 
   teleport:
-    char: "T"
+    char: 'T'
     material: ENDER_PEARL
     custom-model-data: 1603
-    glow: true
     name: '&#C084FC&l传送到领地'
     lore:
       - ''
@@ -60,9 +60,10 @@ items:
       - ''
       - ' &#FFD166点击传送'
     sound: ENTITY_ENDERMAN_TELEPORT
+    glow: true
 
   back:
-    char: "B"
+    char: 'B'
     material: ARROW
     custom-model-data: 1604
     name: '&#55FFAA&l返回列表'
@@ -72,7 +73,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   close:
-    char: "X"
+    char: 'X'
     material: BARRIER
     custom-model-data: 1605
     name: '&#FF6B6B&l关闭菜单'

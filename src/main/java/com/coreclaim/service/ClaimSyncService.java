@@ -1,7 +1,7 @@
 package com.coreclaim.service;
 
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.config.PluginConfig;
+import com.coreclaim.config.ClaimSyncSettings;
 import com.coreclaim.storage.DatabaseManager;
 import java.time.Instant;
 import java.util.UUID;
@@ -43,7 +43,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         if (!databaseManager.isMySql()) {
             return;
         }
-        PluginConfig.ClaimSyncSettings settings = plugin.settings().claimSync();
+        ClaimSyncSettings settings = plugin.settings().claimSync();
         if (!settings.enabled()) {
             plugin.getLogger().warning(
                 "database.type=mysql is enabled, but claim-sync.enabled=false. "
@@ -119,7 +119,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
 
     private void subscriberLoop() {
         while (running.get()) {
-            PluginConfig.ClaimSyncSettings settings = plugin.settings().claimSync();
+            ClaimSyncSettings settings = plugin.settings().claimSync();
             try (Jedis jedis = openJedis(settings)) {
                 plugin.getLogger().info("Claim sync connected to Redis channel '" + settings.redisChannel() + "'.");
                 scheduleFullReload("redis-sync-connected");
@@ -172,7 +172,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
     }
 
     private void publishPayload(String payload) {
-        PluginConfig.ClaimSyncSettings settings = plugin.settings().claimSync();
+        ClaimSyncSettings settings = plugin.settings().claimSync();
         try (Jedis jedis = openJedis(settings)) {
             jedis.publish(settings.redisChannel(), payload);
         } catch (RuntimeException exception) {
@@ -180,7 +180,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         }
     }
 
-    private Jedis openJedis(PluginConfig.ClaimSyncSettings settings) {
+    private Jedis openJedis(ClaimSyncSettings settings) {
         Jedis jedis = new Jedis(settings.redisHost(), settings.redisPort());
         if (settings.hasRedisPassword()) {
             jedis.auth(settings.redisPassword());

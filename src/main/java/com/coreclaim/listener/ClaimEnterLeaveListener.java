@@ -2,11 +2,14 @@ package com.coreclaim.listener;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimFlag;
+import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ProfileService;
+import com.coreclaim.util.AdminAccess;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +33,9 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 
 public final class ClaimEnterLeaveListener implements Listener {
+
+    private static final long CLAIM_DAY_TIME = 6000L;
+    private static final long CLAIM_NIGHT_TIME = 18000L;
 
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
@@ -196,9 +202,13 @@ public final class ClaimEnterLeaveListener implements Listener {
         Claim toClaim = resolveTargetClaim(session, fromClaim, to);
         int fromId = fromClaim == null ? -1 : fromClaim.id();
         int toId = toClaim == null ? -1 : toClaim.id();
+        Claim fromNotifyClaim = resolveNotifyClaim(from);
+        Claim toNotifyClaim = resolveNotifyClaim(to);
+        int fromNotifyId = fromNotifyClaim == null ? -1 : fromNotifyClaim.id();
+        int toNotifyId = toNotifyClaim == null ? -1 : toNotifyClaim.id();
 
         if (fromId != toId && isBlockedEntry(player, toClaim)) {
-            player.sendMessage(plugin.color("&6[Claim] &c你被这块领地 deny，无法进入 &e" + toClaim.name() + "&c。"));
+            player.sendMessage(plugin.message("claim-entry-denied", "{name}", toClaim.name()));
             debugFlight(player, "blocked-entry", toClaim, session);
             cleanupSession(playerId, session);
             return true;
@@ -206,8 +216,9 @@ public final class ClaimEnterLeaveListener implements Listener {
 
         session.currentClaimId = toClaim == null ? null : toClaim.id();
         updateFlightState(player, session, toClaim, reason + (fromId == toId ? "-same-claim" : "-claim-change"));
+        updateClaimTime(player, session, toClaim);
 
-        if (fromId == toId) {
+        if (fromNotifyId == toNotifyId) {
             cleanupSession(playerId, session);
             return false;
         }
@@ -216,14 +227,14 @@ public final class ClaimEnterLeaveListener implements Listener {
             cleanupSession(playerId, session);
             return false;
         }
-        if (fromClaim != null) {
-            sendActionBar(player, leaveMessage(fromClaim));
+        if (fromNotifyClaim != null) {
+            sendActionBar(player, leaveMessage(fromNotifyClaim));
         }
-        if (toClaim != null) {
+        if (toNotifyClaim != null) {
             if (profileService.getOrCreate(player.getUniqueId(), player.getName()).autoShowBorders()) {
-                claimVisualService.showClaim(player, toClaim);
+                claimVisualService.showClaim(player, toNotifyClaim);
             }
-            sendActionBar(player, enterMessage(player, toClaim));
+            sendActionBar(player, enterMessage(player, toNotifyClaim));
         }
         cleanupSession(playerId, session);
         return false;
@@ -238,6 +249,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         PlayerFlightSession session = flightSessions.computeIfAbsent(playerId, ignored -> new PlayerFlightSession());
         session.currentClaimId = claim == null ? null : claim.id();
         updateFlightState(player, session, claim, reason);
+        updateClaimTime(player, session, claim);
         cleanupSession(playerId, session);
     }
 
@@ -255,6 +267,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         } else {
             cancelGrace(session);
         }
+        resetClaimTime(player, session);
         cleanupSession(playerId, session);
         flightSessions.remove(playerId, session);
     }
@@ -309,6 +322,31 @@ public final class ClaimEnterLeaveListener implements Listener {
         }
 
         revokeManagedFlight(player, session, reason + "-revoke");
+    }
+
+    private void updateClaimTime(Player player, PlayerFlightSession session, Claim claim) {
+        ClaimFlagState timeState = claim == null ? ClaimFlagState.UNSET : claim.flagState(ClaimFlag.TIME_CYCLE);
+        if (timeState == ClaimFlagState.ALLOW) {
+            applyClaimTime(player, session, CLAIM_DAY_TIME);
+            return;
+        }
+        if (timeState == ClaimFlagState.DENY) {
+            applyClaimTime(player, session, CLAIM_NIGHT_TIME);
+            return;
+        }
+        resetClaimTime(player, session);
+    }
+
+    private void applyClaimTime(Player player, PlayerFlightSession session, long playerTime) {
+        player.setPlayerTime(playerTime, false);
+        session.managingClaimTime = true;
+    }
+
+    private void resetClaimTime(Player player, PlayerFlightSession session) {
+        if (session.managingClaimTime) {
+            player.resetPlayerTime();
+            session.managingClaimTime = false;
+        }
     }
 
     private void startGrace(Player player, PlayerFlightSession session, long graceTicks, Claim claim, String reason) {
@@ -385,7 +423,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private boolean isBlockedEntry(Player player, Claim claim) {
         return claim != null
             && !claim.owner().equals(player.getUniqueId())
-            && !player.hasPermission("coreclaim.admin")
+            && !AdminAccess.hasForceBypass(player)
             && (claim.isDenied(player.getUniqueId()) || (claim.denyAll() && !claim.isTrusted(player.getUniqueId())));
     }
 
@@ -420,8 +458,12 @@ public final class ClaimEnterLeaveListener implements Listener {
         return resolved;
     }
 
+    private Claim resolveNotifyClaim(Location location) {
+        return location == null ? null : claimService.findClaim(location).orElse(null);
+    }
+
     private void cleanupSession(UUID playerId, PlayerFlightSession session) {
-        if (session.currentClaimId == null && !session.managingClaimFlight && !session.graceActive) {
+        if (session.currentClaimId == null && !session.managingClaimFlight && !session.managingClaimTime && !session.graceActive) {
             flightSessions.remove(playerId, session);
         }
     }
@@ -451,6 +493,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private static final class PlayerFlightSession {
         private Integer currentClaimId;
         private boolean managingClaimFlight;
+        private boolean managingClaimTime;
         private boolean baselineAllowFlight;
         private boolean baselineFlying;
         private boolean graceActive;

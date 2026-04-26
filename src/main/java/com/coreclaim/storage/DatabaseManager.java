@@ -1,6 +1,7 @@
 package com.coreclaim.storage;
 
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.storage.sql.UpsertSqlFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,7 +18,7 @@ import java.util.Locale;
 
 public final class DatabaseManager {
 
-    private static final int SCHEMA_VERSION = 5;
+    private static final int SCHEMA_VERSION = 6;
     private static final String SCHEMA_VERSION_KEY = "schema_version";
     private static final String MIGRATION_COMPLETED_KEY = "sqlite_migration_completed";
     private static final DateTimeFormatter BACKUP_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -48,6 +49,8 @@ public final class DatabaseManager {
     private final DatabaseType databaseType;
     private final File databaseFile;
     private final Object lock = new Object();
+    private final UpsertSqlFactory upsertSqlFactory;
+    private final DatabaseExecutor databaseExecutor;
     private Connection connection;
 
     public DatabaseManager(CoreClaimPlugin plugin) {
@@ -57,6 +60,8 @@ public final class DatabaseManager {
             "database.sqlite.file",
             plugin.getConfig().getString("database.file", "coreclaim.db")
         ));
+        this.upsertSqlFactory = new UpsertSqlFactory(databaseType == DatabaseType.MYSQL);
+        this.databaseExecutor = new DatabaseExecutor(lock, this::ensureConnection, () -> connection);
         connect();
         initializeSchema();
         runSqliteMigrationIfConfigured();
@@ -80,201 +85,19 @@ public final class DatabaseManager {
     }
 
     public String insertIgnoreSql(String table, String columns, String values) {
-        if (databaseType == DatabaseType.MYSQL) {
-            return "INSERT IGNORE INTO " + table + " (" + columns + ") VALUES (" + values + ")";
-        }
-        return "INSERT OR IGNORE INTO " + table + " (" + columns + ") VALUES (" + values + ")";
+        return upsertSqlFactory.insertIgnoreSql(table, columns, values);
     }
 
     public String profileUpsertSql() {
-        if (databaseType == DatabaseType.MYSQL) {
-            return """
-                INSERT INTO profiles (
-                    uuid,
-                    name,
-                    activity_points,
-                online_minutes,
-                starter_core_granted,
-                starter_core_reclaimed,
-                starter_core_used,
-                auto_show_borders,
-                last_seen_at,
-                last_group_key,
-                cleanup_permission_exempt
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                name = VALUES(name),
-                activity_points = VALUES(activity_points),
-                online_minutes = VALUES(online_minutes),
-                starter_core_granted = VALUES(starter_core_granted),
-                starter_core_reclaimed = VALUES(starter_core_reclaimed),
-                starter_core_used = VALUES(starter_core_used),
-                auto_show_borders = VALUES(auto_show_borders),
-                last_seen_at = VALUES(last_seen_at),
-                last_group_key = VALUES(last_group_key),
-                cleanup_permission_exempt = VALUES(cleanup_permission_exempt)
-                """;
-        }
-        return """
-            INSERT INTO profiles (
-                uuid,
-                name,
-                activity_points,
-                online_minutes,
-                starter_core_granted,
-                starter_core_reclaimed,
-                starter_core_used,
-                auto_show_borders,
-                last_seen_at,
-                last_group_key,
-                cleanup_permission_exempt
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(uuid) DO UPDATE SET
-                name = excluded.name,
-                activity_points = excluded.activity_points,
-                online_minutes = excluded.online_minutes,
-                starter_core_granted = excluded.starter_core_granted,
-                starter_core_reclaimed = excluded.starter_core_reclaimed,
-                starter_core_used = excluded.starter_core_used,
-                auto_show_borders = excluded.auto_show_borders,
-                last_seen_at = excluded.last_seen_at,
-                last_group_key = excluded.last_group_key,
-                cleanup_permission_exempt = excluded.cleanup_permission_exempt
-            """;
+        return upsertSqlFactory.profileUpsertSql();
     }
 
     public String claimUpsertSql() {
-        if (databaseType == DatabaseType.MYSQL) {
-            return """
-                INSERT INTO claims (
-                    id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
-                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion,
-                    allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    owner_uuid = VALUES(owner_uuid),
-                    owner_name = VALUES(owner_name),
-                    name = VALUES(name),
-                    core_visible = VALUES(core_visible),
-                    world = VALUES(world),
-                    server_id = VALUES(server_id),
-                    center_x = VALUES(center_x),
-                    center_y = VALUES(center_y),
-                    center_z = VALUES(center_z),
-                    min_y = VALUES(min_y),
-                    max_y = VALUES(max_y),
-                    full_height = VALUES(full_height),
-                    radius = VALUES(radius),
-                    east = VALUES(east),
-                    south = VALUES(south),
-                    west = VALUES(west),
-                    north = VALUES(north),
-                    enter_message = VALUES(enter_message),
-                    leave_message = VALUES(leave_message),
-                    allow_place = VALUES(allow_place),
-                    allow_break = VALUES(allow_break),
-                    allow_interact = VALUES(allow_interact),
-                    allow_container = VALUES(allow_container),
-                    allow_redstone = VALUES(allow_redstone),
-                    allow_explosion = VALUES(allow_explosion),
-                    allow_bucket = VALUES(allow_bucket),
-                    allow_teleport = VALUES(allow_teleport),
-                    allow_flight = VALUES(allow_flight),
-                    system_managed = VALUES(system_managed),
-                    deny_all = VALUES(deny_all),
-                    tp_x = VALUES(tp_x),
-                    tp_y = VALUES(tp_y),
-                    tp_z = VALUES(tp_z),
-                    tp_yaw = VALUES(tp_yaw),
-                    tp_pitch = VALUES(tp_pitch),
-                    last_expanded_at = VALUES(last_expanded_at),
-                    created_at = VALUES(created_at)
-                """;
-        }
-        return """
-            INSERT INTO claims (
-                id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
-                min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                owner_uuid = excluded.owner_uuid,
-                owner_name = excluded.owner_name,
-                name = excluded.name,
-                core_visible = excluded.core_visible,
-                world = excluded.world,
-                server_id = excluded.server_id,
-                center_x = excluded.center_x,
-                center_y = excluded.center_y,
-                center_z = excluded.center_z,
-                min_y = excluded.min_y,
-                max_y = excluded.max_y,
-                full_height = excluded.full_height,
-                radius = excluded.radius,
-                east = excluded.east,
-                south = excluded.south,
-                west = excluded.west,
-                north = excluded.north,
-                enter_message = excluded.enter_message,
-                leave_message = excluded.leave_message,
-                allow_place = excluded.allow_place,
-                allow_break = excluded.allow_break,
-                allow_interact = excluded.allow_interact,
-                allow_container = excluded.allow_container,
-                allow_redstone = excluded.allow_redstone,
-                allow_explosion = excluded.allow_explosion,
-                allow_bucket = excluded.allow_bucket,
-                allow_teleport = excluded.allow_teleport,
-                allow_flight = excluded.allow_flight,
-                system_managed = excluded.system_managed,
-                deny_all = excluded.deny_all,
-                tp_x = excluded.tp_x,
-                tp_y = excluded.tp_y,
-                tp_z = excluded.tp_z,
-                tp_yaw = excluded.tp_yaw,
-                tp_pitch = excluded.tp_pitch,
-                last_expanded_at = excluded.last_expanded_at,
-                created_at = excluded.created_at
-            """;
+        return upsertSqlFactory.claimUpsertSql();
     }
 
     public String memberSettingsUpsertSql() {
-        if (databaseType == DatabaseType.MYSQL) {
-            return """
-                INSERT INTO claim_member_permissions (
-                    claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container,
-                    allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    allow_place = VALUES(allow_place),
-                    allow_break = VALUES(allow_break),
-                    allow_interact = VALUES(allow_interact),
-                    allow_container = VALUES(allow_container),
-                    allow_redstone = VALUES(allow_redstone),
-                    allow_explosion = VALUES(allow_explosion),
-                    allow_bucket = VALUES(allow_bucket),
-                    allow_teleport = VALUES(allow_teleport),
-                    allow_flight = VALUES(allow_flight)
-                """;
-        }
-        return """
-            INSERT INTO claim_member_permissions (
-                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
-                allow_place = excluded.allow_place,
-                allow_break = excluded.allow_break,
-                allow_interact = excluded.allow_interact,
-                allow_container = excluded.allow_container,
-                allow_redstone = excluded.allow_redstone,
-                allow_explosion = excluded.allow_explosion,
-                allow_bucket = excluded.allow_bucket,
-                allow_teleport = excluded.allow_teleport,
-                allow_flight = excluded.allow_flight
-            """;
+        return upsertSqlFactory.memberSettingsUpsertSql();
     }
 
     public void close() {
@@ -293,72 +116,19 @@ public final class DatabaseManager {
     }
 
     public <T> T query(String sql, StatementBinder binder, ResultExtractor<T> extractor) {
-        synchronized (lock) {
-            ensureConnection();
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                binder.bind(statement);
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    return extractor.extract(resultSet);
-                }
-            } catch (SQLException exception) {
-                throw new IllegalStateException("Failed to execute database query: " + sql, exception);
-            }
-        }
+        return databaseExecutor.query(sql, binder, extractor);
     }
 
     public int update(String sql, StatementBinder binder) {
-        synchronized (lock) {
-            ensureConnection();
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                binder.bind(statement);
-                return statement.executeUpdate();
-            } catch (SQLException exception) {
-                throw new IllegalStateException("Failed to execute database update: " + sql, exception);
-            }
-        }
+        return databaseExecutor.update(sql, binder);
     }
 
     public long insertAndReturnKey(String sql, StatementBinder binder) {
-        synchronized (lock) {
-            ensureConnection();
-            try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                binder.bind(statement);
-                statement.executeUpdate();
-                try (ResultSet keys = statement.getGeneratedKeys()) {
-                    if (keys.next()) {
-                        return keys.getLong(1);
-                    }
-                    throw new SQLException("No generated key was returned.");
-                }
-            } catch (SQLException exception) {
-                throw new IllegalStateException("Failed to execute database insert: " + sql, exception);
-            }
-        }
+        return databaseExecutor.insertAndReturnKey(sql, binder);
     }
 
     public <T> T transaction(TransactionCallback<T> callback) {
-        synchronized (lock) {
-            ensureConnection();
-            try {
-                boolean previousAutoCommit = connection.getAutoCommit();
-                if (!previousAutoCommit) {
-                    return callback.execute();
-                }
-                connection.setAutoCommit(false);
-                try {
-                    T result = callback.execute();
-                    connection.commit();
-                    return result;
-                } catch (SQLException | RuntimeException exception) {
-                    connection.rollback();
-                    throw exception;
-                } finally {
-                    connection.setAutoCommit(previousAutoCommit);
-                }
-            } catch (SQLException exception) {
-                throw new IllegalStateException("Failed to execute database transaction.", exception);
-            }
-        }
+        return databaseExecutor.transaction(callback);
     }
 
     private void connect() {
@@ -397,6 +167,7 @@ public final class DatabaseManager {
                 name %s NOT NULL,
                 activity_points %s NOT NULL,
                 online_minutes %s NOT NULL,
+                online_seconds %s NOT NULL DEFAULT 0,
                 starter_core_granted %s NOT NULL,
                 starter_core_reclaimed %s NOT NULL DEFAULT 0,
                 starter_core_used %s NOT NULL DEFAULT 0,
@@ -410,6 +181,7 @@ public final class DatabaseManager {
                 shortTextType(),
                 integerType(),
                 integerType(),
+                longType(),
                 booleanType(),
                 booleanType(),
                 booleanType(),
@@ -585,6 +357,12 @@ public final class DatabaseManager {
         ensureColumn("profiles", "last_seen_at", longType() + " NOT NULL DEFAULT 0");
         ensureColumn("profiles", "last_group_key", shortTextType() + " NOT NULL DEFAULT ''");
         ensureColumn("profiles", "cleanup_permission_exempt", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("profiles", "online_seconds", longType() + " NOT NULL DEFAULT 0");
+        update(
+            "UPDATE profiles SET online_seconds = online_minutes * 60 WHERE online_seconds <= 0 AND online_minutes > 0",
+            statement -> {
+            }
+        );
         ensureColumn("claim_member_permissions", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
@@ -821,18 +599,7 @@ public final class DatabaseManager {
     }
 
     private String metaUpsertSql() {
-        if (databaseType == DatabaseType.MYSQL) {
-            return """
-                INSERT INTO coreclaim_meta (meta_key, meta_value)
-                VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)
-                """;
-        }
-        return """
-            INSERT INTO coreclaim_meta (meta_key, meta_value)
-            VALUES (?, ?)
-            ON CONFLICT(meta_key) DO UPDATE SET meta_value = excluded.meta_value
-            """;
+        return upsertSqlFactory.metaUpsertSql();
     }
 
     public void ensureColumn(String table, String column, String definition) {

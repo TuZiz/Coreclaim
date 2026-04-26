@@ -350,6 +350,7 @@ public final class PluginConfig {
 
     private String defaultFlagValue(ClaimFlag flag, boolean systemDefaults) {
         return switch (flag) {
+            case TIME_CYCLE -> "unset";
             case CONTAINER, USE_BUTTON, USE_LEVER, USE_PRESSURE_PLATE -> "deny";
             case USE_DOOR, USE_TRAPDOOR, USE_FENCE_GATE, USE_BED -> "allow";
         };

@@ -3,6 +3,8 @@ build/
 out/
 *.log
 .idea/
+.vscode/
 libs/
 .playwright-cli/
+*.bak_encoding
 

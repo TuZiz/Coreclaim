@@ -3,6 +3,9 @@ world: "world"
 server-id: "local"
 claim-worlds: []
 
+# 语言文件：zh_cn / en_us
+language: "zh_cn"
+
 # 玩家在线多少分钟后获得首个领地核心
 starter-reward-minutes: 30
 

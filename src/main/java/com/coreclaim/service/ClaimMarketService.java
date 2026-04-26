@@ -6,6 +6,7 @@ import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimSaleListing;
 import com.coreclaim.storage.DatabaseManager;
+import com.coreclaim.util.AdminAccess;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -102,7 +103,7 @@ public final class ClaimMarketService {
             return false;
         }
         if (claim.systemManaged()) {
-            seller.sendMessage(chatMessage("system-claim-market-denied", "&c&l! &7系统领地不能上架市场。"));
+            seller.sendMessage(plugin.message("system-claim-market-denied"));
             return false;
         }
         if (!Double.isFinite(price) || price <= 0D) {
@@ -148,12 +149,12 @@ public final class ClaimMarketService {
                 return false;
             }
         }
-        if (!claim.owner().equals(seller.getUniqueId()) && !seller.hasPermission("coreclaim.admin")) {
+        if (!claim.owner().equals(seller.getUniqueId()) && !AdminAccess.hasMarketManageAccess(seller)) {
             seller.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
-        if (claim.systemManaged() && !seller.hasPermission("coreclaim.admin")) {
-            seller.sendMessage(chatMessage("system-claim-market-denied", "&c&l! &7系统领地不能由普通玩家管理市场状态。"));
+        if (claim.systemManaged() && !AdminAccess.hasMarketManageAccess(seller)) {
+            seller.sendMessage(plugin.message("system-claim-market-denied"));
             return false;
         }
         int targetClaimId = claim.id();
@@ -188,7 +189,7 @@ public final class ClaimMarketService {
         }
         if (claim.systemManaged()) {
             claimService.cancelSaleListing(claimId);
-            buyer.sendMessage(chatMessage("system-claim-market-denied", "&c&l! &7系统领地不能通过市场交易。"));
+            buyer.sendMessage(plugin.message("system-claim-market-denied"));
             return false;
         }
         if (buyer.getUniqueId().equals(listing.sellerId())) {
@@ -324,15 +325,5 @@ public final class ClaimMarketService {
                 + ", seller=" + listing.sellerName()
                 + ", price=" + listing.price()
         );
-    }
-
-    private String chatMessage(String path, String fallback, String... replacements) {
-        String prefix = plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f");
-        String body = plugin.messagesConfig().contains(path) ? plugin.messagesConfig().getString(path, fallback) : fallback;
-        String message = plugin.color(prefix + body);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            message = message.replace(replacements[index], replacements[index + 1]);
-        }
-        return message;
     }
 }

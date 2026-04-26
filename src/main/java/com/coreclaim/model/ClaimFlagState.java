@@ -47,9 +47,9 @@ public enum ClaimFlagState {
         }
         String normalized = rawValue.trim().toLowerCase(Locale.ROOT);
         return switch (normalized) {
-            case "allow", "on", "true", "yes" -> ALLOW;
-            case "deny", "off", "false", "no" -> DENY;
-            case "unset", "reset", "clear", "default" -> UNSET;
+            case "allow", "on", "true", "yes", "day", "sun" -> ALLOW;
+            case "deny", "off", "false", "no", "night", "moon" -> DENY;
+            case "unset", "reset", "clear", "default", "world" -> UNSET;
             default -> null;
         };
     }

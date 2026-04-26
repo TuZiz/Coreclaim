@@ -1,12 +1,12 @@
-title: '&8[&3扩建&8] &3&l扩建控制台 - {name}'
-GuiPlain:
+layout-version: 2
+title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4&l扩建控制台 - {name}'
+Shape:
+  - "FFFFFFFFF"
   - "FFFFNFFFF"
-  - "FFFFFFFFF"
   - "FFWFIFEFF"
-  - "FFFFFFFFF"
   - "FFFFSFFFF"
+  - "FFFFFFFFF"
   - "FFFBFDFFF"
-
 items:
   filler:
     char: "F"
@@ -18,91 +18,96 @@ items:
     char: "I"
     material: COMPASS
     custom-model-data: 1301
-    name: '&e&l扩建控制台'
+    name: '&#FFD166&l扩建控制台'
     lore:
       - ''
-      - ' &7领地名称: &f{name}'
-      - ' &7世界: &f{world}'
-      - ' &7核心坐标: &f{x}, {z}'
-      - ' &7当前大小: &e{width}x{depth}'
-      - ' &7当前面积: &e{area}'
+      - ' &#CBD5E1领地名称: &#F8FAFC{name}'
+      - ' &#CBD5E1所在世界: &#F8FAFC{world}'
+      - ' &#CBD5E1核心坐标: &#F8FAFC{x}, {z}'
+      - ' &#CBD5E1当前大小: &#FFD166{width}x{depth}'
+      - ' &#CBD5E1当前面积: &#FFD166{area}'
       - ''
-      - ' &7点击四个方向按钮扩建领地'
+      - ' &#F8FAFC先选择方向，再选择扩建格数'
+      - ' &#55FFAA可以只扩建 1 格，确认后才会扣费'
 
   expand-north:
     char: "N"
     material: ARROW
     custom-model-data: 1302
     glow: true
-    name: '&3&l向北扩建 +{amount}'
+    name: '&#06B6D4&l选择向北扩建'
     lore:
       - ''
-      - ' &7当前北侧: &e{current}'
-      - ' &7扩建后: &e{target}'
-      - ' &7价格: &6{price}'
+      - ' &#CBD5E1当前北侧: &#FFD166{current}'
+      - ' &#CBD5E1默认预览: &#55FFAA+{amount} &#CBD5E1格'
+      - ' &#CBD5E1预览边界: &#FFD166{target}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
       - ''
-      - ' &e点击向北扩建'
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+      - ' &#FFD166点击选择具体格数'
+    sound: UI_BUTTON_CLICK
 
   expand-west:
     char: "W"
     material: ARROW
     custom-model-data: 1303
     glow: true
-    name: '&3&l向西扩建 +{amount}'
+    name: '&#06B6D4&l选择向西扩建'
     lore:
       - ''
-      - ' &7当前西侧: &e{current}'
-      - ' &7扩建后: &e{target}'
-      - ' &7价格: &6{price}'
+      - ' &#CBD5E1当前西侧: &#FFD166{current}'
+      - ' &#CBD5E1默认预览: &#55FFAA+{amount} &#CBD5E1格'
+      - ' &#CBD5E1预览边界: &#FFD166{target}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
       - ''
-      - ' &e点击向西扩建'
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+      - ' &#FFD166点击选择具体格数'
+    sound: UI_BUTTON_CLICK
 
   expand-east:
     char: "E"
     material: ARROW
     custom-model-data: 1304
     glow: true
-    name: '&3&l向东扩建 +{amount}'
+    name: '&#06B6D4&l选择向东扩建'
     lore:
       - ''
-      - ' &7当前东侧: &e{current}'
-      - ' &7扩建后: &e{target}'
-      - ' &7价格: &6{price}'
+      - ' &#CBD5E1当前东侧: &#FFD166{current}'
+      - ' &#CBD5E1默认预览: &#55FFAA+{amount} &#CBD5E1格'
+      - ' &#CBD5E1预览边界: &#FFD166{target}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
       - ''
-      - ' &e点击向东扩建'
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+      - ' &#FFD166点击选择具体格数'
+    sound: UI_BUTTON_CLICK
 
   expand-south:
     char: "S"
     material: ARROW
     custom-model-data: 1305
     glow: true
-    name: '&3&l向南扩建 +{amount}'
+    name: '&#06B6D4&l选择向南扩建'
     lore:
       - ''
-      - ' &7当前南侧: &e{current}'
-      - ' &7扩建后: &e{target}'
-      - ' &7价格: &6{price}'
+      - ' &#CBD5E1当前南侧: &#FFD166{current}'
+      - ' &#CBD5E1默认预览: &#55FFAA+{amount} &#CBD5E1格'
+      - ' &#CBD5E1预览边界: &#FFD166{target}'
+      - ' &#CBD5E1预计花费: &#F59E0B{price}'
       - ''
-      - ' &e点击向南扩建'
-    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+      - ' &#FFD166点击选择具体格数'
+    sound: UI_BUTTON_CLICK
 
   back:
     char: "B"
     material: BARRIER
     custom-model-data: 1307
-    name: '&c&l返回核心菜单'
+    name: '&#FF6B6B&l返回核心菜单'
     sound: UI_BUTTON_CLICK
 
   delete:
     char: "D"
     material: LAVA_BUCKET
     custom-model-data: 1308
-    name: '&c&l删除领地'
+    name: '&#FF6B6B&l删除领地'
     lore:
       - ''
-      - ' &7点击后需要在聊天栏输入'
-      - ' &a确认删除 &7才会真正删除'
+      - ' &#CBD5E1点击后需要在聊天栏输入确认'
+      - ' &#55FFAA确认删除 &#CBD5E1才会真正删除'
     sound: BLOCK_ANVIL_PLACE

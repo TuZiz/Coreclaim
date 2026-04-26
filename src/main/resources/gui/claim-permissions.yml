@@ -1,12 +1,12 @@
-layout-version: 5
-title: '&8[&5权限&8] &5&l权限与交互 - {name}'
-GuiPlain:
+layout-version: 6
+title: '&#475569[&#A855F7权限&#475569] &#A855F7&l权限与交互 - {name}'
+Shape:
   - "FFFFIFFFF"
   - "FFPBHFRFF"
   - "FFFEKTYFF"
   - "FFF1234FF"
   - "FFF5678FF"
-  - "FFFDXFFFF"
+  - "FFFDXMFFF"
 
 items:
   filler:
@@ -19,248 +19,261 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1601
-    name: '&e&l权限与交互概览'
+    name: '&#FFD166&l权限与交互概览'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7成员数量: &e{trusted_count}'
-      - ' &7已自定义细则: &e{custom_count}'
+      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
+      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
+      - ' &#CBD5E1已自定义细则: &#FFD166{custom_count}'
       - ''
-      - ' &7上方区域: 基础权限'
-      - ' &7下方区域: 交互细则'
-      - ' &7未设置 = 跟随基础权限'
+      - ' &#CBD5E1上方区域: 基础权限'
+      - ' &#CBD5E1下方区域: 交互细则'
+      - ' &#CBD5E1未设置 = 跟随基础权限'
 
   perm-place:
     char: "P"
     material: GRASS_BLOCK
     custom-model-data: 1602
-    name: '&a&l放置权限'
+    name: '&#55FFAA&l放置权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-break:
     char: "B"
     material: NETHERITE_PICKAXE
     custom-model-data: 1603
-    name: '&c&l破坏权限'
+    name: '&#FF6B6B&l破坏权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-interact:
     char: "H"
     material: OAK_BUTTON
     custom-model-data: 1604
-    name: '&b&l交互权限'
+    name: '&#4CC9F0&l交互权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-container:
     char: "C"
     material: BARREL
     custom-model-data: 1608
-    name: '&6&l容器权限'
+    name: '&#F59E0B&l容器权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-redstone:
     char: "R"
     material: REDSTONE_TORCH
     custom-model-data: 1609
-    name: '&c&l红石权限'
+    name: '&#FF6B6B&l红石权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-explosion:
     char: "E"
     material: TNT
     custom-model-data: 1610
-    name: '&6&l爆炸权限'
+    name: '&#F59E0B&l爆炸权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-bucket:
     char: "K"
     material: WATER_BUCKET
     custom-model-data: 1605
-    name: '&9&l桶权限'
+    name: '&#60A5FA&l桶权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-teleport:
     char: "T"
     material: ENDER_PEARL
     custom-model-data: 1606
-    name: '&d&l传送权限'
+    name: '&#C084FC&l传送权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   perm-flight:
     char: "Y"
     material: FEATHER
     custom-model-data: 1613
-    name: '&b&l飞行权限'
+    name: '&#4CC9F0&l飞行权限'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e点击切换状态'
+      - ' &#FFD166点击切换状态'
     sound: UI_BUTTON_CLICK
 
   flag-container:
     char: "1"
     material: BARREL
     custom-model-data: 1616
-    name: '&6&l容器交互'
+    name: '&#F59E0B&l容器交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-button:
     char: "2"
     material: STONE_BUTTON
     custom-model-data: 1617
-    name: '&f&l按钮交互'
+    name: '&#F8FAFC&l按钮交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-lever:
     char: "3"
     material: LEVER
     custom-model-data: 1618
-    name: '&f&l拉杆交互'
+    name: '&#F8FAFC&l拉杆交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-pressure-plate:
     char: "4"
     material: HEAVY_WEIGHTED_PRESSURE_PLATE
     custom-model-data: 1619
-    name: '&f&l压力板交互'
+    name: '&#F8FAFC&l压力板交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-door:
     char: "5"
     material: OAK_DOOR
     custom-model-data: 1620
-    name: '&e&l门交互'
+    name: '&#FFD166&l门交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-trapdoor:
     char: "6"
     material: OAK_TRAPDOOR
     custom-model-data: 1621
-    name: '&e&l活板门交互'
+    name: '&#FFD166&l活板门交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-fence-gate:
     char: "7"
     material: OAK_FENCE_GATE
     custom-model-data: 1622
-    name: '&e&l栅栏门交互'
+    name: '&#FFD166&l栅栏门交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
     sound: UI_BUTTON_CLICK
 
   flag-use-bed:
     char: "8"
     material: RED_BED
     custom-model-data: 1623
-    name: '&d&l床交互'
+    name: '&#C084FC&l床交互'
     lore:
       - ''
-      - ' &7当前状态: {state}'
+      - ' &#CBD5E1当前状态: {state}'
       - ''
-      - ' &e左键切换允许/禁止'
-      - ' &e右键恢复未设置'
+      - ' &#FFD166左键切换允许/禁止'
+      - ' &#FFD166右键恢复未设置'
+    sound: UI_BUTTON_CLICK
+
+  flag-time-cycle:
+    char: "M"
+    material: CLOCK
+    custom-model-data: 1624
+    name: '&#FFD166&l领地时间'
+    lore:
+      - ''
+      - ' &#CBD5E1当前状态: {state}'
+      - ''
+      - ' &#FFD166左键切换 跟随世界/白天/夜晚'
+      - ' &#FFD166右键恢复跟随世界时间'
     sound: UI_BUTTON_CLICK
 
   disable-all:
     char: "D"
     material: REDSTONE_BLOCK
     custom-model-data: 1611
-    name: '&c&l一键关闭基础权限'
+    name: '&#FF6B6B&l一键关闭基础权限'
     lore:
       - ''
-      - ' &7会将基础权限全部改为禁止'
-      - ' &7已手动设置的交互细则不会被清空'
+      - ' &#CBD5E1会将基础权限全部改为禁止'
+      - ' &#CBD5E1已手动设置的交互细则不会被清空'
       - ''
-      - ' &e点击执行'
+      - ' &#FFD166点击执行'
     sound: UI_BUTTON_CLICK
 
   back:
     char: "X"
     material: BARRIER
     custom-model-data: 1612
-    name: '&c&l返回'
+    name: '&#FF6B6B&l返回'
     lore:
       - ''
-      - ' &e点击回到核心菜单'
+      - ' &#FFD166点击回到核心菜单'
     sound: UI_BUTTON_CLICK

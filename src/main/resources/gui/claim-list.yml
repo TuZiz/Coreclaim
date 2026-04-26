@@ -1,6 +1,6 @@
 layout-version: 2
-title: '&8[&6领地&8] &6&l领地列表'
-GuiPlain:
+title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l领地列表'
+Shape:
   - "FFFFRFFFF"
   - "FEEEEEEEF"
   - "FEEEEEEEF"
@@ -20,53 +20,53 @@ items:
     material: GRASS_BLOCK
     custom-model-data: 1201
     glow: true
-    name: '&a&l{name}'
+    name: '&#55FFAA&l{name}'
     lore:
-      - ' &7关系: {relation}'
-      - ' &7主人: &b{owner}'
-      - ' &7区服: &f{server}'
-      - ' &7世界: &f{world}'
-      - ' &7核心坐标: &f{x}, {z}'
-      - ' &7大小: &e{width}x{depth}'
-      - ' &7面积: &e{area}'
-      - ' &7成员数量: &e{trusted}'
+      - ' &#CBD5E1关系: {relation}'
+      - ' &#CBD5E1主人: &#4CC9F0{owner}'
+      - ' &#CBD5E1区服: &#F8FAFC{server}'
+      - ' &#CBD5E1世界: &#F8FAFC{world}'
+      - ' &#CBD5E1核心坐标: &#F8FAFC{x}, {z}'
+      - ' &#CBD5E1大小: &#FFD166{width}x{depth}'
+      - ' &#CBD5E1面积: &#FFD166{area}'
+      - ' &#CBD5E1成员数量: &#FFD166{trusted}'
       - ''
       - ' {left_action}'
-      - ' &7右键直接传送'
+      - ' &#CBD5E1右键直接传送'
     sound: BLOCK_NOTE_BLOCK_HARP
 
   refresh:
     char: "R"
     material: CLOCK
     custom-model-data: 1202
-    name: '&e&l刷新列表'
+    name: '&#FFD166&l刷新列表'
     lore:
       - ''
-      - ' &7当前可见总数: &e{total}'
+      - ' &#CBD5E1当前可见总数: &#FFD166{total}'
       - ''
-      - ' &e点击立即刷新'
+      - ' &#FFD166点击立即刷新'
     sound: UI_BUTTON_CLICK
 
   prev-page:
     char: "L"
     material: ARROW
     custom-model-data: 1203
-    name: '&a&l上一页'
+    name: '&#55FFAA&l上一页'
     sound: UI_BUTTON_CLICK
 
   back:
     char: "B"
     material: BARRIER
     custom-model-data: 1204
-    name: '&c&l关闭菜单'
+    name: '&#FF6B6B&l关闭菜单'
     lore:
       - ''
-      - ' &e点击关闭当前界面'
+      - ' &#FFD166点击关闭当前界面'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: "N"
     material: ARROW
     custom-model-data: 1205
-    name: '&a&l下一页'
+    name: '&#55FFAA&l下一页'
     sound: UI_BUTTON_CLICK

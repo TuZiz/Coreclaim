@@ -2,6 +2,9 @@ package com.coreclaim.gui;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
+import com.coreclaim.gui.support.MenuConfigAccessor;
+import com.coreclaim.gui.support.MenuItemFactory;
+import com.coreclaim.gui.support.MenuTextFormatter;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
@@ -16,6 +19,7 @@ import com.coreclaim.service.ClaimService.ClaimListEntry;
 import com.coreclaim.service.ClaimService.ClaimListRelation;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
+import com.coreclaim.util.AdminAccess;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -48,6 +52,9 @@ public final class MenuService {
     private final RemovalConfirmationService removalConfirmationService;
     private final ClaimInputService claimInputService;
     private final ClaimSelectionService claimSelectionService;
+    private final MenuConfigAccessor configAccessor;
+    private final MenuTextFormatter textFormatter;
+    private final MenuItemFactory itemFactory;
 
     public MenuService(
         CoreClaimPlugin plugin,
@@ -65,6 +72,9 @@ public final class MenuService {
         this.removalConfirmationService = removalConfirmationService;
         this.claimInputService = claimInputService;
         this.claimSelectionService = claimSelectionService;
+        this.configAccessor = new MenuConfigAccessor(plugin);
+        this.textFormatter = new MenuTextFormatter(plugin);
+        this.itemFactory = new MenuItemFactory(plugin, configAccessor, textFormatter);
     }
 
     public void openMainMenu(Player player) {
@@ -144,6 +154,50 @@ public final class MenuService {
             "{amount}", String.valueOf(east.expandAmount()), "{price}", east.costText(), "{current}", String.valueOf(claim.east()), "{target}", String.valueOf(east.targetDistance())));
         inventory.setItem(slot("claim-manage", "delete"), configuredItem("claim-manage", "delete"));
         inventory.setItem(slot("claim-manage", "back"), configuredItem("claim-manage", "back"));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimExpandAmountMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
+        int normalizedAmount = normalizeExpansionAmount(player, claim, direction, amount);
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, direction, normalizedAmount);
+        ClaimExpandAmountHolder holder = new ClaimExpandAmountHolder(claim.id(), direction, normalizedAmount);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-expand-amount"), menuTitle("claim-expand-amount",
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction)
+        ));
+        holder.inventory = inventory;
+        fill(inventory, "claim-expand-amount", "filler");
+
+        String[] replacements = expansionReplacements(player, claim, direction, normalizedAmount, preview);
+        inventory.setItem(slot("claim-expand-amount", "info"), configuredItem("claim-expand-amount", "info", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-10"), configuredItem("claim-expand-amount", "minus-10", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-5"), configuredItem("claim-expand-amount", "minus-5", replacements));
+        inventory.setItem(slot("claim-expand-amount", "minus-1"), configuredItem("claim-expand-amount", "minus-1", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-1"), configuredItem("claim-expand-amount", "plus-1", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-5"), configuredItem("claim-expand-amount", "plus-5", replacements));
+        inventory.setItem(slot("claim-expand-amount", "plus-10"), configuredItem("claim-expand-amount", "plus-10", replacements));
+        inventory.setItem(slot("claim-expand-amount", "max"), configuredItem("claim-expand-amount", "max", replacements));
+        inventory.setItem(slot("claim-expand-amount", "confirm"), configuredItem("claim-expand-amount", "confirm", replacements));
+        inventory.setItem(slot("claim-expand-amount", "back"), configuredItem("claim-expand-amount", "back", replacements));
+        player.openInventory(inventory);
+    }
+
+    public void openClaimExpandConfirmMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
+        int normalizedAmount = normalizeExpansionAmount(player, claim, direction, amount);
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, direction, normalizedAmount);
+        ClaimExpandConfirmHolder holder = new ClaimExpandConfirmHolder(claim.id(), direction, normalizedAmount);
+        Inventory inventory = Bukkit.createInventory(holder, menuSize("claim-expand-confirm"), menuTitle("claim-expand-confirm",
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction)
+        ));
+        holder.inventory = inventory;
+        fill(inventory, "claim-expand-confirm", "filler");
+
+        String[] replacements = expansionReplacements(player, claim, direction, normalizedAmount, preview);
+        inventory.setItem(slot("claim-expand-confirm", "info"), configuredItem("claim-expand-confirm", "info", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "confirm"), configuredItem("claim-expand-confirm", "confirm", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "back"), configuredItem("claim-expand-confirm", "back", replacements));
+        inventory.setItem(slot("claim-expand-confirm", "cancel"), configuredItem("claim-expand-confirm", "cancel", replacements));
         player.openInventory(inventory);
     }
 
@@ -350,7 +404,7 @@ public final class MenuService {
             }
             ClaimFlagState state = claim.flagState(flag);
             inventory.setItem(slot("claim-permissions", itemKey), configuredItem("claim-permissions", itemKey,
-                "{state}", flagStateText(state)
+                "{state}", flagStateText(flag, state)
             ));
         }
         inventory.setItem(slot("claim-permissions", "disable-all"), configuredItem("claim-permissions", "disable-all"));
@@ -364,7 +418,7 @@ public final class MenuService {
         holder.inventory = inventory;
         fill(inventory, "selection-create", "filler");
 
-        String status = preview.allowed() ? "&a\u53ef\u521b\u5efa" : "&c" + stripMessagePrefix(preview.failureMessage());
+        String status = preview.allowed() ? "&#55FFAA\u53ef\u521b\u5efa" : "&#FF6B6B" + stripMessagePrefix(preview.failureMessage());
         inventory.setItem(slot("selection-create", "info"), configuredItem("selection-create", "info",
             "{name}", claimName,
             "{world}", preview.coreLocation() == null || preview.coreLocation().getWorld() == null ? player.getWorld().getName() : preview.coreLocation().getWorld().getName(),
@@ -408,6 +462,10 @@ public final class MenuService {
             handleClaimListMenu(player, claimListHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimManageHolder claimManageHolder) {
             handleClaimManageMenu(player, claimManageHolder, slot);
+        } else if (holder instanceof ClaimExpandAmountHolder claimExpandAmountHolder) {
+            handleClaimExpandAmountMenu(player, claimExpandAmountHolder, slot);
+        } else if (holder instanceof ClaimExpandConfirmHolder claimExpandConfirmHolder) {
+            handleClaimExpandConfirmMenu(player, claimExpandConfirmHolder, slot);
         } else if (holder instanceof CoreMenuHolder coreMenuHolder) {
             handleCoreMenu(player, coreMenuHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimViewHolder claimViewHolder) {
@@ -478,35 +536,31 @@ public final class MenuService {
 
         if (slot == slot("claim-manage", "expand-north")) {
             playConfiguredSound(player, "claim-manage", "expand-north");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.NORTH, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.NORTH, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-south")) {
             playConfiguredSound(player, "claim-manage", "expand-south");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.SOUTH, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.SOUTH, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-west")) {
             playConfiguredSound(player, "claim-manage", "expand-west");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.WEST, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.WEST, 1);
             return;
         }
         if (slot == slot("claim-manage", "expand-east")) {
             playConfiguredSound(player, "claim-manage", "expand-east");
-            if (claimActionService.expandClaim(player, claim, ClaimDirection.EAST, plugin.settings().directionExpandAmount())) {
-                openClaimManageMenu(player, claim);
-            }
+            openClaimExpandAmountMenu(player, claim, ClaimDirection.EAST, 1);
             return;
         }
         if (slot == slot("claim-manage", "delete")) {
             playConfiguredSound(player, "claim-manage", "delete");
-            if (removalConfirmationService.request(player, claim)) {
+            boolean adminMode = !claim.owner().equals(player.getUniqueId()) && AdminAccess.hasClaimManageAccess(player);
+            boolean requested = adminMode
+                ? removalConfirmationService.requestAdminRemoval(player, claim)
+                : removalConfirmationService.requestOwnerRemoval(player, claim);
+            if (requested) {
                 player.closeInventory();
             }
             return;
@@ -514,6 +568,113 @@ public final class MenuService {
         if (slot == slot("claim-manage", "back")) {
             playConfiguredSound(player, "claim-manage", "back");
             openCoreMenu(player, claim);
+        }
+    }
+
+    private void handleClaimExpandAmountMenu(Player player, ClaimExpandAmountHolder holder, int slot) {
+        Claim claim = claimService.findClaimByIdFresh(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+        if (!claimActionService.canManageClaim(player, claim)) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
+
+        if (slot == slot("claim-expand-amount", "minus-10")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-10");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 10);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "minus-5")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-5");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 5);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "minus-1")) {
+            playConfiguredSound(player, "claim-expand-amount", "minus-1");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount - 1);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-1")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-1");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 1);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-5")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-5");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 5);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "plus-10")) {
+            playConfiguredSound(player, "claim-expand-amount", "plus-10");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount + 10);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "max")) {
+            playConfiguredSound(player, "claim-expand-amount", "max");
+            openClaimExpandAmountMenu(player, claim, holder.direction, maxExpansionAmount(player, claim, holder.direction));
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "confirm")) {
+            playConfiguredSound(player, "claim-expand-amount", "confirm");
+            openClaimExpandConfirmMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (slot == slot("claim-expand-amount", "back")) {
+            playConfiguredSound(player, "claim-expand-amount", "back");
+            openClaimManageMenu(player, claim);
+        }
+    }
+
+    private void handleClaimExpandConfirmMenu(Player player, ClaimExpandConfirmHolder holder, int slot) {
+        Claim claim = claimService.findClaimByIdFresh(holder.claimId).orElse(null);
+        if (claim == null) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("claim-not-found"));
+            return;
+        }
+        if (!claimActionService.canManageClaim(player, claim)) {
+            player.closeInventory();
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
+
+        if (slot == slot("claim-expand-confirm", "back")) {
+            playConfiguredSound(player, "claim-expand-confirm", "back");
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (slot == slot("claim-expand-confirm", "cancel")) {
+            playConfiguredSound(player, "claim-expand-confirm", "cancel");
+            openClaimManageMenu(player, claim);
+            return;
+        }
+        if (slot != slot("claim-expand-confirm", "confirm")) {
+            return;
+        }
+
+        playConfiguredSound(player, "claim-expand-confirm", "confirm");
+        ClaimActionService.ExpansionPreview preview = claimActionService.previewExpansion(player, claim, holder.direction, holder.amount);
+        if (!preview.allowed()) {
+            player.sendMessage(plugin.message(preview.hitMax() ? "claim-max-size" : "claim-overlap"));
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (!claimActionService.canPayExpansionCost(player, preview)) {
+            String key = claimActionService.hasExpansionEconomy(preview) ? "economy-not-enough" : "economy-missing";
+            player.sendMessage(plugin.message(key, "{cost}", ClaimActionService.formatMoney(preview.cost())));
+            openClaimExpandConfirmMenu(player, claim, holder.direction, holder.amount);
+            return;
+        }
+        if (claimActionService.expandClaim(player, claim, holder.direction, holder.amount)) {
+            Claim updated = claimService.findClaimByIdFresh(claim.id()).orElse(claim);
+            openClaimManageMenu(player, updated);
+        } else {
+            openClaimExpandAmountMenu(player, claim, holder.direction, holder.amount);
         }
     }
 
@@ -610,7 +771,7 @@ public final class MenuService {
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (!claimActionService.canEditClaim(player, claim)) {
+        if (!claimActionService.canManageMembers(player, claim)) {
             player.closeInventory();
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
@@ -660,7 +821,7 @@ public final class MenuService {
             player.sendMessage(plugin.message("claim-not-found"));
             return;
         }
-        if (!claimActionService.canEditClaim(player, claim)) {
+        if (!claimActionService.canManageMembers(player, claim)) {
             player.closeInventory();
             player.sendMessage(plugin.message("trust-no-permission"));
             return;
@@ -690,7 +851,7 @@ public final class MenuService {
                 return;
             }
             if (claim.isDenied(targetId)) {
-                player.sendMessage(plugin.color("&c该玩家仍在 deny 列表中，请先解除 deny 再进行授权"));
+                player.sendMessage(plugin.color("&#FF6B6B\u8be5\u73a9\u5bb6\u4ecd\u5728 deny \u5217\u8868\u4e2d\uff0c\u8bf7\u5148\u89e3\u9664 deny \u518d\u8fdb\u884c\u6388\u6743\u3002"));
                 openTrustOnlineAddMenu(player, claim, holder.page, holder.returnPage);
                 return;
             }
@@ -763,6 +924,10 @@ public final class MenuService {
         for (ClaimFlag flag : ClaimFlag.values()) {
             String itemKey = flagItemKey(flag);
             if (hasItem("claim-permissions", itemKey) && slot == slot("claim-permissions", itemKey)) {
+                if (!claimActionService.canManageFlags(player, claim)) {
+                    player.sendMessage(plugin.message("trust-no-permission"));
+                    return;
+                }
                 playConfiguredSound(player, "claim-permissions", itemKey);
                 ClaimFlagState currentState = claim.flagState(flag);
                 ClaimFlagState nextState = rightClick ? ClaimFlagState.UNSET : currentState.next();
@@ -787,7 +952,7 @@ public final class MenuService {
             playConfiguredSound(player, "selection-create", "refresh");
             if (preview == null || !preview.ready()) {
                 player.closeInventory();
-                player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&8[&6Claim&8] &f") + "&c\u8bf7\u5148\u91cd\u65b0\u9009\u62e9\u4e24\u4e2a\u5bf9\u89d2\u70b9\u3002"));
+                player.sendMessage(plugin.color(plugin.messagesConfig().getString("prefix", "&#475569[&#F59E0BClaim&#475569] &#F8FAFC") + "&#FF6B6B\u8bf7\u5148\u91cd\u65b0\u9009\u62e9\u4e24\u4e2a\u5bf9\u89d2\u70b9\u3002"));
                 return;
             }
             openSelectionCreateMenu(player, holder.claimName, preview);
@@ -810,12 +975,20 @@ public final class MenuService {
     }
 
     private void togglePermission(Player player, Claim claim, ClaimPermission permission, String itemKey) {
+        if (!claimActionService.canManagePermissions(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         playConfiguredSound(player, "claim-permissions", itemKey);
         claimService.updatePermission(claim, permission, !claim.permission(permission), player.getUniqueId());
         openClaimPermissionsMenu(player, claim);
     }
 
     private void setAllPermissions(Player player, Claim claim, boolean allowed, String itemKey) {
+        if (!claimActionService.canManagePermissions(player, claim)) {
+            player.sendMessage(plugin.message("trust-no-permission"));
+            return;
+        }
         playConfiguredSound(player, "claim-permissions", itemKey);
         for (ClaimPermission permission : ClaimPermission.values()) {
             claimService.updatePermission(claim, permission, allowed, player.getUniqueId());
@@ -838,179 +1011,47 @@ public final class MenuService {
     }
 
     private FileConfiguration menu(String menuKey) {
-        return plugin.menuConfig(menuKey);
+        return configAccessor.menu(menuKey);
     }
 
     private boolean hasItem(String menuKey, String itemKey) {
-        return menu(menuKey).isConfigurationSection("items." + itemKey);
+        return configAccessor.hasItem(menuKey, itemKey);
     }
 
     private int menuSize(String menuKey) {
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
-        if (!layout.isEmpty()) {
-            return layout.size() * 9;
-        }
-        return menu(menuKey).getInt("size", 27);
+        return configAccessor.menuSize(menuKey);
     }
 
     private String menuTitle(String menuKey, String... replacements) {
-        return plugin.color(apply(menu(menuKey).getString("title", menuKey), replacements));
+        return textFormatter.menuTitle(menu(menuKey).getString("title", menuKey), replacements);
     }
 
     private int slot(String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return 0;
-        }
-        if (section.contains("slot")) {
-            return section.getInt("slot", 0);
-        }
-        List<Integer> slots = slots(menuKey, itemKey);
-        return slots.isEmpty() ? 0 : slots.get(0);
+        return configAccessor.slot(menuKey, itemKey, textFormatter::padLayout);
     }
 
     private List<Integer> slots(String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        List<Integer> result = new ArrayList<>();
-        if (section == null) {
-            return result;
-        }
-        if (section.contains("slot")) {
-            result.add(section.getInt("slot", 0));
-            return result;
-        }
-        String rawChar = section.getString("char", "");
-        if (rawChar.isBlank()) {
-            return result;
-        }
-        char symbol = rawChar.charAt(0);
-        List<String> layout = menu(menuKey).getStringList("GuiPlain");
-        for (int row = 0; row < layout.size(); row++) {
-            String line = padLayout(layout.get(row));
-            for (int column = 0; column < 9; column++) {
-                if (line.charAt(column) == symbol) {
-                    result.add(row * 9 + column);
-                }
-            }
-        }
-        return result;
+        return configAccessor.slots(menuKey, itemKey, textFormatter::padLayout);
     }
 
     private ItemStack configuredItem(String menuKey, String itemKey, String... replacements) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return item(Material.BARRIER, "&cMissing: " + menuKey + "." + itemKey);
-        }
-        Material material = Material.matchMaterial(section.getString("material", "BARRIER"));
-        if (material == null) {
-            material = Material.BARRIER;
-        }
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return item;
-        }
-        meta.setDisplayName(plugin.color(apply(section.getString("name", itemKey), replacements)));
-        List<String> lore = section.getStringList("lore");
-        if (!lore.isEmpty()) {
-            List<String> lines = new ArrayList<>();
-            for (String line : lore) {
-                lines.add(plugin.color(apply(line, replacements)));
-            }
-            meta.setLore(lines);
-        }
-        if (section.contains("custom-model-data")) {
-            meta.setCustomModelData(section.getInt("custom-model-data"));
-        }
-        if (section.getBoolean("glow", false)) {
-            meta.addEnchant(Enchantment.LUCK, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        item.setItemMeta(meta);
-        if (material == Material.PLAYER_HEAD && item.getItemMeta() instanceof SkullMeta skullMeta) {
-            String owner = section.getString("skull-owner", "");
-            String texture = section.getString("skull-texture", "");
-            if (!owner.isBlank()) {
-                skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(owner));
-                item.setItemMeta(skullMeta);
-            } else if (!texture.isBlank()) {
-                applySkullTexture(skullMeta, texture);
-                item.setItemMeta(skullMeta);
-            }
-        }
-        return item;
+        return itemFactory.configuredItem(menuKey, itemKey, replacements);
     }
 
     private ItemStack playerHead(String menuKey, String itemKey, UUID playerId, String... replacements) {
-        ItemStack item = configuredItem(menuKey, itemKey, replacements);
-        if (!(item.getItemMeta() instanceof SkullMeta meta)) {
-            return item;
-        }
-        meta.setOwningPlayer(Bukkit.getOfflinePlayer(playerId));
-        item.setItemMeta(meta);
-        return item;
+        return itemFactory.playerHead(menuKey, itemKey, playerId, replacements);
     }
 
     private void playConfiguredSound(Player player, String menuKey, String itemKey) {
-        ConfigurationSection section = menu(menuKey).getConfigurationSection("items." + itemKey);
-        if (section == null) {
-            return;
-        }
-        String rawSound = section.getString("sound", "");
-        if (rawSound == null || rawSound.isBlank()) {
-            return;
-        }
-        try {
-            Sound sound = Sound.valueOf(rawSound.toUpperCase());
-            float volume = (float) section.getDouble("sound-volume", 1D);
-            float pitch = (float) section.getDouble("sound-pitch", 1D);
-            player.playSound(player.getLocation(), sound, volume, pitch);
-        } catch (IllegalArgumentException ignored) {
-        }
-    }
-
-    private void applySkullTexture(SkullMeta meta, String texture) {
-        try {
-            Class<?> gameProfileClass = Class.forName("com.mojang.authlib.GameProfile");
-            Class<?> propertyClass = Class.forName("com.mojang.authlib.properties.Property");
-            Object gameProfile = gameProfileClass.getConstructor(UUID.class, String.class)
-                .newInstance(UUID.nameUUIDFromBytes(texture.getBytes()), "coreclaim_head");
-            Object property = propertyClass.getConstructor(String.class, String.class)
-                .newInstance("textures", normalizeTexture(texture));
-            Object propertyMap = gameProfileClass.getMethod("getProperties").invoke(gameProfile);
-            propertyMap.getClass().getMethod("put", Object.class, Object.class).invoke(propertyMap, "textures", property);
-            Field profileField = meta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(meta, gameProfile);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private String normalizeTexture(String texture) {
-        if (texture.startsWith("http://") || texture.startsWith("https://")) {
-            String payload = "{\"textures\":{\"SKIN\":{\"url\":\"" + texture + "\"}}}";
-            return Base64.getEncoder().encodeToString(payload.getBytes());
-        }
-        return texture;
+        itemFactory.playConfiguredSound(player, menuKey, itemKey);
     }
 
     private String displayNotifyPreview(String raw, Claim claim, String fallback) {
-        String base = raw == null || raw.isBlank() ? fallback : raw;
-        String preview = base
-            .replace("%claim_name%", claim.name())
-            .replace("{claim_name}", claim.name())
-            .replace("{name}", claim.name())
-            .replace("%owner%", claim.ownerName())
-            .replace("{owner}", claim.ownerName());
-        if (preview.length() > 24) {
-            return preview.substring(0, 24) + "...";
-        }
-        return preview;
+        return textFormatter.displayNotifyPreview(raw, claim, fallback);
     }
 
     private String notifyStateText(String raw) {
-        return raw == null || raw.isBlank() ? "&7\u9ed8\u8ba4\u5185\u5bb9" : "&e\u5df2\u4fee\u6539";
+        return textFormatter.notifyStateText(raw);
     }
 
     private ClaimListEntry resolveVisibleListEntry(Player player, int claimId) {
@@ -1049,38 +1090,44 @@ public final class MenuService {
     }
 
     private void sendClaimViewDetails(Player player, Claim claim) {
-        player.sendMessage(plugin.color("&6[Claim] &f领地名称: &e" + claim.name()));
-        player.sendMessage(plugin.color("&6[Claim] &f领地主人: &b" + claim.ownerName()));
-        player.sendMessage(plugin.color("&6[Claim] &f所属区服: &e" + claimService.displayServerId(claim)));
-        player.sendMessage(plugin.color("&6[Claim] &f所在世界: &e" + claim.world()));
-        player.sendMessage(plugin.color("&6[Claim] &f核心坐标: &f" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
-        player.sendMessage(plugin.color("&6[Claim] &f领地大小: &e" + claim.width() + "x" + claim.depth() + " &7(面积 " + claim.area() + ")"));
-        player.sendMessage(plugin.color("&6[Claim] &f传送点: " + (claim.hasTeleportPoint() ? "&a已设置" : "&e未设置，默认回核心")));
-        player.sendMessage(plugin.color("&6[Claim] &f成员数量: &e" + claim.trustedCount()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u540d\u79f0: &#FFD166" + claim.name()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u4e3b\u4eba: &#4CC9F0" + claim.ownerName()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6240\u5c5e\u533a\u670d: &#FFD166" + claimService.displayServerId(claim)));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6240\u5728\u4e16\u754c: &#FFD166" + claim.world()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6838\u5fc3\u5750\u6807: &#F8FAFC" + claim.centerX() + ", " + claim.centerY() + ", " + claim.centerZ()));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u9886\u5730\u5927\u5c0f: &#FFD166" + claim.width() + "x" + claim.depth() + " &#CBD5E1(\u9762\u79ef " + claim.area() + ")"));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u4f20\u9001\u70b9: " + (claim.hasTeleportPoint() ? "&#55FFAA\u5df2\u8bbe\u7f6e" : "&#FFD166\u672a\u8bbe\u7f6e\uff0c\u9ed8\u8ba4\u56de\u6838\u5fc3")));
+        player.sendMessage(plugin.color("&#F59E0B[Claim] &#F8FAFC\u6210\u5458\u6570\u91cf: &#FFD166" + claim.trustedCount()));
     }
 
     private String relationText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&a我的领地" : "&b已授权领地";
+        return textFormatter.relationText(relation);
     }
 
     private String leftClickActionText(ClaimListRelation relation) {
-        return relation == ClaimListRelation.OWNER ? "&7左键打开核心管理" : "&7左键查看只读详情";
+        return textFormatter.leftClickActionText(relation);
     }
 
     private String stripMessagePrefix(String message) {
-        String prefix = plugin.color(plugin.messagesConfig().getString("prefix", ""));
-        return message != null && message.startsWith(prefix) ? message.substring(prefix.length()) : (message == null ? "" : message);
+        return textFormatter.stripMessagePrefix(message);
     }
 
     private String stateText(boolean enabled) {
-        return enabled ? "&a\u5141\u8bb8" : "&c\u7981\u6b62";
+        return textFormatter.stateText(enabled);
     }
 
     private String flagStateText(ClaimFlagState state) {
+        return textFormatter.flagStateText(state);
+    }
+
+    private String flagStateText(ClaimFlag flag, ClaimFlagState state) {
+        if (flag != ClaimFlag.TIME_CYCLE) {
+            return flagStateText(state);
+        }
         return switch (state) {
-            case ALLOW -> "&a\u5141\u8bb8";
-            case DENY -> "&c\u7981\u6b62";
-            case UNSET -> "&7\u672a\u8bbe\u7f6e";
+            case ALLOW -> "&#FFD166\u767d\u5929";
+            case DENY -> "&#60A5FA\u591c\u665a";
+            case UNSET -> "&#CBD5E1\u8ddf\u968f\u4e16\u754c\u65f6\u95f4";
         };
     }
 
@@ -1095,21 +1142,68 @@ public final class MenuService {
     }
 
     private String flagItemKey(ClaimFlag flag) {
-        return switch (flag) {
-            case CONTAINER -> "flag-container";
-            case USE_BUTTON -> "flag-use-button";
-            case USE_LEVER -> "flag-use-lever";
-            case USE_PRESSURE_PLATE -> "flag-use-pressure-plate";
-            case USE_DOOR -> "flag-use-door";
-            case USE_TRAPDOOR -> "flag-use-trapdoor";
-            case USE_FENCE_GATE -> "flag-use-fence-gate";
-            case USE_BED -> "flag-use-bed";
-        };
+        return textFormatter.flagItemKey(flag);
     }
 
     private String playerName(UUID playerId) {
-        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
-        return player.getName() == null ? playerId.toString() : player.getName();
+        return textFormatter.playerName(playerId);
+    }
+
+    private int normalizeExpansionAmount(Player player, Claim claim, ClaimDirection direction, int requestedAmount) {
+        int maxAmount = maxExpansionAmount(player, claim, direction);
+        if (maxAmount <= 0) {
+            return 1;
+        }
+        return Math.max(1, Math.min(requestedAmount, maxAmount));
+    }
+
+    private int maxExpansionAmount(Player player, Claim claim, ClaimDirection direction) {
+        ClaimGroup group = plugin.groups().resolve(player);
+        return Math.max(0, group.maxDistance() - claim.distance(direction));
+    }
+
+    private String[] expansionReplacements(Player player, Claim claim, ClaimDirection direction, int amount, ClaimActionService.ExpansionPreview preview) {
+        int maxAmount = maxExpansionAmount(player, claim, direction);
+        return new String[] {
+            "{name}", claim.name(),
+            "{direction}", directionLabel(direction),
+            "{amount}", String.valueOf(amount),
+            "{max}", String.valueOf(maxAmount),
+            "{current}", String.valueOf(claim.distance(direction)),
+            "{target}", String.valueOf(preview.targetDistance()),
+            "{price}", preview.costText(),
+            "{width}", String.valueOf(preview.width()),
+            "{depth}", String.valueOf(preview.depth()),
+            "{status}", expansionStatusText(player, preview)
+        };
+    }
+
+    private String expansionStatusText(Player player, ClaimActionService.ExpansionPreview preview) {
+        if (preview.hitMax()) {
+            return "&#FF6B6B已到达该方向上限";
+        }
+        if (preview.overlap()) {
+            return "&#FF6B6B扩建后会与其他领地重叠";
+        }
+        if (!preview.allowed()) {
+            return "&#FF6B6B当前无法扩建";
+        }
+        if (!claimActionService.hasExpansionEconomy(preview)) {
+            return "&#FF6B6B经济系统不可用";
+        }
+        if (!claimActionService.canPayExpansionCost(player, preview)) {
+            return "&#FF6B6B余额不足";
+        }
+        return "&#55FFAA可以扩建";
+    }
+
+    private String directionLabel(ClaimDirection direction) {
+        return switch (direction) {
+            case NORTH -> "北";
+            case SOUTH -> "南";
+            case WEST -> "西";
+            case EAST -> "东";
+        };
     }
 
     private List<Player> availableOnlineTrustTargets(Player viewer, Claim claim) {
@@ -1129,38 +1223,15 @@ public final class MenuService {
     }
 
     private String padLayout(String line) {
-        String value = line == null ? "" : line;
-        if (value.length() >= 9) {
-            return value.substring(0, 9);
-        }
-        return String.format("%-9s", value);
+        return textFormatter.padLayout(line);
     }
 
     private String apply(String text, String... replacements) {
-        String result = text == null ? "" : text;
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            result = result.replace(replacements[index], replacements[index + 1]);
-        }
-        return result;
+        return textFormatter.apply(text, replacements);
     }
 
     private ItemStack item(Material material, String name, String... lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return item;
-        }
-        meta.setDisplayName(plugin.color(name));
-        if (lore.length > 0) {
-            List<String> lines = new ArrayList<>();
-            for (String line : lore) {
-                lines.add(plugin.color(line));
-            }
-            meta.setLore(lines);
-        }
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        item.setItemMeta(meta);
-        return item;
+        return itemFactory.item(material, name, lore);
     }
 
     private abstract static class BaseHolder implements InventoryHolder {
@@ -1181,6 +1252,30 @@ public final class MenuService {
     private static final class ClaimManageHolder extends BaseHolder {
         private final int claimId;
         private ClaimManageHolder(int claimId) { this.claimId = claimId; }
+    }
+
+    private static final class ClaimExpandAmountHolder extends BaseHolder {
+        private final int claimId;
+        private final ClaimDirection direction;
+        private final int amount;
+
+        private ClaimExpandAmountHolder(int claimId, ClaimDirection direction, int amount) {
+            this.claimId = claimId;
+            this.direction = direction;
+            this.amount = amount;
+        }
+    }
+
+    private static final class ClaimExpandConfirmHolder extends BaseHolder {
+        private final int claimId;
+        private final ClaimDirection direction;
+        private final int amount;
+
+        private ClaimExpandConfirmHolder(int claimId, ClaimDirection direction, int amount) {
+            this.claimId = claimId;
+            this.direction = direction;
+            this.amount = amount;
+        }
     }
 
     private static final class CoreMenuHolder extends BaseHolder {

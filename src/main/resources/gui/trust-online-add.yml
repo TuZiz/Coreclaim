@@ -1,6 +1,6 @@
 layout-version: 1
-title: '&8[&a授权&8] &a&l添加在线玩家 - {name}'
-GuiPlain:
+title: '&#475569[&#55FFAA授权&#475569] &#55FFAA&l添加在线玩家 - {name}'
+Shape:
   - "FFFFIFFFF"
   - "FPPPPPPPF"
   - "FPPPPPPPF"
@@ -19,68 +19,68 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1411
-    name: '&e&l在线玩家授权'
+    name: '&#FFD166&l在线玩家授权'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7可授权在线玩家: &e{available_count}'
+      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
+      - ' &#CBD5E1可授权在线玩家: &#FFD166{available_count}'
       - ''
-      - ' &7这里不会显示以下玩家:'
-      - ' &f- 你自己'
-      - ' &f- 已授权成员'
-      - ' &f- deny 列表中的玩家'
+      - ' &#CBD5E1这里不会显示以下玩家:'
+      - ' &#F8FAFC- 你自己'
+      - ' &#F8FAFC- 已授权成员'
+      - ' &#F8FAFC- deny 列表中的玩家'
       - ''
-      - ' &7点击头像后立即授权'
+      - ' &#CBD5E1点击头像后立即授权'
 
   online-entry:
     char: "P"
     material: PLAYER_HEAD
     custom-model-data: 1412
-    name: '&a&l授权玩家: &f{player}'
+    name: '&#55FFAA&l授权玩家: &#F8FAFC{player}'
     lore:
       - ''
-      - ' &7将该在线玩家添加到: &b{name}'
-      - ' &7点击后会立即完成授权'
+      - ' &#CBD5E1将该在线玩家添加到: &#4CC9F0{name}'
+      - ' &#CBD5E1点击后会立即完成授权'
       - ''
-      - ' &e点击授权'
+      - ' &#FFD166点击授权'
     sound: ENTITY_PLAYER_LEVELUP
 
   empty:
     slot: 22
     material: PAPER
     custom-model-data: 1413
-    name: '&7当前没有可授权的在线玩家'
+    name: '&#CBD5E1当前没有可授权的在线玩家'
     lore:
       - ''
-      - ' &7可授权列表会自动过滤'
-      - ' &7自己、已授权成员和 deny 玩家'
+      - ' &#CBD5E1可授权列表会自动过滤'
+      - ' &#CBD5E1自己、已授权成员和 deny 玩家'
 
   prev-page:
     char: "L"
     material: ARROW
     custom-model-data: 1414
-    name: '&a&l上一页'
+    name: '&#55FFAA&l上一页'
     lore:
       - ''
-      - ' &7查看上一页在线玩家'
+      - ' &#CBD5E1查看上一页在线玩家'
     sound: UI_BUTTON_CLICK
 
   back:
     char: "X"
     material: BARRIER
     custom-model-data: 1415
-    name: '&c&l返回成员菜单'
+    name: '&#FF6B6B&l返回成员菜单'
     lore:
       - ''
-      - ' &7回到当前领地成员列表'
+      - ' &#CBD5E1回到当前领地成员列表'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: "N"
     material: ARROW
     custom-model-data: 1416
-    name: '&a&l下一页'
+    name: '&#55FFAA&l下一页'
     lore:
       - ''
-      - ' &7查看下一页在线玩家'
+      - ' &#CBD5E1查看下一页在线玩家'
     sound: UI_BUTTON_CLICK

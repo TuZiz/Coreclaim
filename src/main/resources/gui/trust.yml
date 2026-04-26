@@ -1,6 +1,6 @@
 layout-version: 4
-title: '&8[&d成员&8] &d&l成员管理 - {name}'
-GuiPlain:
+title: '&#475569[&#C084FC成员&#475569] &#C084FC&l成员管理 - {name}'
+Shape:
   - "FFFFIFFFF"
   - "FTTTTTTTF"
   - "FTTTTTTTF"
@@ -19,30 +19,30 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1401
-    name: '&e&l成员概览'
+    name: '&#FFD166&l成员概览'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7成员数量: &e{trusted_count}'
+      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
+      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
       - ''
-      - ' &7左侧成员头像可直接移除授权'
-      - ' &7底部按钮可快速添加在线玩家'
-      - ' &7也可以继续使用命令:'
-      - ' &f/claim add <玩家>'
+      - ' &#CBD5E1左侧成员头像可直接移除授权'
+      - ' &#CBD5E1底部按钮可快速添加在线玩家'
+      - ' &#CBD5E1也可以继续使用命令:'
+      - ' &#F8FAFC/claim add <玩家>'
       - ''
-      - ' &7成员默认拥有全部权限'
+      - ' &#CBD5E1成员默认拥有全部权限'
 
   trusted-entry:
     char: "T"
     material: PLAYER_HEAD
     custom-model-data: 1402
-    name: '&a&l成员: &f{player}'
+    name: '&#55FFAA&l成员: &#F8FAFC{player}'
     lore:
       - ''
-      - ' &7当前领地: &b{name}'
-      - ' &7默认权限: &a全部开放'
+      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
+      - ' &#CBD5E1默认权限: &#55FFAA全部开放'
       - ''
-      - ' &c点击移除该成员'
+      - ' &#FF6B6B点击移除该成员'
     sound: BLOCK_NOTE_BLOCK_BASS
 
   add-online:
@@ -50,53 +50,53 @@ items:
     material: LIME_DYE
     custom-model-data: 1408
     glow: true
-    name: '&a&l添加在线玩家'
+    name: '&#55FFAA&l添加在线玩家'
     lore:
       - ''
-      - ' &7打开在线玩家列表'
-      - ' &7点击头像后立即授权到当前领地'
+      - ' &#CBD5E1打开在线玩家列表'
+      - ' &#CBD5E1点击头像后立即授权到当前领地'
       - ''
-      - ' &e点击打开'
+      - ' &#FFD166点击打开'
     sound: UI_BUTTON_CLICK
 
   empty:
     slot: 22
     material: PAPER
     custom-model-data: 1403
-    name: '&7当前还没有成员'
+    name: '&#CBD5E1当前还没有成员'
     lore:
       - ''
-      - ' &7使用命令添加成员:'
-      - ' &f/claim add <玩家>'
+      - ' &#CBD5E1使用命令添加成员:'
+      - ' &#F8FAFC/claim add <玩家>'
       - ''
-      - ' &7也可以点击底部按钮添加在线玩家'
+      - ' &#CBD5E1也可以点击底部按钮添加在线玩家'
 
   prev-page:
     char: "L"
     material: ARROW
     custom-model-data: 1405
-    name: '&a&l上一页'
+    name: '&#55FFAA&l上一页'
     lore:
       - ''
-      - ' &7查看上一页成员'
+      - ' &#CBD5E1查看上一页成员'
     sound: UI_BUTTON_CLICK
 
   back:
     char: "X"
     material: BARRIER
     custom-model-data: 1406
-    name: '&c&l返回核心菜单'
+    name: '&#FF6B6B&l返回核心菜单'
     lore:
       - ''
-      - ' &7回到当前领地核心菜单'
+      - ' &#CBD5E1回到当前领地核心菜单'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: "N"
     material: ARROW
     custom-model-data: 1407
-    name: '&a&l下一页'
+    name: '&#55FFAA&l下一页'
     lore:
       - ''
-      - ' &7查看下一页成员'
+      - ' &#CBD5E1查看下一页成员'
     sound: UI_BUTTON_CLICK

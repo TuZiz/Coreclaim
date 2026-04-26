@@ -5,6 +5,7 @@ import java.util.Locale;
 import org.bukkit.Material;
 
 public enum ClaimFlag {
+    TIME_CYCLE("time-cycle", "Claim Time", ClaimPermission.INTERACT),
     CONTAINER("container", "容器交互", ClaimPermission.CONTAINER),
     USE_BUTTON("use-button", "按钮交互", ClaimPermission.REDSTONE),
     USE_LEVER("use-lever", "拉杆交互", ClaimPermission.REDSTONE),

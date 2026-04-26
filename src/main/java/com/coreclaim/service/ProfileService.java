@@ -33,6 +33,7 @@ public final class ProfileService {
             name,
             0,
             0,
+            0L,
             false,
             false,
             false,
@@ -57,13 +58,14 @@ public final class ProfileService {
                 statement.setString(2, profile.lastKnownName());
                 statement.setInt(3, profile.activityPoints());
                 statement.setInt(4, profile.onlineMinutes());
-                statement.setInt(5, profile.starterCoreGranted() ? 1 : 0);
-                statement.setInt(6, profile.starterCoreReclaimed() ? 1 : 0);
-                statement.setInt(7, profile.starterCoreUsed() ? 1 : 0);
-                statement.setInt(8, profile.autoShowBorders() ? 1 : 0);
-                statement.setLong(9, profile.lastSeenAt());
-                statement.setString(10, profile.lastGroupKey());
-                statement.setInt(11, profile.cleanupPermissionExempt() ? 1 : 0);
+                statement.setLong(5, profile.onlineSeconds());
+                statement.setInt(6, profile.starterCoreGranted() ? 1 : 0);
+                statement.setInt(7, profile.starterCoreReclaimed() ? 1 : 0);
+                statement.setInt(8, profile.starterCoreUsed() ? 1 : 0);
+                statement.setInt(9, profile.autoShowBorders() ? 1 : 0);
+                statement.setLong(10, profile.lastSeenAt());
+                statement.setString(11, profile.lastGroupKey());
+                statement.setInt(12, profile.cleanupPermissionExempt() ? 1 : 0);
             }
         );
     }
@@ -168,7 +170,7 @@ public final class ProfileService {
         databaseManager.query(
             """
             SELECT uuid, name, activity_points, online_minutes, starter_core_granted, starter_core_reclaimed,
-                   starter_core_used, auto_show_borders, last_seen_at, last_group_key, cleanup_permission_exempt
+                   online_seconds, starter_core_used, auto_show_borders, last_seen_at, last_group_key, cleanup_permission_exempt
             FROM profiles
             """,
             statement -> {
@@ -181,6 +183,7 @@ public final class ProfileService {
                         resultSet.getString("name"),
                         resultSet.getInt("activity_points"),
                         resultSet.getInt("online_minutes"),
+                        resultSet.getLong("online_seconds"),
                         resultSet.getInt("starter_core_granted") == 1,
                         resultSet.getInt("starter_core_reclaimed") == 1,
                         resultSet.getInt("starter_core_used") == 1,

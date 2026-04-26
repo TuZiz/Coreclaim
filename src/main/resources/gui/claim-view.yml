@@ -1,6 +1,6 @@
 layout-version: 1
-title: '&8[&6领地&8] &6&l只读详情 - {name}'
-GuiPlain:
+title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l只读详情 - {name}'
+Shape:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "FFFDTFFFF"
@@ -19,32 +19,32 @@ items:
     char: "I"
     material: BOOK
     custom-model-data: 1601
-    name: '&e&l授权领地详情'
+    name: '&#FFD166&l授权领地详情'
     lore:
       - ''
-      - ' &7领地名称: &b{name}'
-      - ' &7领地主人: &e{owner}'
-      - ' &7所属区服: &f{server}'
-      - ' &7所在世界: &f{world}'
+      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
+      - ' &#CBD5E1领地主人: &#FFD166{owner}'
+      - ' &#CBD5E1所属区服: &#F8FAFC{server}'
+      - ' &#CBD5E1所在世界: &#F8FAFC{world}'
       - ''
-      - ' &7核心坐标: &f({center_x}, {center_z})'
-      - ' &7领地大小: &e{width}x{depth}'
-      - ' &7领地面积: &e{area}'
-      - ' &7成员数量: &e{trusted_count}'
+      - ' &#CBD5E1核心坐标: &#F8FAFC({center_x}, {center_z})'
+      - ' &#CBD5E1领地大小: &#FFD166{width}x{depth}'
+      - ' &#CBD5E1领地面积: &#FFD166{area}'
+      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
       - ''
-      - ' &7当前界面为只读查看'
+      - ' &#CBD5E1当前界面为只读查看'
 
   details:
     char: "D"
     material: PAPER
     custom-model-data: 1602
-    name: '&b&l查看详细'
+    name: '&#4CC9F0&l查看详细'
     lore:
       - ''
-      - ' &7把这块领地的详细信息发到聊天栏'
-      - ' &7方便你对照坐标和主人信息'
+      - ' &#CBD5E1把这块领地的详细信息发到聊天栏'
+      - ' &#CBD5E1方便你对照坐标和主人信息'
       - ''
-      - ' &e点击查看'
+      - ' &#FFD166点击查看'
     sound: UI_BUTTON_CLICK
 
   teleport:
@@ -52,31 +52,31 @@ items:
     material: ENDER_PEARL
     custom-model-data: 1603
     glow: true
-    name: '&d&l传送到领地'
+    name: '&#C084FC&l传送到领地'
     lore:
       - ''
-      - ' &7传送到这块已授权领地的传送点'
-      - ' &7没有传送点时会回到领地核心'
+      - ' &#CBD5E1传送到这块已授权领地的传送点'
+      - ' &#CBD5E1没有传送点时会回到领地核心'
       - ''
-      - ' &e点击传送'
+      - ' &#FFD166点击传送'
     sound: ENTITY_ENDERMAN_TELEPORT
 
   back:
     char: "B"
     material: ARROW
     custom-model-data: 1604
-    name: '&a&l返回列表'
+    name: '&#55FFAA&l返回列表'
     lore:
       - ''
-      - ' &7回到上一页领地列表'
+      - ' &#CBD5E1回到上一页领地列表'
     sound: UI_BUTTON_CLICK
 
   close:
     char: "X"
     material: BARRIER
     custom-model-data: 1605
-    name: '&c&l关闭菜单'
+    name: '&#FF6B6B&l关闭菜单'
     lore:
       - ''
-      - ' &7关闭当前只读详情界面'
+      - ' &#CBD5E1关闭当前只读详情界面'
     sound: UI_BUTTON_CLICK

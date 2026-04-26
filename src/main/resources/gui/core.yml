@@ -1,6 +1,6 @@
 layout-version: 4
-title: '&#55FFAA&l领地核心 &8| &f管理面板'
-GuiPlain:
+title: '&#55FFAA&l领地核心 &#475569| &#F8FAFC管理面板'
+Shape:
   - "FFFFFFFFF"
   - "FFFFIFFFF"
   - "FEFLFTFPF"
@@ -22,17 +22,17 @@ items:
     name: '&#55FFAA&l领地详情'
     lore:
       - ''
-      - ' &#4CC9F0■ &7领地名称: &f{name}'
-      - ' &#4CC9F0■ &7领地数量: &f{claims}&8/&7{max_claims}'
-      - ' &#4CC9F0■ &7中心坐标: &f({center_x}, {center_z})'
+      - ' &#4CC9F0■ &#CBD5E1领地名称: &#F8FAFC{name}'
+      - ' &#4CC9F0■ &#CBD5E1领地数量: &#F8FAFC{claims}&#475569/&#CBD5E1{max_claims}'
+      - ' &#4CC9F0■ &#CBD5E1中心坐标: &#F8FAFC({center_x}, {center_z})'
       - ''
-      - ' &#FFD166■ &7当前规模: &f{width}x{depth}'
-      - ' &#FFD166■ &7当前面积: &f{area}'
-      - ' &#FFD166■ &7当前活跃: &f{activity}'
-      - ' &#FFD166■ &7成员数量: &f{trusted_count}'
+      - ' &#FFD166■ &#CBD5E1当前规模: &#F8FAFC{width}x{depth}'
+      - ' &#FFD166■ &#CBD5E1当前面积: &#F8FAFC{area}'
+      - ' &#FFD166■ &#CBD5E1当前活跃: &#F8FAFC{activity}'
+      - ' &#FFD166■ &#CBD5E1成员数量: &#F8FAFC{trusted_count}'
       - ''
-      - ' &#55FFAA■ &7进入提示: &f{enter_state}'
-      - ' &#55FFAA■ &7离开提示: &f{leave_state}'
+      - ' &#55FFAA■ &#CBD5E1进入提示: &#F8FAFC{enter_state}'
+      - ' &#55FFAA■ &#CBD5E1离开提示: &#F8FAFC{leave_state}'
 
   expand:
     char: "E"
@@ -41,10 +41,10 @@ items:
     name: '&#4CC9F0&l扩建领地'
     lore:
       - ''
-      - ' &7打开东南西北四个方向的扩建页'
-      - ' &7可以直接查看价格与目标范围'
+      - ' &#CBD5E1打开东南西北四个方向的扩建页'
+      - ' &#CBD5E1可以直接查看价格与目标范围'
       - ''
-      - ' &#4CC9F0&l» &f点击打开面板'
+      - ' &#4CC9F0&l» &#F8FAFC点击打开面板'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   claim-list:
@@ -54,9 +54,9 @@ items:
     name: '&#FFD166&l我的领地'
     lore:
       - ''
-      - ' &7当前拥有总数: &f{total}'
+      - ' &#CBD5E1当前拥有总数: &#F8FAFC{total}'
       - ''
-      - ' &#FFD166&l» &f点击查看全部领地'
+      - ' &#FFD166&l» &#F8FAFC点击查看全部领地'
     sound: ITEM_BOOK_PAGE_TURN
 
   trust:
@@ -66,11 +66,11 @@ items:
     name: '&#4CC9F0&l成员管理'
     lore:
       - ''
-      - ' &7当前领地: &f{name}'
-      - ' &7成员数量: &f{trusted_count}'
-      - ' &7命令添加: &f/claim add <玩家>'
+      - ' &#CBD5E1当前领地: &#F8FAFC{name}'
+      - ' &#CBD5E1成员数量: &#F8FAFC{trusted_count}'
+      - ' &#CBD5E1命令添加: &#F8FAFC/claim add <玩家>'
       - ''
-      - ' &#4CC9F0&l» &f点击查看成员列表'
+      - ' &#4CC9F0&l» &#F8FAFC点击查看成员列表'
     sound: BLOCK_NOTE_BLOCK_PLING
 
   permissions:
@@ -80,10 +80,10 @@ items:
     name: '&#FFD166&l权限与交互'
     lore:
       - ''
-      - ' &7统一设置基础权限与交互细则'
-      - ' &7未设置的细则会跟随基础权限'
+      - ' &#CBD5E1统一设置基础权限与交互细则'
+      - ' &#CBD5E1未设置的细则会跟随基础权限'
       - ''
-      - ' &#FFD166&l» &f点击打开面板'
+      - ' &#FFD166&l» &#F8FAFC点击打开面板'
     sound: UI_BUTTON_CLICK
 
   rename:
@@ -93,11 +93,11 @@ items:
     name: '&#55FFAA&l修改领地名称'
     lore:
       - ''
-      - ' &7当前名称: &f{name}'
-      - ' &7点击后在聊天栏输入新名称'
-      - ' &8(名称长度最多 16 个字符)'
+      - ' &#CBD5E1当前名称: &#F8FAFC{name}'
+      - ' &#CBD5E1点击后在聊天栏输入新名称'
+      - ' &#475569(名称长度最多 16 个字符)'
       - ''
-      - ' &#55FFAA&l» &f点击开始重命名'
+      - ' &#55FFAA&l» &#F8FAFC点击开始重命名'
     sound: BLOCK_ANVIL_USE
 
   teleport:
@@ -108,10 +108,10 @@ items:
     name: '&#4CC9F0&l传送到领地'
     lore:
       - ''
-      - ' &7优先传送到当前领地的传送点'
-      - ' &7未设置时会回到核心位置'
+      - ' &#CBD5E1优先传送到当前领地的传送点'
+      - ' &#CBD5E1未设置时会回到核心位置'
       - ''
-      - ' &#4CC9F0&l» &f点击传送回家'
+      - ' &#4CC9F0&l» &#F8FAFC点击传送回家'
     sound: ENTITY_ENDERMAN_TELEPORT
 
   notify:
@@ -121,17 +121,17 @@ items:
     name: '&#FFD166&l通知设置'
     lore:
       - ''
-      - ' &7当前领地: &f{name}'
-      - ' &7进入状态: &f{enter_state}'
-      - ' &7离开状态: &f{leave_state}'
+      - ' &#CBD5E1当前领地: &#F8FAFC{name}'
+      - ' &#CBD5E1进入状态: &#F8FAFC{enter_state}'
+      - ' &#CBD5E1离开状态: &#F8FAFC{leave_state}'
       - ''
-      - ' &7当前进入内容:'
-      - ' &f{enter_current}'
-      - ' &7当前离开内容:'
-      - ' &f{leave_current}'
+      - ' &#CBD5E1当前进入内容:'
+      - ' &#F8FAFC{enter_current}'
+      - ' &#CBD5E1当前离开内容:'
+      - ' &#F8FAFC{leave_current}'
       - ''
-      - ' &#4CC9F0&l» &f左键 &7编辑进入提示'
-      - ' &#FFD166&l» &f右键 &7编辑离开提示'
+      - ' &#4CC9F0&l» &#F8FAFC左键 &#CBD5E1编辑进入提示'
+      - ' &#FFD166&l» &#F8FAFC右键 &#CBD5E1编辑离开提示'
     sound: BLOCK_BELL_USE
 
   hide:
@@ -141,10 +141,10 @@ items:
     name: '&#FF6B6B&l隐藏核心显示'
     lore:
       - ''
-      - ' &7隐藏核心方块与悬浮提示'
-      - ' &#FF6B6B&l! &c隐藏后无法再通过核心打开菜单'
+      - ' &#CBD5E1隐藏核心方块与悬浮提示'
+      - ' &#FF6B6B&l! &#FF6B6B隐藏后无法再通过核心打开菜单'
       - ''
-      - ' &#FF6B6B&l» &f点击确认隐藏'
+      - ' &#FF6B6B&l» &#F8FAFC点击确认隐藏'
     sound: BLOCK_ANVIL_PLACE
 
   close:
@@ -154,5 +154,5 @@ items:
     name: '&#FF6B6B&l关闭菜单'
     lore:
       - ''
-      - ' &#FF6B6B&l» &7关闭当前管理面板'
+      - ' &#FF6B6B&l» &#CBD5E1关闭当前管理面板'
     sound: UI_BUTTON_CLICK

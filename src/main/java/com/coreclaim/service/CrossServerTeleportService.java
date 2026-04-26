@@ -47,10 +47,7 @@ public final class CrossServerTeleportService {
                 claim,
                 null
             );
-            player.sendMessage(message(
-                "cross-server-teleport-server-id-misconfigured",
-                "&c&l! &7当前服的跨服路由未配置完成，请先设置唯一的 &eserver-id&7。"
-            ));
+            player.sendMessage(message("cross-server-teleport-server-id-misconfigured"));
             return true;
         }
         String targetServer = claimService.effectiveServerId(claim);
@@ -59,7 +56,6 @@ public final class CrossServerTeleportService {
             logTransferWarning("Cross-server teleport blocked because claim server_id is missing.", player, claim, null);
             player.sendMessage(message(
                 "cross-server-teleport-unmapped",
-                "&c&l! &7领地 &e{name} &7缺少有效的 &bserver_id&7，无法判断目标区服。请管理员执行 &f/claim admin setserver <claimId> <serverId>&7。",
                 "{server}", claimService.displayServerId(claim),
                 "{world}", claim.world(),
                 "{name}", claim.name()
@@ -75,7 +71,6 @@ public final class CrossServerTeleportService {
         savePendingTeleport(player.getUniqueId().toString(), pendingTeleport);
         player.sendMessage(message(
             "cross-server-teleport-start",
-            "&6&l跨区传送: &7正在把你传送到区服 &e{server} &7中的领地 &b{name}&7。",
             "{name}", claim.name(),
             "{server}", targetServer
         ));
@@ -85,7 +80,6 @@ public final class CrossServerTeleportService {
             clearPendingTeleport(player.getUniqueId().toString());
             player.sendMessage(message(
                 "cross-server-teleport-connect-failed",
-                "&c&l! &7无法把你切换到目标区服 &e{server}&7，请检查代理转发是否正常。",
                 "{server}", targetServer
             ));
             logTransferWarning(
@@ -130,7 +124,6 @@ public final class CrossServerTeleportService {
             );
             player.sendMessage(message(
                 "cross-server-teleport-world-missing",
-                "&c&l! &7目标世界 &e{world} &7在当前区服仍未加载，跨区落点失败。",
                 "{world}", pendingTeleport.targetWorld()
             ));
             return;
@@ -154,7 +147,6 @@ public final class CrossServerTeleportService {
         }
         player.sendMessage(message(
             "claim-teleported",
-            "&a&l传送: &7已抵达领地 &e{name}&7。",
             "{name}", pendingTeleport.claimName()
         ));
     }
@@ -382,13 +374,8 @@ public final class CrossServerTeleportService {
             + ", targetServer=" + (targetServer == null || targetServer.isBlank() ? "<none>" : targetServer);
     }
 
-    private String message(String path, String fallback, String... replacements) {
-        String prefix = plugin.messagesConfig().getString("prefix", "&6[CoreClaim] &f");
-        String formatted = plugin.messagesConfig().getString(path, fallback);
-        for (int index = 0; index + 1 < replacements.length; index += 2) {
-            formatted = formatted.replace(replacements[index], replacements[index + 1]);
-        }
-        return plugin.color(prefix + formatted);
+    private String message(String path, String... replacements) {
+        return plugin.message(path, replacements);
     }
 
     private record PendingTeleport(

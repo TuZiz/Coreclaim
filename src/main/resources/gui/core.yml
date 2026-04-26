@@ -1,22 +1,23 @@
 layout-version: 4
 title: '&#55FFAA&l领地核心 &#475569| &#F8FAFC管理面板'
+
 Shape:
-  - "FFFFFFFFF"
-  - "FFFFIFFFF"
-  - "FEFLFTFPF"
-  - "FFRFQFNFF"
-  - "FFFFHFFFF"
-  - "FFFFXFFFF"
+  - 'FFFFFFFFF'
+  - 'FFFFIFFFF'
+  - 'FEFLFTFPF'
+  - 'FFRFQFNFF'
+  - 'FFFFHFFFF'
+  - 'FFFFXFFFF'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1500
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: BOOK
     custom-model-data: 1501
     name: '&#55FFAA&l领地详情'
@@ -35,7 +36,7 @@ items:
       - ' &#55FFAA■ &#CBD5E1离开提示: &#F8FAFC{leave_state}'
 
   expand:
-    char: "E"
+    char: 'E'
     material: NETHERITE_PICKAXE
     custom-model-data: 1502
     name: '&#4CC9F0&l扩建领地'
@@ -48,7 +49,7 @@ items:
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   claim-list:
-    char: "L"
+    char: 'L'
     material: FILLED_MAP
     custom-model-data: 1503
     name: '&#FFD166&l我的领地'
@@ -60,7 +61,7 @@ items:
     sound: ITEM_BOOK_PAGE_TURN
 
   trust:
-    char: "T"
+    char: 'T'
     material: NAME_TAG
     custom-model-data: 1504
     name: '&#4CC9F0&l成员管理'
@@ -74,7 +75,7 @@ items:
     sound: BLOCK_NOTE_BLOCK_PLING
 
   permissions:
-    char: "P"
+    char: 'P'
     material: COMPARATOR
     custom-model-data: 1505
     name: '&#FFD166&l权限与交互'
@@ -87,7 +88,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   rename:
-    char: "R"
+    char: 'R'
     material: ANVIL
     custom-model-data: 1506
     name: '&#55FFAA&l修改领地名称'
@@ -101,10 +102,9 @@ items:
     sound: BLOCK_ANVIL_USE
 
   teleport:
-    char: "Q"
+    char: 'Q'
     material: ENDER_PEARL
     custom-model-data: 1510
-    glow: true
     name: '&#4CC9F0&l传送到领地'
     lore:
       - ''
@@ -113,9 +113,10 @@ items:
       - ''
       - ' &#4CC9F0&l» &#F8FAFC点击传送回家'
     sound: ENTITY_ENDERMAN_TELEPORT
+    glow: true
 
   notify:
-    char: "N"
+    char: 'N'
     material: BELL
     custom-model-data: 1508
     name: '&#FFD166&l通知设置'
@@ -135,7 +136,7 @@ items:
     sound: BLOCK_BELL_USE
 
   hide:
-    char: "H"
+    char: 'H'
     material: BLAZE_POWDER
     custom-model-data: 1509
     name: '&#FF6B6B&l隐藏核心显示'
@@ -148,7 +149,7 @@ items:
     sound: BLOCK_ANVIL_PLACE
 
   close:
-    char: "X"
+    char: 'X'
     material: BARRIER
     custom-model-data: 1511
     name: '&#FF6B6B&l关闭菜单'

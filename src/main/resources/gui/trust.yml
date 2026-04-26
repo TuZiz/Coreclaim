@@ -1,22 +1,23 @@
 layout-version: 4
 title: '&#475569[&#C084FC成员&#475569] &#C084FC&l成员管理 - {name}'
+
 Shape:
-  - "FFFFIFFFF"
-  - "FTTTTTTTF"
-  - "FTTTTTTTF"
-  - "FTTTTTTTF"
-  - "FTTTTTTTF"
-  - "LFAFXFFFN"
+  - 'FFFFIFFFF'
+  - 'FTTTTTTTF'
+  - 'FTTTTTTTF'
+  - 'FTTTTTTTF'
+  - 'FTTTTTTTF'
+  - 'LFFAFXFFN'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1400
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: BOOK
     custom-model-data: 1401
     name: '&#FFD166&l成员概览'
@@ -33,7 +34,7 @@ items:
       - ' &#CBD5E1成员默认拥有全部权限'
 
   trusted-entry:
-    char: "T"
+    char: 'T'
     material: PLAYER_HEAD
     custom-model-data: 1402
     name: '&#55FFAA&l成员: &#F8FAFC{player}'
@@ -46,10 +47,9 @@ items:
     sound: BLOCK_NOTE_BLOCK_BASS
 
   add-online:
-    char: "A"
+    char: 'A'
     material: LIME_DYE
     custom-model-data: 1408
-    glow: true
     name: '&#55FFAA&l添加在线玩家'
     lore:
       - ''
@@ -58,6 +58,7 @@ items:
       - ''
       - ' &#FFD166点击打开'
     sound: UI_BUTTON_CLICK
+    glow: true
 
   empty:
     slot: 22
@@ -72,7 +73,7 @@ items:
       - ' &#CBD5E1也可以点击底部按钮添加在线玩家'
 
   prev-page:
-    char: "L"
+    char: 'L'
     material: ARROW
     custom-model-data: 1405
     name: '&#55FFAA&l上一页'
@@ -82,7 +83,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   back:
-    char: "X"
+    char: 'X'
     material: BARRIER
     custom-model-data: 1406
     name: '&#FF6B6B&l返回核心菜单'
@@ -92,7 +93,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   next-page:
-    char: "N"
+    char: 'N'
     material: ARROW
     custom-model-data: 1407
     name: '&#55FFAA&l下一页'

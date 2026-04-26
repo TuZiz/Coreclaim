@@ -1,25 +1,25 @@
 layout-version: 2
 title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l领地列表'
+
 Shape:
-  - "FFFFRFFFF"
-  - "FEEEEEEEF"
-  - "FEEEEEEEF"
-  - "FEEEEEEEF"
-  - "FEEEEEEEF"
-  - "LFFFBFFFN"
+  - 'FFFFRFFFF'
+  - 'FEEEEEEEF'
+  - 'FEEEEEEEF'
+  - 'FEEEEEEEF'
+  - 'FEEEEEEEF'
+  - 'LFFFBFFFN'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1200
+    name: ' '
 
   entry:
-    char: "E"
+    char: 'E'
     material: GRASS_BLOCK
     custom-model-data: 1201
-    glow: true
     name: '&#55FFAA&l{name}'
     lore:
       - ' &#CBD5E1关系: {relation}'
@@ -34,9 +34,10 @@ items:
       - ' {left_action}'
       - ' &#CBD5E1右键直接传送'
     sound: BLOCK_NOTE_BLOCK_HARP
+    glow: true
 
   refresh:
-    char: "R"
+    char: 'R'
     material: CLOCK
     custom-model-data: 1202
     name: '&#FFD166&l刷新列表'
@@ -48,14 +49,14 @@ items:
     sound: UI_BUTTON_CLICK
 
   prev-page:
-    char: "L"
+    char: 'L'
     material: ARROW
     custom-model-data: 1203
     name: '&#55FFAA&l上一页'
     sound: UI_BUTTON_CLICK
 
   back:
-    char: "B"
+    char: 'B'
     material: BARRIER
     custom-model-data: 1204
     name: '&#FF6B6B&l关闭菜单'
@@ -65,7 +66,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   next-page:
-    char: "N"
+    char: 'N'
     material: ARROW
     custom-model-data: 1205
     name: '&#55FFAA&l下一页'

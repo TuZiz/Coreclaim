@@ -41,6 +41,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private final ClaimService claimService;
     private final ProfileService profileService;
     private final ClaimVisualService claimVisualService;
+    private final ClaimEntryMessageFormatter entryMessageFormatter;
     private final Map<UUID, PlayerFlightSession> flightSessions = new ConcurrentHashMap<>();
     private final PlatformScheduler.TaskHandle reconcileTask;
 
@@ -54,6 +55,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         this.claimService = claimService;
         this.profileService = profileService;
         this.claimVisualService = claimVisualService;
+        this.entryMessageFormatter = new ClaimEntryMessageFormatter(plugin);
         long intervalTicks = plugin.settings().flightReconcileIntervalTicks();
         this.reconcileTask = intervalTicks > 0L
             ? plugin.platformScheduler().runRepeating(this::reconcileAllPlayers, intervalTicks, intervalTicks)
@@ -167,34 +169,6 @@ public final class ClaimEnterLeaveListener implements Listener {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
     }
 
-    private String enterMessage(Player player, Claim claim) {
-        String custom = claim.enterMessage();
-        if (custom != null && !custom.isBlank()) {
-            return applyNotifyPlaceholders(custom, claim);
-        }
-        if (claim.owner().equals(player.getUniqueId())) {
-            return plugin.message("enter-own-claim", "{name}", claim.name());
-        }
-        return plugin.message("enter-trusted-claim", "{owner}", claim.ownerName(), "{name}", claim.name());
-    }
-
-    private String leaveMessage(Claim claim) {
-        String custom = claim.leaveMessage();
-        if (custom != null && !custom.isBlank()) {
-            return applyNotifyPlaceholders(custom, claim);
-        }
-        return plugin.message("leave-claim", "{name}", claim.name());
-    }
-
-    private String applyNotifyPlaceholders(String text, Claim claim) {
-        return plugin.color(text
-            .replace("%claim_name%", claim.name())
-            .replace("{claim_name}", claim.name())
-            .replace("{name}", claim.name())
-            .replace("%owner%", claim.ownerName())
-            .replace("{owner}", claim.ownerName()));
-    }
-
     private boolean handleLocationChange(Player player, Location from, Location to, String reason) {
         UUID playerId = player.getUniqueId();
         PlayerFlightSession session = flightSessions.computeIfAbsent(playerId, ignored -> new PlayerFlightSession());
@@ -228,13 +202,13 @@ public final class ClaimEnterLeaveListener implements Listener {
             return false;
         }
         if (fromNotifyClaim != null) {
-            sendActionBar(player, leaveMessage(fromNotifyClaim));
+            sendActionBar(player, entryMessageFormatter.leaveMessage(fromNotifyClaim));
         }
         if (toNotifyClaim != null) {
             if (profileService.getOrCreate(player.getUniqueId(), player.getName()).autoShowBorders()) {
                 claimVisualService.showClaim(player, toNotifyClaim);
             }
-            sendActionBar(player, enterMessage(player, toNotifyClaim));
+            sendActionBar(player, entryMessageFormatter.enterMessage(player, toNotifyClaim));
         }
         cleanupSession(playerId, session);
         return false;

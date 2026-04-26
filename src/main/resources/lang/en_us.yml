@@ -1,5 +1,5 @@
-# CoreClaim language configuration - polished hex color theme
-prefix: '&#55FFAA&l[CoreClaim] &#F8FAFC'
+# CoreClaim language configuration - soft hex color theme
+prefix: '&#64748B[&#A7F3D0Claim&#64748B] &#CBD5E1'
 
 show-auto-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim show auto [on|off]'
 show-auto-status: '&#55FFAABorder Display &#475569| &#CBD5E1Current status: &#F8FAFC{value}&#CBD5E1.'
@@ -24,8 +24,8 @@ world-missing: '&#FF6B6B&l! &#CBD5E1The target world does not exist or is not lo
 claim-overlap: '&#FF6B6B&l! &#CBD5E1This area is too close to another claim. Please try a different spot.'
 claim-core-too-close: '&#FF6B6B&l! &#CBD5E1Protected areas overlap: only one claim core may exist within &#F8FAFC50x50 &#CBD5E1blocks.'
 starter-core-first-only: '&#FF6B6B&l! &#CBD5E1The starter core can only create your first claim.'
-starter-core-join-reminder: '&#4CC9F0Claim &#475569| &#CBD5E1Stay online for &#F8FAFC{minutes} &#CBD5E1minutes to receive your first claim core. &#F8FAFC{remaining} &#CBD5E1minutes remaining.'
-starter-core-reminder: '&#FFD166Reminder &#475569| &#CBD5E1A starter core will be granted after &#F8FAFC{minutes} &#CBD5E1minutes online. &#F8FAFC{remaining} &#CBD5E1minutes remaining.'
+starter-core-join-reminder: '&#93C5FDOnline Reward &#64748B| &#CBD5E1Stay online for &#E2E8F0{minutes} &#CBD5E1minutes to receive your first claim core. &#E2E8F0{remaining} &#CBD5E1minutes remaining.'
+starter-core-reminder: '&#FCD34DReminder &#64748B| &#CBD5E1A starter core will be granted after &#E2E8F0{minutes} &#CBD5E1minutes online. &#E2E8F0{remaining} &#CBD5E1minutes remaining.'
 starter-core-guidance: '&#FFD166Next Step &#475569| &#CBD5E1Right-click the ground while holding the starter core, then enter a claim name to create your first claim.&#475569(Default full-height protection)'
 starter-core-login-guidance: '&#55FFAAFirst Claim &#475569| &#CBD5E1You already have a starter core. Hold it and right-click the ground to begin.&#475569(Default full-height protection)'
 starter-core-missing-guidance: '&#FFD166Tip &#475569| &#CBD5E1Cores are not reissued. If it was lost, use a normal golden hoe to left-click point 1, right-click point 2, then run &#F8FAFC/claim create <name> &#CBD5E1to finish.'
@@ -325,6 +325,8 @@ state-enabled: '&#55FFAAEnabled'
 state-disabled: '&#FF6B6BDisabled'
 state-allow: '&#55FFAAAllow'
 state-deny: '&#FF6B6BDeny'
+state-default-allow: '&#55FFAADefault Allow'
+state-default-deny: '&#FF6B6BDefault Deny'
 state-unset: '&#94A3B8Unset'
 state-not-set: '&#94A3B8Not Set'
 state-time-day: '&#FACC15Day'

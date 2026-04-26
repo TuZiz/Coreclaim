@@ -1,21 +1,21 @@
 layout-version: 1
 title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4确认扩建 - {direction}'
+
 Shape:
-  - "#########"
-  - "####I####"
-  - "#########"
-  - "###Q#B###"
-  - "####C####"
-  - "#########"
+  - '#########'
+  - '####I####'
+  - '###Q#B###'
+  - '####C####'
+
 items:
   filler:
-    char: "#"
+    char: '#'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1321
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: COMPASS
     custom-model-data: 1322
     name: '&#FFD166&l最终扩建确认'
@@ -34,10 +34,9 @@ items:
       - ' &#FF6B6B确认后才会扣费并修改领地边界'
 
   confirm:
-    char: "Q"
+    char: 'Q'
     material: EMERALD_BLOCK
     custom-model-data: 1323
-    glow: true
     name: '&#55FFAA&l确认扩建'
     lore:
       - ''
@@ -48,16 +47,17 @@ items:
       - ''
       - ' &#FFD166点击执行扩建'
     sound: ENTITY_PLAYER_LEVELUP
+    glow: true
 
   back:
-    char: "B"
+    char: 'B'
     material: ARROW
     custom-model-data: 1324
     name: '&#FFD166&l返回修改格数'
     sound: UI_BUTTON_CLICK
 
   cancel:
-    char: "C"
+    char: 'C'
     material: BARRIER
     custom-model-data: 1325
     name: '&#FF6B6B&l取消扩建'

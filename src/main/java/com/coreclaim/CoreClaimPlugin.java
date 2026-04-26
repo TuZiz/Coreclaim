@@ -3,10 +3,8 @@ package com.coreclaim;
 import com.coreclaim.bootstrap.CommandRegistrar;
 import com.coreclaim.bootstrap.ListenerRegistrar;
 import com.coreclaim.bootstrap.PluginBootstrap;
-import com.coreclaim.command.CoreClaimCommand;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
-import com.coreclaim.config.ResourceConfig;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -15,11 +13,11 @@ import com.coreclaim.papi.CoreClaimPlaceholderExpansion;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimCleanupService;
-import com.coreclaim.service.ClaimService;
+import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimSyncService;
 import com.coreclaim.service.ClaimTransferService;
-import com.coreclaim.service.ClaimInputService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.CrossServerTeleportService;
 import com.coreclaim.service.ExplosionAuthorizationService;
@@ -29,40 +27,24 @@ import com.coreclaim.service.PendingClaimService;
 import com.coreclaim.service.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
 import com.coreclaim.storage.DatabaseManager;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.md_5.bungee.api.ChatColor;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CoreClaimPlugin extends JavaPlugin {
 
     public static final String MESSAGE_RESOURCE_PATH = "lang/zh_cn.yml";
     public static final String ENGLISH_MESSAGE_RESOURCE_PATH = "lang/en_us.yml";
-    private static final String LEGACY_MESSAGE_RESOURCE_PATH = "messages.yml";
-    private static final List<String> BUNDLED_MESSAGE_RESOURCE_PATHS = List.of(MESSAGE_RESOURCE_PATH, ENGLISH_MESSAGE_RESOURCE_PATH);
     private static final Pattern AMPERSAND_HEX_PATTERN = Pattern.compile("(?i)&#([0-9A-F]{6})");
     private static final Pattern MINI_HEX_PATTERN = Pattern.compile("(?i)<#([0-9A-F]{6})>");
 
     private PluginConfig pluginConfig;
     private GroupConfig groupConfig;
-    private ResourceConfig messageResource;
-    private ResourceConfig groupsResource;
-    private ResourceConfig rulesResource;
-    private final Map<String, ResourceConfig> menuResources = new HashMap<>();
+    private PluginResourceManager resourceManager;
     private PlatformScheduler platformScheduler;
     private DatabaseManager databaseManager;
     private ClaimCoreFactory claimCoreFactory;
@@ -87,12 +69,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        ResourceBootstrap.PreparedResources preparedResources = new ResourceBootstrap().prepare(this);
-        this.messageResource = preparedResources.messageResource();
-        this.groupsResource = preparedResources.groupsResource();
-        this.rulesResource = preparedResources.rulesResource();
-        this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
-        this.groupConfig = new GroupConfig(groupsResource.config());
+        resourceManager = new PluginResourceManager(this);
+        PluginResourceManager.PreparedResources preparedResources = resourceManager.prepare();
+        this.pluginConfig = new PluginConfig(getConfig(), preparedResources.rulesResource().config());
+        this.groupConfig = new GroupConfig(preparedResources.groupsResource().config());
 
         PluginBootstrap.BootstrapResult bootstrap = new PluginBootstrap().initialize(this, pluginConfig, groupConfig);
         this.pluginConfig = bootstrap.pluginConfig();
@@ -131,7 +111,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         claimCleanupService.start();
         onlineRewardService.start();
         logSharedModeWarnings();
-        logLegacyRuleConfigWarnings();
+        resourceManager.logLegacyRuleConfigWarnings();
         getLogger().info(message("database-ready", "{file}", databaseManager.displayName()));
         getLogger().info("CoreClaim enabled in " + (platformScheduler.isFolia() ? "Folia" : "Spigot/Bukkit") + " mode.");
     }
@@ -173,35 +153,19 @@ public final class CoreClaimPlugin extends JavaPlugin {
     }
 
     public FileConfiguration menuConfig(String menuKey) {
-        ResourceConfig resource = menuResources.get(menuKey);
-        if (resource == null) {
-            throw new IllegalArgumentException("Unknown menu config: " + menuKey);
-        }
-        return resource.config();
+        return resourceManager.menuConfig(menuKey);
     }
 
     public FileConfiguration messagesConfig() {
-        return messageResource.config();
+        return resourceManager.messagesConfig();
     }
 
     public String messageResourcePath() {
-        String language = getConfig().getString("language", "zh_cn");
-        if (language == null || language.isBlank()) {
-            return MESSAGE_RESOURCE_PATH;
-        }
-        String normalized = language.trim().toLowerCase(Locale.ROOT).replace('-', '_');
-        if ("zh_cn".equals(normalized)) {
-            return MESSAGE_RESOURCE_PATH;
-        }
-        if ("en_us".equals(normalized)) {
-            return ENGLISH_MESSAGE_RESOURCE_PATH;
-        }
-        getLogger().warning("Unknown language '" + language + "', falling back to zh_cn.");
-        return MESSAGE_RESOURCE_PATH;
+        return resourceManager == null ? PluginResourceManager.messageResourcePath(this) : resourceManager.messageResourcePath();
     }
 
     public FileConfiguration rulesConfig() {
-        return rulesResource.config();
+        return resourceManager.rulesConfig();
     }
 
     public GroupConfig groups() {
@@ -246,7 +210,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     }
 
     public String message(String path, String... replacements) {
-        String prefix = messagesConfig().getString("prefix", "&#55FFAA&l[CoreClaim] &#F8FAFC");
+        String prefix = messagesConfig().getString("prefix", "&#64748B[&#A7F3D0Claim&#64748B] &#CBD5E1");
         String body = messagesConfig().getString(path, path);
         String message = prefix + body;
         for (int index = 0; index + 1 < replacements.length; index += 2) {
@@ -283,29 +247,13 @@ public final class CoreClaimPlugin extends JavaPlugin {
         return result;
     }
 
-    private String applyHexColors(String input, Pattern pattern) {
-        Matcher matcher = pattern.matcher(input);
-        StringBuffer buffer = new StringBuffer();
-        while (matcher.find()) {
-            matcher.appendReplacement(buffer, Matcher.quoteReplacement(ChatColor.of("#" + matcher.group(1)).toString()));
-        }
-        matcher.appendTail(buffer);
-        return buffer.toString();
-    }
-
     public int reloadPluginResources() {
+        ensureResourceManager();
         reloadConfig();
-        ensureConfigDefaults();
-        ensureRulesDefaults();
-        ensureMessagesDefaults();
-        ensureHealthyGuiResources();
+        resourceManager.reloadResources();
         reloadConfig();
-        messageResource = new ResourceConfig(this, messageResourcePath());
-        groupsResource.reload();
-        rulesResource.reload();
-        menuResources.values().forEach(ResourceConfig::reload);
-        this.pluginConfig = new PluginConfig(getConfig(), rulesResource.config());
-        this.groupConfig = new GroupConfig(groupsResource.config());
+        this.pluginConfig = new PluginConfig(getConfig(), resourceManager.rulesConfig());
+        this.groupConfig = new GroupConfig(resourceManager.groupsConfig());
         int claimCount = claimService == null ? 0 : claimService.reloadClaims();
         if (claimCleanupService != null) {
             claimCleanupService.reload();
@@ -323,42 +271,24 @@ public final class CoreClaimPlugin extends JavaPlugin {
             claimSyncService.publishClaimsReloaded();
         }
         logSharedModeWarnings();
-        logLegacyRuleConfigWarnings();
+        resourceManager.logLegacyRuleConfigWarnings();
         return claimCount;
     }
 
-    void ensureConfigDefaults() {
-        try (InputStream inputStream = getResource("config.yml")) {
-            if (inputStream == null) {
-                return;
-            }
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration config = getConfig();
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, config, "", missingPaths);
-            if (missingPaths.isEmpty()) {
-                return;
-            }
-            config.setDefaults(defaults);
-            config.options().copyDefaults(true);
-            saveConfig();
-            getLogger().info("Added missing config defaults: " + String.join(", ", missingPaths));
-        } catch (Exception exception) {
-            getLogger().warning("Failed to merge config defaults: " + exception.getMessage());
+    private String applyHexColors(String input, Pattern pattern) {
+        Matcher matcher = pattern.matcher(input);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(ChatColor.of("#" + matcher.group(1)).toString()));
         }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 
-    private void collectMissingConfigPaths(ConfigurationSection defaults, FileConfiguration config, String prefix, List<String> missingPaths) {
-        for (String key : defaults.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            Object value = defaults.get(key);
-            if (value instanceof ConfigurationSection section) {
-                collectMissingConfigPaths(section, config, path, missingPaths);
-                continue;
-            }
-            if (!config.contains(path)) {
-                missingPaths.add(path);
-            }
+    private void ensureResourceManager() {
+        if (resourceManager == null) {
+            resourceManager = new PluginResourceManager(this);
+            resourceManager.prepare();
         }
     }
 
@@ -379,221 +309,5 @@ public final class CoreClaimPlugin extends JavaPlugin {
         if (!pluginConfig.crossServerTeleportEnabled()) {
             getLogger().warning("cross-server-teleport.enabled=false. Remote claim menus can show, but cross-server teleport is disabled.");
         }
-    }
-
-    private void logLegacyRuleConfigWarnings() {
-        File legacyFlagsFile = new File(getDataFolder(), "flags.yml");
-        if (legacyFlagsFile.exists()) {
-            getLogger().warning("Legacy flags.yml was found. CoreClaim now uses rules.yml; flags.yml is only kept as compatibility fallback.");
-        }
-        if (getConfig().getConfigurationSection("flags") != null) {
-            getLogger().warning("Legacy flags config was found in config.yml. CoreClaim now uses rules.yml; config.yml.flags is only kept as compatibility fallback.");
-        }
-        if (getConfig().getConfigurationSection("permissions.new-claim-defaults") != null
-            || getConfig().getConfigurationSection("permissions.system-claim-defaults") != null) {
-            getLogger().warning("Legacy permission defaults were found in config.yml. CoreClaim now uses rules.yml; config.yml.permissions is only kept as compatibility fallback.");
-        }
-    }
-
-    void ensureRulesDefaults() {
-        try (InputStream inputStream = getResource("rules.yml")) {
-            if (inputStream == null) {
-                return;
-            }
-            if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
-                throw new IllegalStateException("无法创建插件数据目录。");
-            }
-            File file = new File(getDataFolder(), "rules.yml");
-            boolean existed = file.exists();
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration rulesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
-            boolean changed = false;
-            File legacyFlagsFile = new File(getDataFolder(), "flags.yml");
-            if (legacyFlagsFile.exists()) {
-                FileConfiguration legacyFlags = YamlConfiguration.loadConfiguration(legacyFlagsFile);
-                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
-                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
-                if (changed) {
-                    getLogger().info("Migrated legacy flag defaults from flags.yml to rules.yml");
-                }
-            }
-            changed |= migrateLegacySection(getConfig().getConfigurationSection("flags.new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
-            changed |= migrateLegacySection(getConfig().getConfigurationSection("flags.system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
-            changed |= migrateLegacySection(getConfig().getConfigurationSection("permissions.new-claim-defaults"), rulesConfig, "new-claim-defaults.permissions");
-            changed |= migrateLegacySection(getConfig().getConfigurationSection("permissions.system-claim-defaults"), rulesConfig, "system-claim-defaults.permissions");
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, rulesConfig, "", missingPaths);
-            if (!missingPaths.isEmpty()) {
-                rulesConfig.setDefaults(defaults);
-                rulesConfig.options().copyDefaults(true);
-                changed = true;
-            }
-            if (!existed || changed) {
-                rulesConfig.save(file);
-                if (!missingPaths.isEmpty()) {
-                    getLogger().info("Added missing rules defaults: " + String.join(", ", missingPaths));
-                }
-            }
-        } catch (Exception exception) {
-            getLogger().warning("Failed to prepare rules defaults: " + exception.getMessage());
-        }
-    }
-
-    void ensureMessagesDefaults() {
-        for (String resourcePath : BUNDLED_MESSAGE_RESOURCE_PATHS) {
-            ensureMessageDefaults(resourcePath, MESSAGE_RESOURCE_PATH.equals(resourcePath));
-        }
-    }
-
-    private void ensureMessageDefaults(String resourcePath, boolean migrateLegacyMessages) {
-        try (InputStream inputStream = getResource(resourcePath)) {
-            if (inputStream == null) {
-                return;
-            }
-            if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
-                throw new IllegalStateException("Unable to create plugin data folder.");
-            }
-            File file = new File(getDataFolder(), resourcePath);
-            if (migrateLegacyMessages) {
-                migrateLegacyMessagesFile(file);
-            }
-            boolean existed = file.exists();
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration messagesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
-            boolean changed = false;
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, messagesConfig, "", missingPaths);
-            if (!missingPaths.isEmpty()) {
-                messagesConfig.setDefaults(defaults);
-                messagesConfig.options().copyDefaults(true);
-                changed = true;
-            }
-
-            String oldAdminUsage = "&#FF6B6B用法 &8| &7/claim admin <create|info|playerclaims|diagnose|add|unadd|deny|undeny|permission|flag|cleanup|setserver> ...";
-            String newAdminUsage = defaults.getString("admin-usage", oldAdminUsage);
-            if (oldAdminUsage.equals(messagesConfig.getString("admin-usage"))) {
-                messagesConfig.set("admin-usage", newAdminUsage);
-                changed = true;
-            }
-
-            if (!existed || changed) {
-                messagesConfig.save(file);
-                if (!missingPaths.isEmpty()) {
-                    getLogger().info("Added missing messages defaults to " + resourcePath + ": " + String.join(", ", missingPaths));
-                }
-            }
-        } catch (Exception exception) {
-            getLogger().warning("Failed to prepare messages defaults for " + resourcePath + ": " + exception.getMessage());
-        }
-    }
-
-    private void migrateLegacyMessagesFile(File targetFile) throws Exception {
-        File legacyFile = new File(getDataFolder(), LEGACY_MESSAGE_RESOURCE_PATH);
-        if (!legacyFile.exists() || targetFile.exists()) {
-            return;
-        }
-        File parent = targetFile.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IllegalStateException("Unable to create language directory: " + parent.getAbsolutePath());
-        }
-        Files.move(legacyFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        getLogger().info("Migrated legacy messages.yml to " + MESSAGE_RESOURCE_PATH);
-    }
-
-    private boolean migrateLegacySection(ConfigurationSection source, FileConfiguration target, String prefix) {
-        if (source == null) {
-            return false;
-        }
-        return migrateLegacyValues(source, target, prefix);
-    }
-
-    private boolean migrateLegacyValues(ConfigurationSection source, FileConfiguration target, String prefix) {
-        boolean changed = false;
-        for (String key : source.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            Object value = source.get(key);
-            if (value instanceof ConfigurationSection section) {
-                changed |= migrateLegacyValues(section, target, path);
-            } else if (!target.isSet(path)) {
-                target.set(path, value);
-                changed = true;
-            }
-        }
-        return changed;
-    }
-
-    void loadMenuResources() {
-        menuResources.put("claim-list", new ResourceConfig(this, "gui/claim-list.yml"));
-        menuResources.put("claim-view", new ResourceConfig(this, "gui/claim-view.yml"));
-        menuResources.put("claim-manage", new ResourceConfig(this, "gui/claim-manage.yml"));
-        menuResources.put("trust", new ResourceConfig(this, "gui/trust.yml"));
-        menuResources.put("trust-online-add", new ResourceConfig(this, "gui/trust-online-add.yml"));
-        menuResources.put("claim-permissions", new ResourceConfig(this, "gui/claim-permissions.yml"));
-        menuResources.put("selection-create", new ResourceConfig(this, "gui/selection-create.yml"));
-        menuResources.put("claim-expand-amount", new ResourceConfig(this, "gui/claim-expand-amount.yml"));
-        menuResources.put("claim-expand-confirm", new ResourceConfig(this, "gui/claim-expand-confirm.yml"));
-        menuResources.put("core", new ResourceConfig(this, "gui/core.yml"));
-    }
-
-    void ensureHealthyGuiResources() {
-        for (String resource : List.of(
-            "gui/claim-list.yml",
-            "gui/claim-view.yml",
-            "gui/claim-manage.yml",
-            "gui/trust.yml",
-            "gui/trust-online-add.yml",
-            "gui/claim-permissions.yml",
-            "gui/selection-create.yml",
-            "gui/claim-expand-amount.yml",
-            "gui/claim-expand-confirm.yml",
-            "gui/core.yml"
-        )) {
-            repairCorruptedGuiResource(resource);
-        }
-    }
-
-    private void repairCorruptedGuiResource(String fileName) {
-        try {
-            File file = new File(getDataFolder(), fileName);
-            if (!file.exists()) {
-                return;
-            }
-            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-            if (!looksLikeGuiMojibake(content) && !looksLikeOutdatedGuiLayout(fileName, content)) {
-                return;
-            }
-            saveResource(fileName, true);
-            getLogger().warning("Detected outdated or corrupted GUI content in " + fileName + ". Replaced it with the bundled resource.");
-        } catch (Exception exception) {
-            getLogger().warning("Failed to verify GUI resource " + fileName + ": " + exception.getMessage());
-        }
-    }
-
-    private boolean looksLikeGuiMojibake(String content) {
-        if (content == null || content.isBlank()) {
-            return false;
-        }
-        return content.contains("GuiPlain:")
-            && content.contains("custom-model-data:")
-            && java.util.regex.Pattern.compile("[\\u4E00-\\u9FFF]{3,}\\?").matcher(content).find();
-    }
-
-    private boolean looksLikeOutdatedGuiLayout(String fileName, String content) {
-        if (content == null || content.isBlank()) {
-            return false;
-        }
-        return switch (fileName) {
-            case "gui/claim-list.yml" -> !content.contains("layout-version: 2");
-            case "gui/claim-view.yml" -> !content.contains("layout-version: 1");
-            case "gui/claim-manage.yml" -> !content.contains("layout-version: 2");
-            case "gui/claim-expand-amount.yml" -> !content.contains("layout-version: 1");
-            case "gui/claim-expand-confirm.yml" -> !content.contains("layout-version: 1");
-            case "gui/trust-online-add.yml" -> !content.contains("layout-version: 1");
-            case "gui/core.yml" -> !content.contains("layout-version: 5");
-            case "gui/claim-permissions.yml" -> !content.contains("layout-version: 6");
-            case "gui/trust.yml" -> !content.contains("layout-version: 4");
-            case "gui/selection-create.yml" -> !content.contains("layout-version: 3");
-            default -> false;
-        };
     }
 }

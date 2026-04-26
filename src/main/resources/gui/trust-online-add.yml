@@ -1,22 +1,23 @@
 layout-version: 1
 title: '&#475569[&#55FFAA授权&#475569] &#55FFAA&l添加在线玩家 - {name}'
+
 Shape:
-  - "FFFFIFFFF"
-  - "FPPPPPPPF"
-  - "FPPPPPPPF"
-  - "FPPPPPPPF"
-  - "FPPPPPPPF"
-  - "LFFFXFFFN"
+  - 'FFFFIFFFF'
+  - 'FPPPPPPPF'
+  - 'FPPPPPPPF'
+  - 'FPPPPPPPF'
+  - 'FPPPPPPPF'
+  - 'LFFFXFFFN'
 
 items:
   filler:
-    char: "F"
+    char: 'F'
     material: GRAY_STAINED_GLASS_PANE
-    name: ' '
     custom-model-data: 1410
+    name: ' '
 
   info:
-    char: "I"
+    char: 'I'
     material: BOOK
     custom-model-data: 1411
     name: '&#FFD166&l在线玩家授权'
@@ -33,7 +34,7 @@ items:
       - ' &#CBD5E1点击头像后立即授权'
 
   online-entry:
-    char: "P"
+    char: 'P'
     material: PLAYER_HEAD
     custom-model-data: 1412
     name: '&#55FFAA&l授权玩家: &#F8FAFC{player}'
@@ -56,7 +57,7 @@ items:
       - ' &#CBD5E1自己、已授权成员和 deny 玩家'
 
   prev-page:
-    char: "L"
+    char: 'L'
     material: ARROW
     custom-model-data: 1414
     name: '&#55FFAA&l上一页'
@@ -66,7 +67,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   back:
-    char: "X"
+    char: 'X'
     material: BARRIER
     custom-model-data: 1415
     name: '&#FF6B6B&l返回成员菜单'
@@ -76,7 +77,7 @@ items:
     sound: UI_BUTTON_CLICK
 
   next-page:
-    char: "N"
+    char: 'N'
     material: ARROW
     custom-model-data: 1416
     name: '&#55FFAA&l下一页'

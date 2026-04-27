@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -41,10 +40,10 @@ final class PluginResourceManager {
         Map.entry("gui/claim-manage.yml", "layout-version: 2"),
         Map.entry("gui/claim-expand-amount.yml", "layout-version: 1"),
         Map.entry("gui/claim-expand-confirm.yml", "layout-version: 1"),
-        Map.entry("gui/trust-online-add.yml", "layout-version: 1"),
+        Map.entry("gui/trust-online-add.yml", "layout-version: 2"),
         Map.entry("gui/core.yml", "layout-version: 5"),
         Map.entry("gui/claim-permissions.yml", "layout-version: 7"),
-        Map.entry("gui/trust.yml", "layout-version: 4"),
+        Map.entry("gui/trust.yml", "layout-version: 5"),
         Map.entry("gui/selection-create.yml", "layout-version: 3")
     );
 
@@ -143,8 +142,7 @@ final class PluginResourceManager {
             }
             FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             FileConfiguration config = plugin.getConfig();
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, config, "", missingPaths);
+            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, config);
             if (missingPaths.isEmpty()) {
                 return;
             }
@@ -183,8 +181,7 @@ final class PluginResourceManager {
             changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("flags.system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
             changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("permissions.new-claim-defaults"), rulesConfig, "new-claim-defaults.permissions");
             changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("permissions.system-claim-defaults"), rulesConfig, "system-claim-defaults.permissions");
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, rulesConfig, "", missingPaths);
+            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, rulesConfig);
             if (!missingPaths.isEmpty()) {
                 rulesConfig.setDefaults(defaults);
                 rulesConfig.options().copyDefaults(true);
@@ -223,29 +220,14 @@ final class PluginResourceManager {
             FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             FileConfiguration messagesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
             boolean changed = false;
-            List<String> missingPaths = new ArrayList<>();
-            collectMissingConfigPaths(defaults, messagesConfig, "", missingPaths);
+            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, messagesConfig);
             if (!missingPaths.isEmpty()) {
                 messagesConfig.setDefaults(defaults);
                 messagesConfig.options().copyDefaults(true);
                 changed = true;
             }
 
-            String oldAdminUsage = "&#FF6B6B鐢ㄦ硶 &8| &7/claim admin <create|info|playerclaims|diagnose|add|unadd|deny|undeny|permission|flag|cleanup|setserver> ...";
-            String newAdminUsage = defaults.getString("admin-usage", oldAdminUsage);
-            if (oldAdminUsage.equals(messagesConfig.getString("admin-usage"))) {
-                messagesConfig.set("admin-usage", newAdminUsage);
-                changed = true;
-            }
-            if (CoreClaimPlugin.MESSAGE_RESOURCE_PATH.equals(resourcePath)) {
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "prefix", "&#55FFAA&l[领地系统] &#F8FAFC");
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-join-reminder", "&#4CC9F0领地 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟可获得第一块领地核心，当前还差 &#F8FAFC{remaining} &#CBD5E1分钟。");
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-reminder", "&#FFD166提醒 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟会自动发放新人核心，当前还需 &#F8FAFC{remaining} &#CBD5E1分钟。");
-            } else if (CoreClaimPlugin.ENGLISH_MESSAGE_RESOURCE_PATH.equals(resourcePath)) {
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "prefix", "&#55FFAA&l[CoreClaim] &#F8FAFC");
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-join-reminder", "&#4CC9F0Claim &#475569| &#CBD5E1Stay online for &#F8FAFC{minutes} &#CBD5E1minutes to receive your first claim core. &#F8FAFC{remaining} &#CBD5E1minutes remaining.");
-                changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-reminder", "&#FFD166Reminder &#475569| &#CBD5E1A starter core will be granted after &#F8FAFC{minutes} &#CBD5E1minutes online. &#F8FAFC{remaining} &#CBD5E1minutes remaining.");
-            }
+            changed |= MessageDefaultsRepair.applyKnownReplacements(messagesConfig, defaults, resourcePath);
 
             if (!existed || changed) {
                 messagesConfig.save(file);
@@ -256,14 +238,6 @@ final class PluginResourceManager {
         } catch (Exception exception) {
             plugin.getLogger().warning("Failed to prepare messages defaults for " + resourcePath + ": " + exception.getMessage());
         }
-    }
-
-    private boolean replaceMessageIfExact(FileConfiguration messagesConfig, FileConfiguration defaults, String path, String oldValue) {
-        if (!oldValue.equals(messagesConfig.getString(path))) {
-            return false;
-        }
-        messagesConfig.set(path, defaults.getString(path, oldValue));
-        return true;
     }
 
     private void migrateLegacyMessagesFile(File targetFile) throws Exception {
@@ -299,20 +273,6 @@ final class PluginResourceManager {
             }
         }
         return changed;
-    }
-
-    private void collectMissingConfigPaths(ConfigurationSection defaults, FileConfiguration config, String prefix, List<String> missingPaths) {
-        for (String key : defaults.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            Object value = defaults.get(key);
-            if (value instanceof ConfigurationSection section) {
-                collectMissingConfigPaths(section, config, path, missingPaths);
-                continue;
-            }
-            if (!config.contains(path)) {
-                missingPaths.add(path);
-            }
-        }
     }
 
     private void loadMenuResources() {

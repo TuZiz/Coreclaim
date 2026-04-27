@@ -1,9 +1,9 @@
-layout-version: 1
+layout-version: 2
 title: '&#475569[&#55FFAA授权&#475569] &#55FFAA&l添加在线玩家 - {name}'
 
 Shape:
   - 'FFFFIFFFF'
-  - 'FPPPPPPPF'
+  - 'FPPPEPPPF'
   - 'FPPPPPPPF'
   - 'FPPPPPPPF'
   - 'FPPPPPPPF'
@@ -34,7 +34,9 @@ items:
       - ' &#CBD5E1点击头像后立即授权'
 
   online-entry:
-    char: 'P'
+    chars:
+      - 'P'
+      - 'E'
     material: PLAYER_HEAD
     custom-model-data: 1412
     name: '&#55FFAA&l授权玩家: &#F8FAFC{player}'
@@ -47,7 +49,7 @@ items:
     sound: ENTITY_PLAYER_LEVELUP
 
   empty:
-    slot: 22
+    char: 'E'
     material: PAPER
     custom-model-data: 1413
     name: '&#CBD5E1当前没有可授权的在线玩家'

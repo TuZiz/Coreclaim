@@ -10,16 +10,10 @@ public final class PlatformScheduler {
 
     private final CoreClaimPlugin plugin;
     private final boolean folia;
-    private volatile boolean globalSchedulerAvailable;
-    private volatile boolean playerSchedulerAvailable;
-    private volatile boolean warnedGlobalFallback;
-    private volatile boolean warnedPlayerFallback;
 
     public PlatformScheduler(CoreClaimPlugin plugin) {
         this.plugin = plugin;
         this.folia = detectFolia();
-        this.globalSchedulerAvailable = folia;
-        this.playerSchedulerAvailable = folia;
     }
 
     public boolean isFolia() {
@@ -27,7 +21,7 @@ public final class PlatformScheduler {
     }
 
     public TaskHandle runRepeating(Runnable runnable, long delayTicks, long periodTicks) {
-        if (!globalSchedulerAvailable) {
+        if (!folia) {
             return runBukkitRepeating(runnable, delayTicks, periodTicks);
         }
 
@@ -48,13 +42,12 @@ public final class PlatformScheduler {
             );
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
-            disableGlobalScheduler(exception);
-            return runBukkitRepeating(runnable, delayTicks, periodTicks);
+            throw foliaSchedulerFailure("global repeating task", exception);
         }
     }
 
     public TaskHandle runLater(Runnable runnable, long delayTicks) {
-        if (!globalSchedulerAvailable) {
+        if (!folia) {
             return runBukkitLater(runnable, delayTicks);
         }
 
@@ -73,13 +66,12 @@ public final class PlatformScheduler {
             );
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
-            disableGlobalScheduler(exception);
-            return runBukkitLater(runnable, delayTicks);
+            throw foliaSchedulerFailure("global delayed task", exception);
         }
     }
 
     public void runPlayerTask(Player player, Runnable runnable) {
-        if (!playerSchedulerAvailable) {
+        if (!folia) {
             Bukkit.getScheduler().runTask(plugin, runnable);
             return;
         }
@@ -93,13 +85,12 @@ public final class PlatformScheduler {
                 Runnable.class
             ).invoke(entityScheduler, plugin, (Consumer<Object>) ignored -> runnable.run(), null);
         } catch (Throwable exception) {
-            disablePlayerScheduler(exception);
-            Bukkit.getScheduler().runTask(plugin, runnable);
+            throw foliaSchedulerFailure("player task", exception);
         }
     }
 
     public TaskHandle runPlayerLater(Player player, Runnable runnable, long delayTicks) {
-        if (!playerSchedulerAvailable) {
+        if (!folia) {
             return runBukkitLater(runnable, delayTicks);
         }
 
@@ -114,8 +105,7 @@ public final class PlatformScheduler {
             ).invoke(entityScheduler, plugin, (Consumer<Object>) ignored -> runnable.run(), null, delayTicks);
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
-            disablePlayerScheduler(exception);
-            return runBukkitLater(runnable, delayTicks);
+            throw foliaSchedulerFailure("player delayed task", exception);
         }
     }
 
@@ -148,20 +138,8 @@ public final class PlatformScheduler {
         return task::cancel;
     }
 
-    private void disableGlobalScheduler(Throwable exception) {
-        globalSchedulerAvailable = false;
-        if (!warnedGlobalFallback) {
-            warnedGlobalFallback = true;
-            plugin.getLogger().warning("Folia 调度器适配失败，已退回 Bukkit 调度器: " + describeThrowable(exception));
-        }
-    }
-
-    private void disablePlayerScheduler(Throwable exception) {
-        playerSchedulerAvailable = false;
-        if (!warnedPlayerFallback) {
-            warnedPlayerFallback = true;
-            plugin.getLogger().warning("Folia 玩家调度器适配失败，已退回 Bukkit 调度器: " + describeThrowable(exception));
-        }
+    private IllegalStateException foliaSchedulerFailure(String operation, Throwable throwable) {
+        return new IllegalStateException("Folia scheduler failed for " + operation + ": " + describeThrowable(throwable), throwable);
     }
 
     private String describeThrowable(Throwable throwable) {

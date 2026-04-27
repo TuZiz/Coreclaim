@@ -2,7 +2,9 @@ package com.coreclaim.gui.support;
 
 import com.coreclaim.CoreClaimPlugin;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -52,21 +54,35 @@ public final class MenuConfigAccessor {
             result.add(section.getInt("slot", 0));
             return result;
         }
-        String rawChar = section.getString("char", "");
-        if (rawChar.isBlank()) {
+        Set<Character> symbols = symbols(section);
+        if (symbols.isEmpty()) {
             return result;
         }
-        char symbol = rawChar.charAt(0);
         List<String> layout = layout(menuKey);
         for (int row = 0; row < layout.size(); row++) {
             String line = padLayout.apply(layout.get(row));
             for (int column = 0; column < 9; column++) {
-                if (line.charAt(column) == symbol) {
+                if (symbols.contains(line.charAt(column))) {
                     result.add(row * 9 + column);
                 }
             }
         }
         return result;
+    }
+
+    private Set<Character> symbols(ConfigurationSection section) {
+        Set<Character> symbols = new LinkedHashSet<>();
+        for (String rawChar : section.getStringList("chars")) {
+            addSymbol(symbols, rawChar);
+        }
+        addSymbol(symbols, section.getString("char", ""));
+        return symbols;
+    }
+
+    private void addSymbol(Set<Character> symbols, String rawChar) {
+        if (rawChar != null && !rawChar.isBlank()) {
+            symbols.add(rawChar.charAt(0));
+        }
     }
 
     private List<String> layout(String menuKey) {

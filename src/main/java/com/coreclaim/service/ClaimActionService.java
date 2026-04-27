@@ -333,10 +333,6 @@ public final class ClaimActionService {
         return player.getName() == null ? player.getUniqueId().toString() : player.getName();
     }
 
-    public boolean canEditClaim(Player player, Claim claim) {
-        return canManageClaim(player, claim);
-    }
-
     public boolean canManageClaim(Player player, Claim claim) {
         return isOwner(player, claim) || AdminAccess.hasClaimManageAccess(player);
     }

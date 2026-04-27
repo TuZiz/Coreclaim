@@ -59,6 +59,16 @@ public final class ClaimManageMenuController {
             player.sendMessage(menu.plugin().message("claim-not-found"));
             return;
         }
+        if (slot == menu.slot("claim-manage", "back")) {
+            menu.playConfiguredSound(player, "claim-manage", "back");
+            menu.openCoreMenu(player, claim);
+            return;
+        }
+        if (!menu.claimActionService().canManageClaim(player, claim)) {
+            player.closeInventory();
+            player.sendMessage(menu.plugin().message("trust-no-permission"));
+            return;
+        }
 
         if (slot == menu.slot("claim-manage", "expand-north")) {
             menu.playConfiguredSound(player, "claim-manage", "expand-north");
@@ -90,10 +100,6 @@ public final class ClaimManageMenuController {
                 player.closeInventory();
             }
             return;
-        }
-        if (slot == menu.slot("claim-manage", "back")) {
-            menu.playConfiguredSound(player, "claim-manage", "back");
-            menu.openCoreMenu(player, claim);
         }
     }
 }

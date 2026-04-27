@@ -9,7 +9,7 @@ CoreClaim 是一个面向 `Spigot / Paper / Folia 1.20+` 的 Java 17 领地插�
 - **双创建流程**：支持新人核心右键命名创建，也支持普通金锄头两点选区后 `/claim create <领地名>` 创建。
 - **完整 GUI 管理**：内置领地列表、详情、核心管理、成员管理、在线玩家添加、权限/交互细则、选区创建确认、扩建数量与确认菜单。
 - **权限与交互细则**：默认权限覆盖放置、破坏、交互、容器、红石、爆炸、桶、传送、飞行；交互旗标可单独控制容器、按钮、拉杆、压力板、门、活板门、栅栏门、床和领地时间。
-- **成员与封禁**：支持 `/claim add`、`/claim unadd`、`/claim deny <玩家|*>`、`/claim undeny <玩家|*>`，被授权领地在列表中以只读/传送入口展示。
+- **成员与门禁**：支持 `/claim add`、`/claim unadd`、`/claim deny <玩家|*|全部>`、`/claim undeny <玩家|*|全部>`，被授权领地在列表中以只读/传送入口展示。
 - **扩建与经济**：按方向扩建，组别可配置初始半径、最大半径、数量上限、创建单价、扩建单价；Vault 存在时启用扣费。
 - **传送与转让**：支持领地传送点设置、领地传送、限时转让请求、接收/拒绝转让。
 - **跨服能力**：支持 `server-id`、跨服传送占位流程、MySQL 共享存储、SQLite 到 MySQL 迁移、Redis 领地同步通知。
@@ -54,8 +54,8 @@ CoreClaim 是一个面向 `Spigot / Paper / Folia 1.20+` 的 Java 17 领地插�
 | `/claim expand <east|south|west|north>` | 向指定方向扩建 |
 | `/claim add <玩家>` | 添加成员 |
 | `/claim unadd <玩家>` | 移除成员 |
-| `/claim deny <玩家|*>` | 禁止玩家或所有非成员访问 |
-| `/claim undeny <玩家|*>` | 取消禁止 |
+| `/claim deny <玩家|*|全部>` | 禁止指定玩家，或开启全员门禁 |
+| `/claim undeny <玩家|*|全部>` | 解除指定玩家门禁，或关闭全员门禁 |
 | `/claim flag [list]` | 查看交互旗标 |
 | `/claim flag <flag> <allow|deny|unset>` | 修改交互旗标 |
 | `/claim transfer <玩家>` | 转让当前领地 |
@@ -75,8 +75,8 @@ CoreClaim 是一个面向 `Spigot / Paper / Folia 1.20+` 的 Java 17 领地插�
 | `/claim admin diagnose <领地名|#claimId>` | 查看跨服和传送诊断 |
 | `/claim admin add <玩家>` | 强制添加当前领地成员 |
 | `/claim admin unadd <玩家>` | 强制移除当前领地成员 |
-| `/claim admin deny <玩家|*>` | 强制修改 deny 列表 |
-| `/claim admin undeny <玩家|*>` | 强制取消 deny |
+| `/claim admin deny <玩家|*|全部>` | 强制修改门禁 |
+| `/claim admin undeny <玩家|*|全部>` | 强制取消门禁 |
 | `/claim admin permission <permission> <allow|deny>` | 修改默认权限 |
 | `/claim admin flag <flag> <allow|deny|unset>` | 修改交互旗标 |
 | `/claim admin remove [领地名|#claimId]` | 删除脚下或指定领地 |

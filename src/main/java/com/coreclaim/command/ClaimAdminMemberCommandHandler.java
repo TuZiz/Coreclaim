@@ -53,7 +53,7 @@ final class ClaimAdminMemberCommandHandler {
             sender.sendMessage(plugin.message("admin-deny-usage"));
             return true;
         }
-        if ("*".equals(targetArg)) {
+        if (ClaimDenyTargets.isAllTarget(targetArg)) {
             claimService.updateDenyAll(claim, true, actorId(sender));
             sender.sendMessage(plugin.message("admin-deny-all-enabled", "{name}", claim.name()));
             return true;
@@ -94,7 +94,7 @@ final class ClaimAdminMemberCommandHandler {
             sender.sendMessage(plugin.message("admin-undeny-usage"));
             return true;
         }
-        if ("*".equals(targetArg)) {
+        if (ClaimDenyTargets.isAllTarget(targetArg)) {
             claimService.updateDenyAll(claim, false, actorId(sender));
             sender.sendMessage(plugin.message("admin-deny-all-disabled", "{name}", claim.name()));
             return true;

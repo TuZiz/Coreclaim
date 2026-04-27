@@ -119,7 +119,7 @@ final class ClaimTabCompletionService {
             return filter(options, args[1]);
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("deny") || args[0].equalsIgnoreCase("undeny"))) {
-            options.add("*");
+            options.addAll(ClaimDenyTargets.allTargetOptions());
             options.addAll(knownPlayerNames());
             return filter(options, args[1]);
         }
@@ -189,7 +189,7 @@ final class ClaimTabCompletionService {
             return filter(options, args[2]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin") && (args[1].equalsIgnoreCase("deny") || args[1].equalsIgnoreCase("undeny"))) {
-            options.add("*");
+            options.addAll(ClaimDenyTargets.allTargetOptions());
             options.addAll(knownPlayerNames());
             return filter(options, args[2]);
         }

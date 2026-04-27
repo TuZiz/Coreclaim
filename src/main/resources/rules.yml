@@ -9,16 +9,16 @@ new-claim-defaults:
     explosion: false
     bucket: false
     teleport: false
-    flight: true
+    flight: false
   flags:
     container: deny
     use-button: deny
     use-lever: deny
     use-pressure-plate: deny
-    use-door: allow
-    use-trapdoor: allow
-    use-fence-gate: allow
-    use-bed: allow
+    use-door: deny
+    use-trapdoor: deny
+    use-fence-gate: deny
+    use-bed: deny
     time-cycle: unset
 
 # 新建系统领地默认公共规则

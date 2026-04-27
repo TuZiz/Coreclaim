@@ -1,4 +1,4 @@
-layout-version: 4
+layout-version: 6
 title: '&#55FFAA&l领地核心 &#475569| &#F8FAFC管理面板'
 
 Shape:
@@ -78,11 +78,11 @@ items:
     char: 'P'
     material: COMPARATOR
     custom-model-data: 1505
-    name: '&#FFD166&l权限与交互'
+    name: '&#FFD166&l权限管理'
     lore:
       - ''
-      - ' &#CBD5E1统一设置基础权限与交互细则'
-      - ' &#CBD5E1未设置的细则会跟随基础权限'
+      - ' &#CBD5E1统一设置基础权限与细分权限'
+      - ' &#CBD5E1未设置的细分权限会跟随基础权限'
       - ''
       - ' &#FFD166&l» &#F8FAFC点击打开面板'
     sound: UI_BUTTON_CLICK

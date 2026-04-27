@@ -6,14 +6,14 @@ import org.bukkit.Material;
 
 public enum ClaimFlag {
     TIME_CYCLE("time-cycle", "Claim Time", ClaimPermission.INTERACT),
-    CONTAINER("container", "容器交互", ClaimPermission.CONTAINER),
-    USE_BUTTON("use-button", "按钮交互", ClaimPermission.REDSTONE),
-    USE_LEVER("use-lever", "拉杆交互", ClaimPermission.REDSTONE),
-    USE_PRESSURE_PLATE("use-pressure-plate", "压力板交互", ClaimPermission.REDSTONE),
-    USE_DOOR("use-door", "门交互", ClaimPermission.INTERACT),
-    USE_TRAPDOOR("use-trapdoor", "活板门交互", ClaimPermission.INTERACT),
-    USE_FENCE_GATE("use-fence-gate", "栅栏门交互", ClaimPermission.INTERACT),
-    USE_BED("use-bed", "床交互", ClaimPermission.INTERACT);
+    CONTAINER("container", "容器权限", ClaimPermission.CONTAINER),
+    USE_BUTTON("use-button", "按钮权限", ClaimPermission.REDSTONE),
+    USE_LEVER("use-lever", "拉杆权限", ClaimPermission.REDSTONE),
+    USE_PRESSURE_PLATE("use-pressure-plate", "压力板权限", ClaimPermission.REDSTONE),
+    USE_DOOR("use-door", "门权限", ClaimPermission.INTERACT),
+    USE_TRAPDOOR("use-trapdoor", "活板门权限", ClaimPermission.INTERACT),
+    USE_FENCE_GATE("use-fence-gate", "栅栏门权限", ClaimPermission.INTERACT),
+    USE_BED("use-bed", "床权限", ClaimPermission.INTERACT);
 
     private final String key;
     private final String displayName;

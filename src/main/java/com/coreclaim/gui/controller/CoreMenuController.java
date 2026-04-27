@@ -71,6 +71,10 @@ public final class CoreMenuController {
         }
 
         if (slot == menu.slot("core", "expand")) {
+            if (!menu.claimActionService().canManageClaim(player, claim)) {
+                player.sendMessage(menu.plugin().message("trust-no-permission"));
+                return;
+            }
             menu.playConfiguredSound(player, "core", "expand");
             menu.openClaimManageMenu(player, claim);
             return;
@@ -81,11 +85,20 @@ public final class CoreMenuController {
             return;
         }
         if (slot == menu.slot("core", "trust")) {
+            if (!menu.claimActionService().canManageMembers(player, claim)) {
+                player.sendMessage(menu.plugin().message("trust-no-permission"));
+                return;
+            }
             menu.playConfiguredSound(player, "core", "trust");
             menu.openTrustMenu(player, claim, 0);
             return;
         }
         if (slot == menu.slot("core", "permissions")) {
+            if (!menu.claimActionService().canManagePermissions(player, claim)
+                && !menu.claimActionService().canManageFlags(player, claim)) {
+                player.sendMessage(menu.plugin().message("trust-no-permission"));
+                return;
+            }
             menu.playConfiguredSound(player, "core", "permissions");
             menu.openClaimPermissionsMenu(player, claim);
             return;

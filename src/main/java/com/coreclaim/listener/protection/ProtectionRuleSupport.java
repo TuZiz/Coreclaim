@@ -189,10 +189,10 @@ public final class ProtectionRuleSupport {
             return ClaimPermission.INTERACT;
         }
         if (isAxe(item) && isWeatheredOrWaxedCopper(material)) {
-            return ClaimPermission.INTERACT;
+            return ClaimPermission.BREAK;
         }
         if (isShovel(item) && isShovelFlattenable(material)) {
-            return ClaimPermission.INTERACT;
+            return ClaimPermission.BREAK;
         }
         if (isHoe(item) && isHoeTillable(material)) {
             return ClaimPermission.INTERACT;

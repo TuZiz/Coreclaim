@@ -1,9 +1,9 @@
-layout-version: 4
+layout-version: 5
 title: '&#475569[&#C084FC成员&#475569] &#C084FC&l成员管理 - {name}'
 
 Shape:
   - 'FFFFIFFFF'
-  - 'FTTTTTTTF'
+  - 'FTTTETTTF'
   - 'FTTTTTTTF'
   - 'FTTTTTTTF'
   - 'FTTTTTTTF'
@@ -34,7 +34,9 @@ items:
       - ' &#CBD5E1成员默认拥有全部权限'
 
   trusted-entry:
-    char: 'T'
+    chars:
+      - 'T'
+      - 'E'
     material: PLAYER_HEAD
     custom-model-data: 1402
     name: '&#55FFAA&l成员: &#F8FAFC{player}'
@@ -61,7 +63,7 @@ items:
     glow: true
 
   empty:
-    slot: 22
+    char: 'E'
     material: PAPER
     custom-model-data: 1403
     name: '&#CBD5E1当前还没有成员'

@@ -23,6 +23,7 @@ import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Tameable;
 import org.bukkit.entity.Turtle;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBurnEvent;
@@ -110,6 +111,10 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return;
         }
         if (isNaturalTurtleEggPlacement(event)) {
+            return;
+        }
+        if (event.getEntity() instanceof Villager
+            && isVillagerFarmChange(event.getBlock().getType(), event.getTo())) {
             return;
         }
         if (claimService.findClaim(event.getBlock().getLocation()).isPresent()) {
@@ -232,6 +237,26 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     private boolean isNaturalTurtleEggPlacement(EntityChangeBlockEvent event) {
         return event.getEntity() instanceof Turtle && event.getTo() == Material.TURTLE_EGG;
+    }
+
+    static boolean isVillagerFarmChange(Material from, Material to) {
+        if (isVillagerCrop(from) && to == Material.AIR) {
+            return true;
+        }
+        return isAirBlock(from) && isVillagerCrop(to);
+    }
+
+    private static boolean isVillagerCrop(Material material) {
+        return material == Material.WHEAT
+            || material == Material.CARROTS
+            || material == Material.POTATOES
+            || material == Material.BEETROOTS;
+    }
+
+    private static boolean isAirBlock(Material material) {
+        return material == Material.AIR
+            || material == Material.CAVE_AIR
+            || material == Material.VOID_AIR;
     }
 
     private int claimId(Optional<Claim> claim) {

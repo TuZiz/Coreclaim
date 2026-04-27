@@ -3,7 +3,6 @@ package com.coreclaim.service;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.platform.PlatformScheduler;
-import com.coreclaim.util.AdminAccess;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -161,8 +160,7 @@ public final class ClaimInputService {
     }
 
     private boolean canManageClaim(Player player, Claim claim) {
-        return player != null && claim != null
-            && (claim.owner().equals(player.getUniqueId()) || AdminAccess.hasClaimManageAccess(player));
+        return ClaimInputAccess.canCommitClaimText(player, claim);
     }
 
     private void scheduleTimeout(UUID playerId) {

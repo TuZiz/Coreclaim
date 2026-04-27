@@ -36,6 +36,7 @@ public final class ClaimEnterLeaveListener implements Listener {
 
     private static final long CLAIM_DAY_TIME = 6000L;
     private static final long CLAIM_NIGHT_TIME = 18000L;
+    private static final long BLOCKED_ENTRY_NOTICE_COOLDOWN_MILLIS = 2000L;
 
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
@@ -43,6 +44,7 @@ public final class ClaimEnterLeaveListener implements Listener {
     private final ClaimVisualService claimVisualService;
     private final ClaimEntryMessageFormatter entryMessageFormatter;
     private final Map<UUID, PlayerFlightSession> flightSessions = new ConcurrentHashMap<>();
+    private final Map<UUID, BlockedEntryNotice> blockedEntryNotices = new ConcurrentHashMap<>();
     private final PlatformScheduler.TaskHandle reconcileTask;
 
     public ClaimEnterLeaveListener(
@@ -182,7 +184,7 @@ public final class ClaimEnterLeaveListener implements Listener {
         int toNotifyId = toNotifyClaim == null ? -1 : toNotifyClaim.id();
 
         if (fromId != toId && isBlockedEntry(player, toClaim)) {
-            player.sendMessage(plugin.message("claim-entry-denied", "{name}", toClaim.name()));
+            notifyBlockedEntry(player, playerId, toClaim);
             debugFlight(player, "blocked-entry", toClaim, session);
             cleanupSession(playerId, session);
             return true;
@@ -232,6 +234,7 @@ public final class ClaimEnterLeaveListener implements Listener {
             return;
         }
         UUID playerId = player.getUniqueId();
+        blockedEntryNotices.remove(playerId);
         PlayerFlightSession session = flightSessions.get(playerId);
         if (session == null) {
             return;
@@ -244,6 +247,23 @@ public final class ClaimEnterLeaveListener implements Listener {
         resetClaimTime(player, session);
         cleanupSession(playerId, session);
         flightSessions.remove(playerId, session);
+    }
+
+    private void notifyBlockedEntry(Player player, UUID playerId, Claim claim) {
+        long nowMillis = System.currentTimeMillis();
+        BlockedEntryNotice previous = blockedEntryNotices.get(playerId);
+        if (!shouldShowBlockedEntryNotice(previous, claim.id(), nowMillis)) {
+            return;
+        }
+        blockedEntryNotices.put(playerId, new BlockedEntryNotice(claim.id(), nowMillis));
+        player.sendMessage(plugin.message("claim-entry-denied", "{name}", claim.name()));
+        claimVisualService.showClaim(player, claim);
+    }
+
+    static boolean shouldShowBlockedEntryNotice(BlockedEntryNotice previous, int claimId, long nowMillis) {
+        return previous == null
+            || previous.claimId() != claimId
+            || nowMillis - previous.notifiedAtMillis() >= BLOCKED_ENTRY_NOTICE_COOLDOWN_MILLIS;
     }
 
     private void updateFlightState(Player player, PlayerFlightSession session, Claim claim, String reason) {
@@ -434,6 +454,9 @@ public final class ClaimEnterLeaveListener implements Listener {
 
     private Claim resolveNotifyClaim(Location location) {
         return location == null ? null : claimService.findClaim(location).orElse(null);
+    }
+
+    record BlockedEntryNotice(int claimId, long notifiedAtMillis) {
     }
 
     private void cleanupSession(UUID playerId, PlayerFlightSession session) {

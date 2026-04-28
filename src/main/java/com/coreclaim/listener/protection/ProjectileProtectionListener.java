@@ -1,8 +1,6 @@
 package com.coreclaim.listener.protection;
 
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.ClaimFlag;
-import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import java.util.Iterator;
 import java.util.Optional;
@@ -36,20 +34,11 @@ public final class ProjectileProtectionListener implements Listener {
         if (event.getHitBlock() != null) {
             Optional<Claim> claim = support.claimService().findClaim(event.getHitBlock().getLocation());
             if (claim.isPresent()) {
-                ClaimFlag flag = ClaimFlag.fromInteraction(event.getHitBlock().getType());
-                if (flag != null
-                    && support.claimService().flagState(claim.get(), flag) != ClaimFlagState.UNSET
-                    && !support.claimService().hasFlagPermission(claim.get(), shooter.getUniqueId(), flag)) {
-                    event.setCancelled(true);
-                    event.getEntity().remove();
-                    support.sendProtectionDeny(shooter, claim.get());
-                    return;
-                }
                 boolean projectileProtected = support.isProjectileSensitiveBlock(event.getHitBlock().getType())
                     && (support.plugin().settings().strictRedstoneInteract()
                     || !support.plugin().settings().isAllowedInteract(event.getHitBlock().getType()));
                 if (projectileProtected
-                    && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), ClaimPermission.INTERACT)) {
+                    && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectileSensitivePermission(event.getHitBlock().getType()))) {
                     event.setCancelled(true);
                     event.getEntity().remove();
                     support.sendProtectionDeny(shooter, claim.get());

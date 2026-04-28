@@ -2,19 +2,25 @@ package com.coreclaim.model;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Set;
 import org.bukkit.Material;
 
 public enum ClaimFlag {
     TIME_CYCLE("time-cycle", "Claim Time", ClaimPermission.INTERACT),
-    CONTAINER("container", "容器权限", ClaimPermission.CONTAINER),
-    USE_BUTTON("use-button", "按钮权限", ClaimPermission.REDSTONE),
-    USE_LEVER("use-lever", "拉杆权限", ClaimPermission.REDSTONE),
-    USE_PRESSURE_PLATE("use-pressure-plate", "压力板权限", ClaimPermission.REDSTONE),
-    USE_DOOR("use-door", "门权限", ClaimPermission.INTERACT),
-    USE_TRAPDOOR("use-trapdoor", "活板门权限", ClaimPermission.INTERACT),
-    USE_FENCE_GATE("use-fence-gate", "栅栏门权限", ClaimPermission.INTERACT),
-    USE_BED("use-bed", "床权限", ClaimPermission.INTERACT),
-    LIQUID_FLOW("liquid-flow", "液体流入权限", ClaimPermission.BUCKET);
+    LIQUID_FLOW("liquid-flow", "液体流入权限", ClaimPermission.INTERACT);
+
+    private static final Set<String> LEGACY_INTERACT_KEYS = Set.of(
+        "container",
+        "use-door",
+        "use-trapdoor",
+        "use-fence-gate",
+        "use-bed"
+    );
+    private static final Set<String> LEGACY_REDSTONE_KEYS = Set.of(
+        "use-button",
+        "use-lever",
+        "use-pressure-plate"
+    );
 
     private final String key;
     private final String displayName;
@@ -51,39 +57,13 @@ public enum ClaimFlag {
     }
 
     public static ClaimFlag fromInteraction(Material material) {
-        if (material == null) {
-            return null;
-        }
-        if (isContainerMaterial(material)) {
-            return CONTAINER;
-        }
-
-        String materialName = material.name();
-        if (materialName.endsWith("_BUTTON")) {
-            return USE_BUTTON;
-        }
-        if (material == Material.LEVER) {
-            return USE_LEVER;
-        }
-        if (materialName.endsWith("_PRESSURE_PLATE")) {
-            return USE_PRESSURE_PLATE;
-        }
-        if (materialName.endsWith("_DOOR")) {
-            return USE_DOOR;
-        }
-        if (materialName.endsWith("_TRAPDOOR")) {
-            return USE_TRAPDOOR;
-        }
-        if (materialName.endsWith("_FENCE_GATE")) {
-            return USE_FENCE_GATE;
-        }
-        if (materialName.endsWith("_BED")) {
-            return USE_BED;
-        }
         return null;
     }
 
-    private static boolean isContainerMaterial(Material material) {
+    public static boolean isContainerMaterial(Material material) {
+        if (material == null) {
+            return false;
+        }
         String materialName = material.name();
         return materialName.endsWith("CHEST")
             || materialName.endsWith("BARREL")
@@ -97,5 +77,33 @@ public enum ClaimFlag {
             || material == Material.BREWING_STAND
             || material == Material.CHISELED_BOOKSHELF
             || material == Material.LECTERN;
+    }
+
+    public static Set<String> legacyInteractKeys() {
+        return LEGACY_INTERACT_KEYS;
+    }
+
+    public static Set<String> legacyRedstoneKeys() {
+        return LEGACY_REDSTONE_KEYS;
+    }
+
+    public static boolean isLegacyKey(String rawValue) {
+        String normalized = normalizeLegacyKey(rawValue);
+        return LEGACY_INTERACT_KEYS.contains(normalized) || LEGACY_REDSTONE_KEYS.contains(normalized);
+    }
+
+    public static boolean isLegacyInteractKey(String rawValue) {
+        return LEGACY_INTERACT_KEYS.contains(normalizeLegacyKey(rawValue));
+    }
+
+    public static boolean isLegacyRedstoneKey(String rawValue) {
+        return LEGACY_REDSTONE_KEYS.contains(normalizeLegacyKey(rawValue));
+    }
+
+    private static String normalizeLegacyKey(String rawValue) {
+        if (rawValue == null) {
+            return "";
+        }
+        return rawValue.trim().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 }

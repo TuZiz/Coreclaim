@@ -146,7 +146,7 @@ final class PluginConfigLoader {
             return false;
         }
         return switch (permission) {
-            case INTERACT, TELEPORT -> true;
+            case TELEPORT -> true;
             default -> false;
         };
     }
@@ -198,9 +198,6 @@ final class PluginConfigLoader {
         if (!systemDefaults) {
             return "deny";
         }
-        return switch (flag) {
-            case USE_DOOR, USE_TRAPDOOR, USE_FENCE_GATE, USE_BED -> "allow";
-            default -> "deny";
-        };
+        return "deny";
     }
 }

@@ -127,7 +127,6 @@ final class ClaimCommandResolver {
             case "place" -> ClaimPermission.PLACE;
             case "break" -> ClaimPermission.BREAK;
             case "interact" -> ClaimPermission.INTERACT;
-            case "container" -> ClaimPermission.CONTAINER;
             case "redstone" -> ClaimPermission.REDSTONE;
             case "explosion" -> ClaimPermission.EXPLOSION;
             case "bucket" -> ClaimPermission.BUCKET;

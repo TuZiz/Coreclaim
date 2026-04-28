@@ -34,10 +34,9 @@ class ClaimEnvironmentProtectionListenerTest {
 
     @Test
     void resolvesLiquidFlowFlagAgainstBucketFallback() {
-        assertTrue(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.ALLOW, false));
-        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.DENY, true));
-        assertTrue(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.UNSET, true));
-        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.UNSET, false));
-        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(null, false));
+        assertTrue(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.ALLOW));
+        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.DENY));
+        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.UNSET));
+        assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(null));
     }
 }

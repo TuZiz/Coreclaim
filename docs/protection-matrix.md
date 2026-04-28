@@ -11,13 +11,13 @@
 | 铜块除锈/去蜡 | `PlayerInteractEvent` 右键方块 | `BREAK` | 无权限时取消事件；铜类容器额外区分工具使用和打开容器 | 成功时记录建造活跃 |
 | 铲子路径化 | `PlayerInteractEvent` 右键方块 | `BREAK` | 无权限时取消事件 | 成功时记录建造活跃 |
 | 蜂巢、蛋糕、蜡烛、堆肥桶、炼药锅等右键状态变化 | `PlayerInteractEvent` 右键方块 | `INTERACT` | 无权限时取消事件 | 成功时记录交互活跃 |
-| 容器打开 | `PlayerInteractEvent` / 实体交互 | `CONTAINER` 旗标权限 | `setCancelled(true)`；工具动作可仅拒绝物品或方块使用 | 成功时记录交互活跃 |
-| 红石/特殊交互 | `PlayerInteractEvent` / `ProjectileHitEvent` | `REDSTONE` 或 `INTERACT`，取决于 `strict-redstone-interact` 与 `always-protected-interact` | `setCancelled(true)`，投掷物会移除实体 | 成功时记录交互活跃 |
-| 床、重生锚等特殊爆炸触发 | `PlayerInteractEvent` | `EXPLOSION` | 无权限时取消事件；有权限时登记爆炸授权位置 | 成功时记录交互活跃 |
-| 盔甲架、命名牌、实体容器 | `PlayerInteractEntityEvent` / `PlayerArmorStandManipulateEvent` | 盔甲架和命名牌为 `BREAK`，实体容器为 `CONTAINER`，其他为 `INTERACT` | `setCancelled(true)` | `BREAK` 记录建造活跃，其他记录交互活跃 |
+| 容器、门、活板门、栅栏门、床普通使用 | `PlayerInteractEvent` / 实体交互 | `INTERACT` | `setCancelled(true)`；容器上的工具动作可仅拒绝物品或方块使用 | 成功时记录交互活跃 |
+| 红石开关和特殊红石交互 | `PlayerInteractEvent` / `ProjectileHitEvent` | `REDSTONE`；按钮、拉杆、压力板固定归类为红石权限 | `setCancelled(true)`，投掷物会移除实体 | 成功时记录交互活跃 |
+| 床、重生锚等特殊爆炸触发 | `PlayerInteractEvent` | 只在会爆炸的维度检查 `EXPLOSION`，普通睡觉仍为 `INTERACT` | 无权限时取消事件；有权限时登记爆炸授权位置 | 成功时记录交互活跃 |
+| 盔甲架、命名牌、实体容器 | `PlayerInteractEntityEvent` / `PlayerArmorStandManipulateEvent` | 盔甲架和命名牌为 `BREAK`，实体容器为 `INTERACT`，其他为 `INTERACT` | `setCancelled(true)` | `BREAK` 记录建造活跃，其他记录交互活跃 |
 | 栓绳、钓鱼竿实体交互 | `PlayerLeashEntityEvent` / `PlayerUnleashEntityEvent` / `HangingBreakByEntityEvent` / `PlayerFishEvent` | 栓绳和拴绳结默认放行；钓鱼竿按目标实体推导权限 | 栓绳不取消；钓鱼无权限时 `setCancelled(true)` 并可移除钩子 | 栓绳成功时记录交互活跃 |
-| 液体跨界流入领地 | `BlockFromToEvent` | 目标领地 `LIQUID_FLOW` 细分权限，未设置时跟随 `BUCKET` | 水、岩浆、气泡柱流入未允许的领地时 `setCancelled(true)` | 不记录活跃值 |
-| 投掷物触发方块或实体 | `ProjectileHitEvent` / 药水/滞留药水/区域效果云 | 爆炸型投掷物为 `EXPLOSION`，其他危险投掷物为 `BREAK`，敏感红石块为 `INTERACT` | 取消事件、移除投掷物、或清空药水影响 | 不记录活跃值 |
+| 液体跨界流入领地 | `BlockFromToEvent` | 目标领地 `LIQUID_FLOW` 特殊规则；不再跟随 `BUCKET` | 水、岩浆、气泡柱流入未允许的领地时 `setCancelled(true)` | 不记录活跃值 |
+| 投掷物触发方块或实体 | `ProjectileHitEvent` / 药水/滞留药水/区域效果云 | 爆炸型投掷物为 `EXPLOSION`，其他危险投掷物为 `BREAK`，敏感红石块为 `REDSTONE` 或 `INTERACT` | 取消事件、移除投掷物、或清空药水影响 | 不记录活跃值 |
 | 爆炸破坏方块 | `ExplosionPrimeEvent` / `EntityExplodeEvent` | 来源玩家需要 `EXPLOSION`；无来源默认不破坏领地方块 | 取消爆炸或移除 blockList 中的领地方块 | 不记录活跃值 |
 | 村民收割/补种作物 | `EntityChangeBlockEvent` | 不需要玩家权限；仅限村民对小麦、胡萝卜、土豆、甜菜的收割和补种变化 | 直接放行；其他实体改方块仍按环境保护取消 | 不记录活跃值 |
 | 玩家坐骑跨界、珍珠/紫颂果/传送门进入 | `PlayerMoveEvent` / `PlayerTeleportEvent` / `PlayerPortalEvent` | `TELEPORT`，可由配置项放行对应入口 | 回退位置或取消传送 | 不记录活跃值 |
@@ -28,4 +28,4 @@
 - `coreclaim.admin.force` 和 `coreclaim.admin` 可绕过保护判断。
 - `coreclaim.admin.view` 只允许查看，不允许写入领地数据。
 - GUI、命令和聊天输入的写入入口必须在提交时再次检查对应写权限。
-- 容器打开和工具右键要分开处理，避免为了允许铜块除锈或铲子路径化而误放开容器权限。
+- 容器打开和工具右键要分开处理，避免为了允许铜块除锈或铲子路径化而误放开交互权限。

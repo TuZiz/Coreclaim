@@ -1,13 +1,13 @@
-layout-version: 9
+layout-version: 10
 title: '&#475569[&#A855F7权限&#475569] &#A855F7&l权限管理 - {name}'
 
 Shape:
   - 'FFFFIFFFF'
-  - 'FFPBHCRFF'
-  - 'FFEKFTYFF'
-  - 'FF12F34FF'
-  - 'FF56F78FF'
-  - 'FF9DXMFFF'
+  - 'FFPBHREFF'
+  - 'FFKTYFFFF'
+  - 'FFF9MFFFF'
+  - 'FFFFDFFFF'
+  - 'FFFFXFFFF'
 
 items:
   filler:
@@ -25,11 +25,11 @@ items:
       - ''
       - ' &#CBD5E1当前领地: &#4CC9F0{name}'
       - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
-      - ' &#CBD5E1已自定义细则: &#FFD166{custom_count}'
+      - ' &#CBD5E1已自定义规则: &#FFD166{custom_count}'
       - ''
-      - ' &#CBD5E1上方区域: 基础权限'
-      - ' &#CBD5E1下方区域: 细分权限'
-      - ' &#CBD5E1默认允许/默认拒绝 = 跟随基础权限'
+      - ' &#CBD5E1交互权限包含容器、门、床和普通右键'
+      - ' &#CBD5E1红石权限包含按钮、拉杆和压力板'
+      - ' &#CBD5E1液体流入独立于桶权限'
 
   perm-place:
     char: 'P'
@@ -57,25 +57,14 @@ items:
 
   perm-interact:
     char: 'H'
-    material: OAK_BUTTON
+    material: OAK_DOOR
     custom-model-data: 1604
-    name: '&#4CC9F0&l使用权限'
+    name: '&#4CC9F0&l交互权限'
     lore:
       - ''
       - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166点击切换默认权限'
-    sound: UI_BUTTON_CLICK
-
-  perm-container:
-    char: 'C'
-    material: CHEST
-    custom-model-data: 1608
-    name: '&#F59E0B&l容器默认权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1禁止后陌生人无法使用你的容器'
+      - ' &#CBD5E1控制容器、门、活板门、栅栏门、床和普通右键'
+      - ' &#CBD5E1禁止后陌生人无法使用你的容器或门禁'
       - ''
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
@@ -88,6 +77,7 @@ items:
     lore:
       - ''
       - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1控制按钮、拉杆、压力板和红石类交互'
       - ''
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
@@ -100,6 +90,7 @@ items:
     lore:
       - ''
       - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1控制 TNT、爆炸投掷物和危险维度的床/重生锚'
       - ''
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
@@ -112,6 +103,7 @@ items:
     lore:
       - ''
       - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1只控制玩家手动倒出或取走液体'
       - ''
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
@@ -140,106 +132,16 @@ items:
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
 
-  flag-container:
-    char: '1'
-    material: BARREL
-    custom-model-data: 1616
-    name: '&#F59E0B&l容器权限'
+  flag-liquid-flow:
+    char: '9'
+    material: WATER_BUCKET
+    custom-model-data: 1625
+    name: '&#60A5FA&l液体流入权限'
     lore:
       - ''
       - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1禁止后陌生人无法使用你的容器'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-button:
-    char: '2'
-    material: STONE_BUTTON
-    custom-model-data: 1617
-    name: '&#F8FAFC&l按钮权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-lever:
-    char: '3'
-    material: LEVER
-    custom-model-data: 1618
-    name: '&#F8FAFC&l拉杆权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-pressure-plate:
-    char: '4'
-    material: HEAVY_WEIGHTED_PRESSURE_PLATE
-    custom-model-data: 1619
-    name: '&#F8FAFC&l压力板权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-door:
-    char: '5'
-    material: OAK_DOOR
-    custom-model-data: 1620
-    name: '&#FFD166&l门权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-trapdoor:
-    char: '6'
-    material: OAK_TRAPDOOR
-    custom-model-data: 1621
-    name: '&#FFD166&l活板门权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-fence-gate:
-    char: '7'
-    material: OAK_FENCE_GATE
-    custom-model-data: 1622
-    name: '&#FFD166&l栅栏门权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
-  flag-use-bed:
-    char: '8'
-    material: RED_BED
-    custom-model-data: 1623
-    name: '&#C084FC&l床权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1允许后水和岩浆可以从外部流入领地'
+      - ' &#CBD5E1不影响玩家手动使用桶'
       - ''
       - ' &#FFD166左键切换权限状态'
       - ' &#FFD166右键恢复默认权限'
@@ -258,20 +160,6 @@ items:
       - ' &#FFD166右键恢复跟随世界时间'
     sound: UI_BUTTON_CLICK
 
-  flag-liquid-flow:
-    char: '9'
-    material: WATER_BUCKET
-    custom-model-data: 1625
-    name: '&#60A5FA&l液体流入权限'
-    lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1允许后水和岩浆可以从外部流入领地'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
-    sound: UI_BUTTON_CLICK
-
   disable-all:
     char: 'D'
     material: REDSTONE_BLOCK
@@ -279,8 +167,9 @@ items:
     name: '&#FF6B6B&l一键禁止危险权限'
     lore:
       - ''
-      - ' &#CBD5E1会将基础权限全部改为禁止'
-      - ' &#CBD5E1已手动设置的细分权限不会被清空'
+      - ' &#CBD5E1会禁止放置、破坏、交互、红石、爆炸、桶'
+      - ' &#CBD5E1并禁止外部液体流入领地'
+      - ' &#CBD5E1不会修改传送、飞行和领地时间'
       - ''
       - ' &#FFD166点击执行'
     sound: UI_BUTTON_CLICK

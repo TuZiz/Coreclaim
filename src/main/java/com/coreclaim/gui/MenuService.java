@@ -386,6 +386,10 @@ public final class MenuService {
             return flagStateText(flag, state);
         }
         if (state == ClaimFlagState.UNSET) {
+            ClaimFlagState defaultState = plugin.settings().claimFlagDefault(flag, claim.systemManaged());
+            if (defaultState != ClaimFlagState.UNSET) {
+                return flagStateText(flag, defaultState);
+            }
             return defaultStateText(claim.permission(flag.fallbackPermission()));
         }
         return flagStateText(state);

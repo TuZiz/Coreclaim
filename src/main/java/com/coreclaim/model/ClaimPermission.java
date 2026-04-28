@@ -4,7 +4,6 @@ public enum ClaimPermission {
     PLACE,
     BREAK,
     INTERACT,
-    CONTAINER,
     REDSTONE,
     EXPLOSION,
     BUCKET,

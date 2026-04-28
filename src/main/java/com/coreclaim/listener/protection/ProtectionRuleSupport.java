@@ -159,17 +159,21 @@ public final class ProtectionRuleSupport {
     }
 
     public ClaimPermission requiredPermissionForBlockInteract(Material material, ItemStack item) {
+        return requiredPermissionForBlockInteract(null, material, item);
+    }
+
+    public ClaimPermission requiredPermissionForBlockInteract(Block block, Material material, ItemStack item) {
         ClaimPermission toolChangePermission = requiredPermissionForBlockToolChange(material, item);
         if (toolChangePermission != null) {
             return toolChangePermission;
         }
-        if (isSpecialExplosiveMaterial(material)) {
+        if (isSpecialExplosiveUse(block, material)) {
             return ClaimPermission.EXPLOSION;
         }
-        if (isContainerMaterial(material)) {
-            return ClaimPermission.CONTAINER;
+        if (isRedstoneControl(material)) {
+            return ClaimPermission.REDSTONE;
         }
-        if (plugin.settings().isAlwaysProtectedInteract(material)) {
+        if (isConfiguredRedstoneInteract(material)) {
             return ClaimPermission.REDSTONE;
         }
         return ClaimPermission.INTERACT;
@@ -211,7 +215,7 @@ public final class ProtectionRuleSupport {
             return ClaimPermission.BREAK;
         }
         if (entity instanceof InventoryHolder) {
-            return ClaimPermission.CONTAINER;
+            return ClaimPermission.INTERACT;
         }
         Material held = player.getInventory().getItemInMainHand().getType();
         return held == Material.NAME_TAG ? ClaimPermission.BREAK : ClaimPermission.INTERACT;
@@ -288,16 +292,52 @@ public final class ProtectionRuleSupport {
             && from.getBlockZ() == to.getBlockZ();
     }
 
-    public boolean isSpecialExplosiveMaterial(Material material) {
-        if (!plugin.settings().blockSpecialExplosiveUse()) {
+    public boolean isSpecialExplosiveUse(Block block, Material material) {
+        if (plugin == null || !plugin.settings().blockSpecialExplosiveUse() || material == null) {
             return false;
         }
+        if (block == null || block.getWorld() == null) {
+            return material == Material.RESPAWN_ANCHOR;
+        }
         String name = material.name();
-        return material == Material.RESPAWN_ANCHOR || name.endsWith("_BED");
+        if (name.endsWith("_BED")) {
+            return block.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL;
+        }
+        if (material == Material.RESPAWN_ANCHOR) {
+            return block.getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER;
+        }
+        return false;
     }
 
     public boolean isContainerMaterial(Material material) {
-        return ClaimFlag.fromInteraction(material) == ClaimFlag.CONTAINER;
+        return ClaimFlag.isContainerMaterial(material);
+    }
+
+    public boolean isRedstoneControl(Material material) {
+        if (material == null) {
+            return false;
+        }
+        String name = material.name();
+        return material == Material.LEVER
+            || name.endsWith("_BUTTON")
+            || name.endsWith("_PRESSURE_PLATE");
+    }
+
+    public ClaimPermission projectileSensitivePermission(Material material) {
+        return isRedstoneControl(material) || isConfiguredRedstoneInteract(material)
+            ? ClaimPermission.REDSTONE
+            : ClaimPermission.INTERACT;
+    }
+
+    private boolean isConfiguredRedstoneInteract(Material material) {
+        if (plugin == null || material == null) {
+            return false;
+        }
+        String name = material.name();
+        if (name.endsWith("_DOOR") || name.endsWith("_TRAPDOOR") || name.endsWith("_FENCE_GATE") || name.endsWith("_BED")) {
+            return false;
+        }
+        return plugin.settings().isAlwaysProtectedInteract(material);
     }
 
     public boolean isCoreItem(ItemStack item) {

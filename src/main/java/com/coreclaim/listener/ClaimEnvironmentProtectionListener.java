@@ -203,7 +203,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         }
         Optional<Claim> claim = claimService.findClaim(location);
         if (claim.isPresent()) {
-            if (!claimService.hasFlagPermission(claim.get(), player.getUniqueId(), ClaimFlag.CONTAINER)) {
+            if (!claimService.hasPermission(claim.get(), player.getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
                 return;
             }
@@ -251,7 +251,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
     }
 
     private boolean isLiquidFlowAllowed(Claim claim) {
-        return isLiquidFlowAllowed(claim.flagState(ClaimFlag.LIQUID_FLOW), claim.permission(ClaimPermission.BUCKET));
+        return isLiquidFlowAllowed(claim.flagState(ClaimFlag.LIQUID_FLOW));
     }
 
     private boolean isNaturalTurtleEggPlacement(EntityChangeBlockEvent event) {
@@ -284,9 +284,9 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             || material == Material.BUBBLE_COLUMN;
     }
 
-    static boolean isLiquidFlowAllowed(ClaimFlagState state, boolean bucketFallback) {
+    static boolean isLiquidFlowAllowed(ClaimFlagState state) {
         ClaimFlagState resolvedState = state == null ? ClaimFlagState.UNSET : state;
-        return resolvedState.resolve(bucketFallback);
+        return resolvedState == ClaimFlagState.ALLOW;
     }
 
     private int claimId(Optional<Claim> claim) {

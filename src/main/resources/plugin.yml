@@ -24,7 +24,7 @@ permissions:
     description: Set the teleport point for the current claim
     default: true
   coreclaim.manage.flags:
-    description: Manage interaction flags on the current claim
+    description: Manage special rules on the current claim
     default: true
   coreclaim.admin:
     description: Full CoreClaim administrator access
@@ -48,7 +48,7 @@ permissions:
     description: Force-manage default claim permissions
     default: op
   coreclaim.admin.flag.manage:
-    description: Force-manage claim interaction flags
+    description: Force-manage claim special rules
     default: op
   coreclaim.admin.claim.manage:
     description: Force-manage claim ownership, server, deletion, and system claims

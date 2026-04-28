@@ -27,10 +27,9 @@ class PluginConfigLoaderTest {
 
     @Test
     void systemClaimFallbackKeepsPublicUseDefaults() {
-        assertTrue(PluginConfigLoader.defaultPermissionValue(ClaimPermission.INTERACT, true));
+        assertFalse(PluginConfigLoader.defaultPermissionValue(ClaimPermission.INTERACT, true));
         assertTrue(PluginConfigLoader.defaultPermissionValue(ClaimPermission.TELEPORT, true));
         assertFalse(PluginConfigLoader.defaultPermissionValue(ClaimPermission.FLIGHT, true));
-        assertEquals("allow", PluginConfigLoader.defaultFlagValue(ClaimFlag.USE_DOOR, true));
-        assertEquals("deny", PluginConfigLoader.defaultFlagValue(ClaimFlag.CONTAINER, true));
+        assertEquals("deny", PluginConfigLoader.defaultFlagValue(ClaimFlag.LIQUID_FLOW, true));
     }
 }

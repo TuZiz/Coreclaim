@@ -1,7 +1,6 @@
 package com.coreclaim.listener.protection;
 
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimPermission;
 import java.util.Optional;
 import org.bukkit.entity.Entity;
@@ -37,7 +36,7 @@ public final class InteractionProtectionListener implements Listener {
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
             && !support.isBypassing(event.getPlayer())) {
-            if (!support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+            if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 return;
@@ -60,7 +59,7 @@ public final class InteractionProtectionListener implements Listener {
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
             && !support.isBypassing(event.getPlayer())) {
-            if (!support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+            if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 return;

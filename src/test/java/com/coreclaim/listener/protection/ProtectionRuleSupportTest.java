@@ -36,4 +36,16 @@ class ProtectionRuleSupportTest {
         );
         assertNull(support.requiredPermissionForBlockToolChange(Material.DIRT, new ItemStack(Material.STICK)));
     }
+
+    @Test
+    void mergedInteractionPermissionsClassifyCommonBlocks() {
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.CHEST, null));
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_DOOR, null));
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_TRAPDOOR, null));
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_FENCE_GATE, null));
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.RED_BED, null));
+        assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.STONE_BUTTON, null));
+        assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.LEVER, null));
+        assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.OAK_PRESSURE_PLATE, null));
+    }
 }

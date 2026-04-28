@@ -58,7 +58,17 @@ final class ClaimCommandFormatter {
             : plugin.message("claim-detail-teleport-core"));
         sender.sendMessage(plugin.message("claim-detail-deny", "{denied}", String.valueOf(claim.deniedMembers().size()), "{deny_all}", claim.denyAll() ? plugin.plainMessage("state-enabled") : plugin.plainMessage("state-disabled")));
         sender.sendMessage(plugin.message("claim-detail-rules", "{source}", ruleSourceSummary(claim)));
-        sender.sendMessage(plugin.message("claim-detail-permissions", "{place}", stateText(claim.permission(ClaimPermission.PLACE)), "{break}", stateText(claim.permission(ClaimPermission.BREAK)), "{interact}", stateText(claim.permission(ClaimPermission.INTERACT)), "{teleport}", stateText(claim.permission(ClaimPermission.TELEPORT)), "{flight}", stateText(claim.permission(ClaimPermission.FLIGHT))));
+        sender.sendMessage(plugin.message(
+            "claim-detail-permissions",
+            "{place}", stateText(claim.permission(ClaimPermission.PLACE)),
+            "{break}", stateText(claim.permission(ClaimPermission.BREAK)),
+            "{interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
+            "{redstone}", stateText(claim.permission(ClaimPermission.REDSTONE)),
+            "{explosion}", stateText(claim.permission(ClaimPermission.EXPLOSION)),
+            "{bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
+            "{teleport}", stateText(claim.permission(ClaimPermission.TELEPORT)),
+            "{flight}", stateText(claim.permission(ClaimPermission.FLIGHT))
+        ));
         sender.sendMessage(plugin.message("claim-detail-flags", "{flags}", summarizeFlags(claim)));
         sender.sendMessage(plugin.message("claim-detail-core-visible", "{value}", claim.coreVisible() ? plugin.plainMessage("state-core-visible") : plugin.plainMessage("state-core-hidden")));
         sender.sendMessage(plugin.message("claim-detail-enter-message", "{message}", previewMessage(claim.enterMessage(), claim, plugin.plainMessage("claim-detail-default-enter"))));

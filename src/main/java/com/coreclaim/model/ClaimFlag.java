@@ -13,7 +13,8 @@ public enum ClaimFlag {
     USE_DOOR("use-door", "门权限", ClaimPermission.INTERACT),
     USE_TRAPDOOR("use-trapdoor", "活板门权限", ClaimPermission.INTERACT),
     USE_FENCE_GATE("use-fence-gate", "栅栏门权限", ClaimPermission.INTERACT),
-    USE_BED("use-bed", "床权限", ClaimPermission.INTERACT);
+    USE_BED("use-bed", "床权限", ClaimPermission.INTERACT),
+    LIQUID_FLOW("liquid-flow", "液体流入权限", ClaimPermission.BUCKET);
 
     private final String key;
     private final String displayName;

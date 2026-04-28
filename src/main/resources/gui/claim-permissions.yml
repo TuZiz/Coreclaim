@@ -1,4 +1,4 @@
-layout-version: 8
+layout-version: 9
 title: '&#475569[&#A855F7权限&#475569] &#A855F7&l权限管理 - {name}'
 
 Shape:
@@ -7,7 +7,7 @@ Shape:
   - 'FFEKFTYFF'
   - 'FF12F34FF'
   - 'FF56F78FF'
-  - 'FFFDXMFFF'
+  - 'FF9DXMFFF'
 
 items:
   filler:
@@ -256,6 +256,20 @@ items:
       - ''
       - ' &#FFD166左键切换 跟随世界/白天/夜晚'
       - ' &#FFD166右键恢复跟随世界时间'
+    sound: UI_BUTTON_CLICK
+
+  flag-liquid-flow:
+    char: '9'
+    material: WATER_BUCKET
+    custom-model-data: 1625
+    name: '&#60A5FA&l液体流入权限'
+    lore:
+      - ''
+      - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1允许后水和岩浆可以从外部流入领地'
+      - ''
+      - ' &#FFD166左键切换权限状态'
+      - ' &#FFD166右键恢复默认权限'
     sound: UI_BUTTON_CLICK
 
   disable-all:

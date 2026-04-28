@@ -1,4 +1,4 @@
-layout-version: 2
+layout-version: 3
 title: '&#475569[&#55FFAA授权&#475569] &#55FFAA&l添加在线玩家 - {name}'
 
 Shape:
@@ -29,7 +29,7 @@ items:
       - ' &#CBD5E1这里不会显示以下玩家:'
       - ' &#F8FAFC- 你自己'
       - ' &#F8FAFC- 已授权成员'
-      - ' &#F8FAFC- deny 列表中的玩家'
+      - ' &#F8FAFC- 禁足名单中的玩家'
       - ''
       - ' &#CBD5E1点击头像后立即授权'
 
@@ -56,7 +56,7 @@ items:
     lore:
       - ''
       - ' &#CBD5E1可授权列表会自动过滤'
-      - ' &#CBD5E1自己、已授权成员和 deny 玩家'
+      - ' &#CBD5E1自己、已授权成员和禁足玩家'
 
   prev-page:
     char: 'L'

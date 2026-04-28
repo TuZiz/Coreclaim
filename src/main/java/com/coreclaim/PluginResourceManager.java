@@ -40,9 +40,9 @@ final class PluginResourceManager {
         Map.entry("gui/claim-manage.yml", "layout-version: 2"),
         Map.entry("gui/claim-expand-amount.yml", "layout-version: 1"),
         Map.entry("gui/claim-expand-confirm.yml", "layout-version: 1"),
-        Map.entry("gui/trust-online-add.yml", "layout-version: 2"),
+        Map.entry("gui/trust-online-add.yml", "layout-version: 3"),
         Map.entry("gui/core.yml", "layout-version: 6"),
-        Map.entry("gui/claim-permissions.yml", "layout-version: 8"),
+        Map.entry("gui/claim-permissions.yml", "layout-version: 9"),
         Map.entry("gui/trust.yml", "layout-version: 5"),
         Map.entry("gui/selection-create.yml", "layout-version: 3")
     );

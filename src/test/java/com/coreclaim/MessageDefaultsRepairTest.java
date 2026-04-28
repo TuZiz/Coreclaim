@@ -29,16 +29,25 @@ class MessageDefaultsRepairTest {
         defaults.set("starter-core-join-reminder", "new join reminder");
         defaults.set("starter-core-reminder", "new reminder");
         defaults.set("deny-usage", "new deny usage");
+        defaults.set("claim-entry-denied", "new entry denied");
         defaults.set("claim-deny-all-enabled", "new deny all enabled");
+        defaults.set("claim-detail-deny", "new deny detail");
         defaults.set("claim-detail-flags", "new detailed permissions");
+        defaults.set("claim-detail-denied", "new denied players");
         existing.set("admin-usage", "&#FF6B6B鐢ㄦ硶 &8| &7/claim admin <create|info|playerclaims|diagnose|add|unadd|deny|undeny|permission|flag|cleanup|setserver> ...");
         existing.set("prefix", "&#55FFAA&l[领地系统] &#F8FAFC");
         existing.set("starter-core-join-reminder", "&#4CC9F0领地 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟可获得第一块领地核心，当前还差 &#F8FAFC{remaining} &#CBD5E1分钟。");
         existing.set("starter-core-reminder", "&#FFD166提醒 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟会自动发放新人核心，当前还需 &#F8FAFC{remaining} &#CBD5E1分钟。");
         existing.set("deny-usage", "&#FF6B6B用法 &#475569| &#CBD5E1/claim deny <玩家> &#475569或 &#CBD5E1/claim deny *");
+        existing.set("claim-entry-denied", "&#FF6B6B&l! &#CBD5E1你被这块领地 deny，无法进入 &#F8FAFC{name}&#CBD5E1。");
         existing.set("claim-deny-all-enabled", "&#55FFAA封闭模式 &#475569| &#CBD5E1已为领地 &#F8FAFC{name} &#CBD5E1开启 &#F8FAFCdeny *&#CBD5E1。");
+        existing.set("claim-detail-deny", "&#55FFAA详情 &#475569| &#CBD5E1Deny 状态: &#FF6B6B{denied} &#CBD5E1人 &#475569| &#CBD5E1deny *: {deny_all}");
         existing.set("claim-detail-flags", "&#55FFAA详情 &#475569| &#CBD5E1交互旗标: {flags}");
-        existing.set("help-player", List.of("&#FACC15/claim flag [list] &#CBD5E1查看或调整交互旗标"));
+        existing.set("claim-detail-denied", "&#55FFAA详情 &#475569| &#CBD5E1Denied 玩家: {players}");
+        existing.set("help-player", List.of(
+            "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置门禁",
+            "&#FACC15/claim flag [list] &#CBD5E1查看或调整交互旗标"
+        ));
 
         assertTrue(MessageDefaultsRepair.applyKnownReplacements(existing, defaults, CoreClaimPlugin.MESSAGE_RESOURCE_PATH));
         assertEquals("new admin usage", existing.getString("admin-usage"));
@@ -46,8 +55,14 @@ class MessageDefaultsRepairTest {
         assertEquals("new join reminder", existing.getString("starter-core-join-reminder"));
         assertEquals("new reminder", existing.getString("starter-core-reminder"));
         assertEquals("new deny usage", existing.getString("deny-usage"));
+        assertEquals("new entry denied", existing.getString("claim-entry-denied"));
         assertEquals("new deny all enabled", existing.getString("claim-deny-all-enabled"));
+        assertEquals("new deny detail", existing.getString("claim-detail-deny"));
         assertEquals("new detailed permissions", existing.getString("claim-detail-flags"));
-        assertEquals(List.of("&#FACC15/claim flag [list] &#CBD5E1查看或调整细分权限"), existing.getStringList("help-player"));
+        assertEquals("new denied players", existing.getString("claim-detail-denied"));
+        assertEquals(List.of(
+            "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置禁足",
+            "&#FACC15/claim flag [list] &#CBD5E1查看或调整细分权限"
+        ), existing.getStringList("help-player"));
     }
 }

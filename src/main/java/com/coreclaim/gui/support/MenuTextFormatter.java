@@ -80,6 +80,7 @@ public final class MenuTextFormatter {
             case USE_TRAPDOOR -> "flag-use-trapdoor";
             case USE_FENCE_GATE -> "flag-use-fence-gate";
             case USE_BED -> "flag-use-bed";
+            case LIQUID_FLOW -> "flag-liquid-flow";
         };
     }
 

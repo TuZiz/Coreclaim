@@ -19,6 +19,7 @@ new-claim-defaults:
     use-trapdoor: deny
     use-fence-gate: deny
     use-bed: deny
+    liquid-flow: deny
     time-cycle: unset
 
 # 新建系统领地默认公共规则
@@ -42,4 +43,5 @@ system-claim-defaults:
     use-trapdoor: allow
     use-fence-gate: allow
     use-bed: allow
+    liquid-flow: deny
     time-cycle: unset

@@ -76,6 +76,12 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onFlow(BlockFromToEvent event) {
+        if (isLiquidFlowMaterial(event.getBlock().getType())) {
+            if (shouldCancelLiquidFlow(event.getBlock().getLocation(), event.getToBlock().getLocation())) {
+                event.setCancelled(true);
+            }
+            return;
+        }
         if (crossesClaimBoundary(event.getBlock().getLocation(), event.getToBlock().getLocation())) {
             event.setCancelled(true);
         }
@@ -235,6 +241,19 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         return claimId(fromClaim) != claimId(toClaim);
     }
 
+    private boolean shouldCancelLiquidFlow(Location from, Location to) {
+        Optional<Claim> fromClaim = claimService.findClaim(from);
+        Optional<Claim> toClaim = claimService.findClaim(to);
+        if (toClaim.isEmpty() || claimId(fromClaim) == claimId(toClaim)) {
+            return false;
+        }
+        return !isLiquidFlowAllowed(toClaim.get());
+    }
+
+    private boolean isLiquidFlowAllowed(Claim claim) {
+        return isLiquidFlowAllowed(claim.flagState(ClaimFlag.LIQUID_FLOW), claim.permission(ClaimPermission.BUCKET));
+    }
+
     private boolean isNaturalTurtleEggPlacement(EntityChangeBlockEvent event) {
         return event.getEntity() instanceof Turtle && event.getTo() == Material.TURTLE_EGG;
     }
@@ -257,6 +276,17 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         return material == Material.AIR
             || material == Material.CAVE_AIR
             || material == Material.VOID_AIR;
+    }
+
+    static boolean isLiquidFlowMaterial(Material material) {
+        return material == Material.WATER
+            || material == Material.LAVA
+            || material == Material.BUBBLE_COLUMN;
+    }
+
+    static boolean isLiquidFlowAllowed(ClaimFlagState state, boolean bucketFallback) {
+        ClaimFlagState resolvedState = state == null ? ClaimFlagState.UNSET : state;
+        return resolvedState.resolve(bucketFallback);
     }
 
     private int claimId(Optional<Claim> claim) {

@@ -15,7 +15,8 @@
 | 红石/特殊交互 | `PlayerInteractEvent` / `ProjectileHitEvent` | `REDSTONE` 或 `INTERACT`，取决于 `strict-redstone-interact` 与 `always-protected-interact` | `setCancelled(true)`，投掷物会移除实体 | 成功时记录交互活跃 |
 | 床、重生锚等特殊爆炸触发 | `PlayerInteractEvent` | `EXPLOSION` | 无权限时取消事件；有权限时登记爆炸授权位置 | 成功时记录交互活跃 |
 | 盔甲架、命名牌、实体容器 | `PlayerInteractEntityEvent` / `PlayerArmorStandManipulateEvent` | 盔甲架和命名牌为 `BREAK`，实体容器为 `CONTAINER`，其他为 `INTERACT` | `setCancelled(true)` | `BREAK` 记录建造活跃，其他记录交互活跃 |
-| 栓绳、钓鱼竿实体交互 | `PlayerLeashEntityEvent` / `PlayerUnleashEntityEvent` / `PlayerFishEvent` | `INTERACT` 或目标实体推导权限 | `setCancelled(true)`，钓鱼钩可移除 | 成功时记录交互活跃 |
+| 栓绳、钓鱼竿实体交互 | `PlayerLeashEntityEvent` / `PlayerUnleashEntityEvent` / `HangingBreakByEntityEvent` / `PlayerFishEvent` | 栓绳和拴绳结默认放行；钓鱼竿按目标实体推导权限 | 栓绳不取消；钓鱼无权限时 `setCancelled(true)` 并可移除钩子 | 栓绳成功时记录交互活跃 |
+| 液体跨界流入领地 | `BlockFromToEvent` | 目标领地 `LIQUID_FLOW` 细分权限，未设置时跟随 `BUCKET` | 水、岩浆、气泡柱流入未允许的领地时 `setCancelled(true)` | 不记录活跃值 |
 | 投掷物触发方块或实体 | `ProjectileHitEvent` / 药水/滞留药水/区域效果云 | 爆炸型投掷物为 `EXPLOSION`，其他危险投掷物为 `BREAK`，敏感红石块为 `INTERACT` | 取消事件、移除投掷物、或清空药水影响 | 不记录活跃值 |
 | 爆炸破坏方块 | `ExplosionPrimeEvent` / `EntityExplodeEvent` | 来源玩家需要 `EXPLOSION`；无来源默认不破坏领地方块 | 取消爆炸或移除 blockList 中的领地方块 | 不记录活跃值 |
 | 村民收割/补种作物 | `EntityChangeBlockEvent` | 不需要玩家权限；仅限村民对小麦、胡萝卜、土豆、甜菜的收割和补种变化 | 直接放行；其他实体改方块仍按环境保护取消 | 不记录活跃值 |

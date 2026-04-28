@@ -1,10 +1,10 @@
 package com.coreclaim.listener.protection;
 
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimPermission;
 import java.util.Optional;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LeashHitch;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -36,7 +36,7 @@ public final class InteractionProtectionListener implements Listener {
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
             && !support.isBypassing(event.getPlayer())) {
-            if (!support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+            if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 return;
@@ -59,7 +59,7 @@ public final class InteractionProtectionListener implements Listener {
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
             && !support.isBypassing(event.getPlayer())) {
-            if (!support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+            if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 return;
@@ -90,9 +90,6 @@ public final class InteractionProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onLeash(PlayerLeashEntityEvent event) {
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
-        if (support.denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event)) {
-            return;
-        }
         if (claim.isPresent() && !support.isBypassing(event.getPlayer())) {
             support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
         }
@@ -101,9 +98,6 @@ public final class InteractionProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onUnleash(PlayerUnleashEntityEvent event) {
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
-        if (support.denyIfNeeded(event.getPlayer(), claim, ClaimPermission.INTERACT, event)) {
-            return;
-        }
         if (claim.isPresent() && !support.isBypassing(event.getPlayer())) {
             support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
         }
@@ -152,6 +146,9 @@ public final class InteractionProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onHangingBreak(HangingBreakByEntityEvent event) {
+        if (event.getEntity() instanceof LeashHitch) {
+            return;
+        }
         Player player = support.resolvePlayer(event.getRemover());
         if (player == null) {
             return;

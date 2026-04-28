@@ -150,6 +150,19 @@ final class ClaimPropertyMutations {
     void updatePermission(Claim claim, ClaimPermission permission, boolean allowed, UUID actorId) {
         synchronized (context.runtime.mutationLock()) {
             claim.setPermission(permission, allowed);
+            if (permission == ClaimPermission.INTERACT) {
+                context.runtime.databaseManager().update(
+                    "UPDATE claims SET allow_interact = ?, allow_container = ? WHERE id = ?",
+                    statement -> {
+                        statement.setInt(1, allowed ? 1 : 0);
+                        statement.setInt(2, allowed ? 1 : 0);
+                        statement.setInt(3, claim.id());
+                    }
+                );
+                context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+                context.recordInteractionActivity(claim, actorId);
+                return;
+            }
             context.runtime.databaseManager().update(
                 "UPDATE claims SET " + permissionColumn(permission) + " = ? WHERE id = ?",
                 statement -> {
@@ -195,7 +208,6 @@ final class ClaimPropertyMutations {
             case PLACE -> "allow_place";
             case BREAK -> "allow_break";
             case INTERACT -> "allow_interact";
-            case CONTAINER -> "allow_container";
             case REDSTONE -> "allow_redstone";
             case EXPLOSION -> "allow_explosion";
             case BUCKET -> "allow_bucket";

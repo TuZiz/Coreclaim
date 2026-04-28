@@ -5,7 +5,6 @@ public final class ClaimMemberSettings {
     private boolean allowPlace;
     private boolean allowBreak;
     private boolean allowInteract;
-    private boolean allowContainer;
     private boolean allowRedstone;
     private boolean allowExplosion;
     private boolean allowBucket;
@@ -25,8 +24,7 @@ public final class ClaimMemberSettings {
     ) {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
-        this.allowInteract = allowInteract;
-        this.allowContainer = allowContainer;
+        this.allowInteract = allowInteract && allowContainer;
         this.allowRedstone = allowRedstone;
         this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
@@ -43,9 +41,6 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.INTERACT) {
             return allowInteract;
-        }
-        if (permission == ClaimPermission.CONTAINER) {
-            return allowContainer;
         }
         if (permission == ClaimPermission.REDSTONE) {
             return allowRedstone;
@@ -73,10 +68,6 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.INTERACT) {
             allowInteract = allowed;
-            return;
-        }
-        if (permission == ClaimPermission.CONTAINER) {
-            allowContainer = allowed;
             return;
         }
         if (permission == ClaimPermission.REDSTONE) {

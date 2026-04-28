@@ -39,7 +39,7 @@ public final class ClaimVisualService {
 
         final int[] remaining = {iterations};
         final PlatformScheduler.TaskHandle[] handle = new PlatformScheduler.TaskHandle[1];
-        handle[0] = plugin.platformScheduler().runRepeating(() -> {
+        handle[0] = plugin.platformScheduler().runPlayerRepeating(player, () -> {
             if (!player.isOnline() || remaining[0]-- <= 0) {
                 if (handle[0] != null) {
                     handle[0].cancel();
@@ -61,7 +61,7 @@ public final class ClaimVisualService {
         );
         final int[] remaining = {12};
         final PlatformScheduler.TaskHandle[] handle = new PlatformScheduler.TaskHandle[1];
-        handle[0] = plugin.platformScheduler().runRepeating(() -> {
+        handle[0] = plugin.platformScheduler().runPlayerRepeating(player, () -> {
             if (!player.isOnline() || remaining[0]-- <= 0) {
                 if (handle[0] != null) {
                     handle[0].cancel();
@@ -82,7 +82,7 @@ public final class ClaimVisualService {
         );
         final int[] remaining = {8};
         final PlatformScheduler.TaskHandle[] handle = new PlatformScheduler.TaskHandle[1];
-        handle[0] = plugin.platformScheduler().runRepeating(() -> {
+        handle[0] = plugin.platformScheduler().runPlayerRepeating(player, () -> {
             if (!player.isOnline() || remaining[0]-- <= 0) {
                 if (handle[0] != null) {
                     handle[0].cancel();

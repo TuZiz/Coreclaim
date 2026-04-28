@@ -1,8 +1,6 @@
 package com.coreclaim.listener.protection;
 
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.ClaimFlag;
-import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import java.util.Optional;
 import org.bukkit.Location;
@@ -89,15 +87,15 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         Material clickedType = event.getClickedBlock().getType();
-        ClaimFlag interactionFlag = ClaimFlag.fromInteraction(clickedType);
+        boolean containerInteraction = support.isContainerMaterial(clickedType);
         ClaimPermission toolChangePermission = support.requiredPermissionForBlockToolChange(clickedType, event.getItem());
         if (claim.isPresent() && toolChangePermission != null) {
             boolean bypassing = support.isBypassing(event.getPlayer());
             boolean canUseTool = bypassing
                 || support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), toolChangePermission);
             if (!canUseTool) {
-                if (interactionFlag == ClaimFlag.CONTAINER
-                    && support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
+                if (containerInteraction
+                    && support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                     event.setUseItemInHand(Event.Result.DENY);
                     support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
                     return;
@@ -106,7 +104,7 @@ public final class BlockProtectionListener implements Listener {
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 return;
             }
-            if (interactionFlag == ClaimFlag.CONTAINER) {
+            if (containerInteraction) {
                 event.setUseInteractedBlock(Event.Result.DENY);
                 event.setUseItemInHand(Event.Result.ALLOW);
             }
@@ -115,35 +113,7 @@ public final class BlockProtectionListener implements Listener {
             }
             return;
         }
-        ClaimPermission requiredPermission = support.requiredPermissionForBlockInteract(clickedType, event.getItem());
-        if (claim.isPresent() && interactionFlag == ClaimFlag.CONTAINER) {
-            if (!support.isBypassing(event.getPlayer())
-                && !support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimFlag.CONTAINER)) {
-                event.setCancelled(true);
-                support.sendProtectionDeny(event.getPlayer(), claim.get());
-                return;
-            }
-            if (!support.isBypassing(event.getPlayer())) {
-                support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
-            }
-            return;
-        }
-        if (claim.isPresent() && interactionFlag != null && !support.isBypassing(event.getPlayer())) {
-            ClaimFlagState flagState = support.claimService().flagState(claim.get(), interactionFlag);
-            if (flagState != ClaimFlagState.UNSET) {
-                if (requiredPermission == ClaimPermission.EXPLOSION
-                    && support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.EXPLOSION)) {
-                    support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
-                }
-                if (!support.claimService().hasFlagPermission(claim.get(), event.getPlayer().getUniqueId(), interactionFlag)) {
-                    event.setCancelled(true);
-                    support.sendProtectionDeny(event.getPlayer(), claim.get());
-                    return;
-                }
-                support.recordBlockInteraction(claim.get(), event.getPlayer(), requiredPermission);
-                return;
-            }
-        }
+        ClaimPermission requiredPermission = support.requiredPermissionForBlockInteract(event.getClickedBlock(), clickedType, event.getItem());
         boolean allowListed = support.plugin().settings().isAllowedInteract(clickedType)
             && !(support.plugin().settings().strictRedstoneInteract() && support.plugin().settings().isAlwaysProtectedInteract(clickedType));
         if (claim.isPresent() && allowListed) {

@@ -132,7 +132,7 @@ final class ClaimAdminClaimCommandHandler {
         sender.sendMessage(plugin.color("&6[Claim] &f世界状态: " + (worldLoaded ? "&a已加载" : "&e未加载或不在本服")));
         sender.sendMessage(plugin.color("&6[Claim] &fTP 路由: &b" + route));
         sender.sendMessage(plugin.color("&6[Claim] &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭") + " &8| &fDenied: &c" + claim.deniedMembers().size() + " &8| &fTrusted: &a" + claim.trustedCount()));
-        sender.sendMessage(plugin.color("&6[Claim] &f交互旗标: " + formatter.summarizeFlags(claim)));
+        sender.sendMessage(plugin.color("&6[Claim] &f细分权限: " + formatter.summarizeFlags(claim)));
         return true;
     }
 

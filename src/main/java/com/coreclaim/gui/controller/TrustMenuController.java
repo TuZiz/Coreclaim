@@ -196,7 +196,7 @@ public final class TrustMenuController {
                 return;
             }
             if (claim.isDenied(targetId)) {
-                player.sendMessage(menu.plugin().color("&#FF6B6B该玩家仍在 deny 列表中，请先解除 deny 再进行授权。"));
+                player.sendMessage(menu.plugin().color("&#FF6B6B该玩家仍在禁足名单中，请先解除禁足再进行授权。"));
                 menu.openTrustOnlineAddMenu(player, claim, holder.page, holder.returnPage);
                 return;
             }

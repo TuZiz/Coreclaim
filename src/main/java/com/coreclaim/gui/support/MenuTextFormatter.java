@@ -72,14 +72,7 @@ public final class MenuTextFormatter {
     public String flagItemKey(ClaimFlag flag) {
         return switch (flag) {
             case TIME_CYCLE -> "flag-time-cycle";
-            case CONTAINER -> "flag-container";
-            case USE_BUTTON -> "flag-use-button";
-            case USE_LEVER -> "flag-use-lever";
-            case USE_PRESSURE_PLATE -> "flag-use-pressure-plate";
-            case USE_DOOR -> "flag-use-door";
-            case USE_TRAPDOOR -> "flag-use-trapdoor";
-            case USE_FENCE_GATE -> "flag-use-fence-gate";
-            case USE_BED -> "flag-use-bed";
+            case LIQUID_FLOW -> "flag-liquid-flow";
         };
     }
 

@@ -143,10 +143,10 @@ final class PluginConfigLoader {
 
     static boolean defaultPermissionValue(ClaimPermission permission, boolean systemDefaults) {
         if (!systemDefaults) {
-            return permission == ClaimPermission.FLIGHT;
+            return false;
         }
         return switch (permission) {
-            case INTERACT, TELEPORT -> true;
+            case TELEPORT -> true;
             default -> false;
         };
     }
@@ -191,11 +191,13 @@ final class PluginConfigLoader {
         return permission.name().toLowerCase(Locale.ROOT);
     }
 
-    private static String defaultFlagValue(ClaimFlag flag, boolean systemDefaults) {
-        return switch (flag) {
-            case TIME_CYCLE -> "unset";
-            case CONTAINER, USE_BUTTON, USE_LEVER, USE_PRESSURE_PLATE -> "deny";
-            case USE_DOOR, USE_TRAPDOOR, USE_FENCE_GATE, USE_BED -> "allow";
-        };
+    static String defaultFlagValue(ClaimFlag flag, boolean systemDefaults) {
+        if (flag == ClaimFlag.TIME_CYCLE) {
+            return "unset";
+        }
+        if (!systemDefaults) {
+            return "deny";
+        }
+        return "deny";
     }
 }

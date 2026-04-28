@@ -40,6 +40,7 @@ public final class ClaimService {
         this.defaultsService = new ClaimDefaultsService(runtime, persistenceRepository);
         this.mutationService = new ClaimMutationService(runtime, lookupService, defaultsService, persistenceRepository);
         persistenceRepository.backfillMissingServerIds(currentServerId());
+        persistenceRepository.migrateMergedPermissionData();
         lookupService.reloadClaims();
     }
 

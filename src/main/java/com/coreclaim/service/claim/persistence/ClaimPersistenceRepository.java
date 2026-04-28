@@ -5,11 +5,16 @@ import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
+import com.coreclaim.model.PermissionMergeSupport;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.claim.ClaimRuntime;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class ClaimPersistenceRepository {
@@ -30,6 +35,15 @@ public final class ClaimPersistenceRepository {
             "UPDATE claims SET server_id = ? WHERE " + MISSING_SERVER_ID_CONDITION,
             statement -> statement.setString(1, currentServerId)
         );
+    }
+
+    public void migrateMergedPermissionData() {
+        runtime.databaseManager().transaction(() -> {
+            normalizeClaimPermissionRows();
+            normalizeMemberPermissionRows();
+            deleteLegacyFlagRows();
+            return null;
+        });
     }
 
     public Optional<Claim> loadClaimFromDatabase(int id) {
@@ -218,7 +232,7 @@ public final class ClaimPersistenceRepository {
                     statement.setInt(21, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
                     statement.setInt(22, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                     statement.setInt(23, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                    statement.setInt(24, claim.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                    statement.setInt(24, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                     statement.setInt(25, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
                     statement.setInt(26, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
                     statement.setInt(27, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
@@ -298,7 +312,7 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(1, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
                 statement.setInt(2, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                 statement.setInt(3, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                statement.setInt(4, claim.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                statement.setInt(4, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(5, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
                 statement.setInt(6, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
                 statement.setInt(7, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
@@ -319,7 +333,7 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(3, settings.permission(ClaimPermission.PLACE) ? 1 : 0);
                 statement.setInt(4, settings.permission(ClaimPermission.BREAK) ? 1 : 0);
                 statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                statement.setInt(6, settings.permission(ClaimPermission.CONTAINER) ? 1 : 0);
+                statement.setInt(6, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(7, settings.permission(ClaimPermission.REDSTONE) ? 1 : 0);
                 statement.setInt(8, settings.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
                 statement.setInt(9, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
@@ -346,5 +360,118 @@ public final class ClaimPersistenceRepository {
 
     public Claim snapshotClaim(Claim claim) {
         return ClaimRowMapper.snapshotClaim(claim);
+    }
+
+    private void normalizeClaimPermissionRows() {
+        Map<Integer, PermissionRow> rows = runtime.databaseManager().query(
+            "SELECT id, allow_interact, allow_container, allow_redstone FROM claims",
+            statement -> {
+            },
+            resultSet -> {
+                Map<Integer, PermissionRow> values = new HashMap<>();
+                while (resultSet.next()) {
+                    values.put(resultSet.getInt("id"), new PermissionRow(
+                        resultSet.getInt("allow_interact") != 0,
+                        resultSet.getInt("allow_container") != 0,
+                        resultSet.getInt("allow_redstone") != 0
+                    ));
+                }
+                return values;
+            }
+        );
+        Map<Integer, EnumMap<LegacyPermissionGroup, List<ClaimFlagState>>> legacyStates = legacyFlagStates();
+        for (Map.Entry<Integer, PermissionRow> entry : rows.entrySet()) {
+            int claimId = entry.getKey();
+            PermissionRow row = entry.getValue();
+            EnumMap<LegacyPermissionGroup, List<ClaimFlagState>> states = legacyStates.get(claimId);
+            boolean interact = PermissionMergeSupport.mergeLegacyFlagStates(
+                PermissionMergeSupport.mergeInteractAndContainer(row.allowInteract(), row.allowContainer()),
+                states == null ? List.of() : states.getOrDefault(LegacyPermissionGroup.INTERACT, List.of())
+            );
+            boolean redstone = PermissionMergeSupport.mergeLegacyFlagStates(
+                row.allowRedstone(),
+                states == null ? List.of() : states.getOrDefault(LegacyPermissionGroup.REDSTONE, List.of())
+            );
+            if (interact == row.allowInteract() && interact == row.allowContainer() && redstone == row.allowRedstone()) {
+                continue;
+            }
+            runtime.databaseManager().update(
+                "UPDATE claims SET allow_interact = ?, allow_container = ?, allow_redstone = ? WHERE id = ?",
+                statement -> {
+                    statement.setInt(1, interact ? 1 : 0);
+                    statement.setInt(2, interact ? 1 : 0);
+                    statement.setInt(3, redstone ? 1 : 0);
+                    statement.setInt(4, claimId);
+                }
+            );
+        }
+    }
+
+    private void normalizeMemberPermissionRows() {
+        runtime.databaseManager().update(
+            """
+            UPDATE claim_member_permissions
+            SET allow_interact = CASE WHEN allow_interact <> 0 AND allow_container <> 0 THEN 1 ELSE 0 END,
+                allow_container = CASE WHEN allow_interact <> 0 AND allow_container <> 0 THEN 1 ELSE 0 END
+            """,
+            statement -> {
+            }
+        );
+    }
+
+    private Map<Integer, EnumMap<LegacyPermissionGroup, List<ClaimFlagState>>> legacyFlagStates() {
+        String placeholders = "?, ".repeat(ClaimFlag.legacyInteractKeys().size() + ClaimFlag.legacyRedstoneKeys().size() - 1) + "?";
+        return runtime.databaseManager().query(
+            "SELECT claim_id, flag_key, state FROM claim_flags WHERE flag_key IN (" + placeholders + ")",
+            statement -> {
+                int index = 1;
+                for (String key : ClaimFlag.legacyInteractKeys()) {
+                    statement.setString(index++, key);
+                }
+                for (String key : ClaimFlag.legacyRedstoneKeys()) {
+                    statement.setString(index++, key);
+                }
+            },
+            resultSet -> {
+                Map<Integer, EnumMap<LegacyPermissionGroup, List<ClaimFlagState>>> states = new HashMap<>();
+                while (resultSet.next()) {
+                    String flagKey = resultSet.getString("flag_key");
+                    LegacyPermissionGroup group = ClaimFlag.isLegacyInteractKey(flagKey)
+                        ? LegacyPermissionGroup.INTERACT
+                        : LegacyPermissionGroup.REDSTONE;
+                    states
+                        .computeIfAbsent(resultSet.getInt("claim_id"), ignored -> new EnumMap<>(LegacyPermissionGroup.class))
+                        .computeIfAbsent(group, ignored -> new ArrayList<>())
+                        .add(ClaimFlagState.fromDatabase(resultSet.getInt("state")));
+                }
+                return states;
+            }
+        );
+    }
+
+    private void deleteLegacyFlagRows() {
+        Set<String> interactKeys = ClaimFlag.legacyInteractKeys();
+        Set<String> redstoneKeys = ClaimFlag.legacyRedstoneKeys();
+        String placeholders = "?, ".repeat(interactKeys.size() + redstoneKeys.size() - 1) + "?";
+        runtime.databaseManager().update(
+            "DELETE FROM claim_flags WHERE flag_key IN (" + placeholders + ")",
+            statement -> {
+                int index = 1;
+                for (String key : interactKeys) {
+                    statement.setString(index++, key);
+                }
+                for (String key : redstoneKeys) {
+                    statement.setString(index++, key);
+                }
+            }
+        );
+    }
+
+    private enum LegacyPermissionGroup {
+        INTERACT,
+        REDSTONE
+    }
+
+    private record PermissionRow(boolean allowInteract, boolean allowContainer, boolean allowRedstone) {
     }
 }

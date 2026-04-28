@@ -25,6 +25,8 @@ public final class PlatformScheduler {
             return runBukkitRepeating(runnable, delayTicks, periodTicks);
         }
 
+        long foliaDelayTicks = positiveFoliaTicks(delayTicks);
+        long foliaPeriodTicks = positiveFoliaTicks(periodTicks);
         try {
             Object scheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
             Object scheduledTask = scheduler.getClass().getMethod(
@@ -37,8 +39,8 @@ public final class PlatformScheduler {
                 scheduler,
                 plugin,
                 (Consumer<Object>) ignored -> runnable.run(),
-                delayTicks,
-                periodTicks
+                foliaDelayTicks,
+                foliaPeriodTicks
             );
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
@@ -51,6 +53,7 @@ public final class PlatformScheduler {
             return runBukkitLater(runnable, delayTicks);
         }
 
+        long foliaDelayTicks = positiveFoliaTicks(delayTicks);
         try {
             Object scheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
             Object scheduledTask = scheduler.getClass().getMethod(
@@ -62,7 +65,7 @@ public final class PlatformScheduler {
                 scheduler,
                 plugin,
                 (Consumer<Object>) ignored -> runnable.run(),
-                delayTicks
+                foliaDelayTicks
             );
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
@@ -94,6 +97,7 @@ public final class PlatformScheduler {
             return runBukkitLater(runnable, delayTicks);
         }
 
+        long foliaDelayTicks = positiveFoliaTicks(delayTicks);
         try {
             Object entityScheduler = player.getClass().getMethod("getScheduler").invoke(player);
             Object scheduledTask = entityScheduler.getClass().getMethod(
@@ -102,10 +106,40 @@ public final class PlatformScheduler {
                 Consumer.class,
                 Runnable.class,
                 long.class
-            ).invoke(entityScheduler, plugin, (Consumer<Object>) ignored -> runnable.run(), null, delayTicks);
+            ).invoke(entityScheduler, plugin, (Consumer<Object>) ignored -> runnable.run(), null, foliaDelayTicks);
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
             throw foliaSchedulerFailure("player delayed task", exception);
+        }
+    }
+
+    public TaskHandle runPlayerRepeating(Player player, Runnable runnable, long delayTicks, long periodTicks) {
+        if (!folia) {
+            return runBukkitRepeating(runnable, delayTicks, periodTicks);
+        }
+
+        long foliaDelayTicks = positiveFoliaTicks(delayTicks);
+        long foliaPeriodTicks = positiveFoliaTicks(periodTicks);
+        try {
+            Object entityScheduler = player.getClass().getMethod("getScheduler").invoke(player);
+            Object scheduledTask = entityScheduler.getClass().getMethod(
+                "runAtFixedRate",
+                org.bukkit.plugin.Plugin.class,
+                Consumer.class,
+                Runnable.class,
+                long.class,
+                long.class
+            ).invoke(
+                entityScheduler,
+                plugin,
+                (Consumer<Object>) ignored -> runnable.run(),
+                null,
+                foliaDelayTicks,
+                foliaPeriodTicks
+            );
+            return () -> cancelReflectively(scheduledTask);
+        } catch (Throwable exception) {
+            throw foliaSchedulerFailure("player repeating task", exception);
         }
     }
 
@@ -136,6 +170,10 @@ public final class PlatformScheduler {
     private TaskHandle runBukkitLater(Runnable runnable, long delayTicks) {
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delayTicks);
         return task::cancel;
+    }
+
+    static long positiveFoliaTicks(long ticks) {
+        return Math.max(1L, ticks);
     }
 
     private IllegalStateException foliaSchedulerFailure(String operation, Throwable throwable) {

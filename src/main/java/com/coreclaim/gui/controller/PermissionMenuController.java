@@ -16,7 +16,6 @@ public final class PermissionMenuController {
         new PermissionEntry(ClaimPermission.PLACE, "perm-place"),
         new PermissionEntry(ClaimPermission.BREAK, "perm-break"),
         new PermissionEntry(ClaimPermission.INTERACT, "perm-interact"),
-        new PermissionEntry(ClaimPermission.CONTAINER, "perm-container"),
         new PermissionEntry(ClaimPermission.REDSTONE, "perm-redstone"),
         new PermissionEntry(ClaimPermission.EXPLOSION, "perm-explosion"),
         new PermissionEntry(ClaimPermission.BUCKET, "perm-bucket"),
@@ -42,7 +41,6 @@ public final class PermissionMenuController {
             "{perm_place}", menu.stateText(claim.permission(ClaimPermission.PLACE)),
             "{perm_break}", menu.stateText(claim.permission(ClaimPermission.BREAK)),
             "{perm_interact}", menu.stateText(claim.permission(ClaimPermission.INTERACT)),
-            "{perm_container}", menu.stateText(claim.permission(ClaimPermission.CONTAINER)),
             "{perm_redstone}", menu.stateText(claim.permission(ClaimPermission.REDSTONE)),
             "{perm_explosion}", menu.stateText(claim.permission(ClaimPermission.EXPLOSION)),
             "{perm_bucket}", menu.stateText(claim.permission(ClaimPermission.BUCKET)),
@@ -98,7 +96,7 @@ public final class PermissionMenuController {
             }
         }
         if (slot == menu.slot("claim-permissions", "disable-all")) {
-            setAllPermissions(player, claim, false, "disable-all");
+            disableDangerousPermissions(player, claim, "disable-all");
             return;
         }
         if (slot == menu.slot("claim-permissions", "back")) {
@@ -129,15 +127,19 @@ public final class PermissionMenuController {
         menu.openClaimPermissionsMenu(player, claim);
     }
 
-    private void setAllPermissions(Player player, Claim claim, boolean allowed, String itemKey) {
-        if (!menu.claimActionService().canManagePermissions(player, claim)) {
+    private void disableDangerousPermissions(Player player, Claim claim, String itemKey) {
+        if (!menu.claimActionService().canManagePermissions(player, claim) || !menu.claimActionService().canManageFlags(player, claim)) {
             player.sendMessage(menu.plugin().message("trust-no-permission"));
             return;
         }
         menu.playConfiguredSound(player, "claim-permissions", itemKey);
         for (ClaimPermission permission : ClaimPermission.values()) {
-            menu.claimService().updatePermission(claim, permission, allowed, player.getUniqueId());
+            if (permission == ClaimPermission.TELEPORT || permission == ClaimPermission.FLIGHT) {
+                continue;
+            }
+            menu.claimService().updatePermission(claim, permission, false, player.getUniqueId());
         }
+        menu.claimService().updateFlagState(claim, ClaimFlag.LIQUID_FLOW, ClaimFlagState.DENY, player.getUniqueId());
         menu.openClaimPermissionsMenu(player, claim);
     }
 

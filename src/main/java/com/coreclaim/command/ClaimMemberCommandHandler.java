@@ -85,7 +85,7 @@ final class ClaimMemberCommandHandler {
             return true;
         }
         String targetName = args[1].trim();
-        if ("*".equals(targetName)) {
+        if (ClaimDenyTargets.isAllTarget(targetName)) {
             if (claim.denyAll()) {
                 player.sendMessage(command.plugin().message("claim-deny-all-already-enabled"));
                 return true;
@@ -129,7 +129,7 @@ final class ClaimMemberCommandHandler {
             return true;
         }
         String targetName = args[1].trim();
-        if ("*".equals(targetName)) {
+        if (ClaimDenyTargets.isAllTarget(targetName)) {
             if (!claim.denyAll()) {
                 player.sendMessage(command.plugin().message("claim-deny-all-already-disabled"));
                 return true;

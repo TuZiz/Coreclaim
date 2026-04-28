@@ -9,7 +9,6 @@ new-claim-defaults:
     bucket: false
     teleport: false
     flight: false
-  flags:
     liquid-flow: deny
     time-cycle: unset
 
@@ -24,6 +23,5 @@ system-claim-defaults:
     bucket: false
     teleport: true
     flight: false
-  flags:
     liquid-flow: deny
     time-cycle: unset

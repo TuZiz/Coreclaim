@@ -16,6 +16,8 @@ final class RuleDefaultsRepair {
         changed |= replaceBooleanIfExact(rulesConfig, defaults, "new-claim-defaults.permissions.flight", true);
         changed |= mergeInteractAndContainer(rulesConfig, "new-claim-defaults.permissions");
         changed |= mergeInteractAndContainer(rulesConfig, "system-claim-defaults.permissions");
+        changed |= migrateFlagDefaultsToPermissionDefaults(rulesConfig, "new-claim-defaults");
+        changed |= migrateFlagDefaultsToPermissionDefaults(rulesConfig, "system-claim-defaults");
         changed |= mergeLegacyFlagGroup(
             rulesConfig,
             "new-claim-defaults",
@@ -40,6 +42,20 @@ final class RuleDefaultsRepair {
             "redstone",
             ClaimFlag.legacyRedstoneKeys()
         );
+        return changed;
+    }
+
+    private static boolean migrateFlagDefaultsToPermissionDefaults(FileConfiguration rulesConfig, String defaultsPath) {
+        boolean changed = false;
+        for (ClaimFlag flag : ClaimFlag.values()) {
+            String legacyPath = defaultsPath + ".flags." + flag.key();
+            if (!rulesConfig.isSet(legacyPath)) {
+                continue;
+            }
+            rulesConfig.set(defaultsPath + ".permissions." + flag.key(), rulesConfig.getString(legacyPath));
+            rulesConfig.set(legacyPath, null);
+            changed = true;
+        }
         return changed;
     }
 

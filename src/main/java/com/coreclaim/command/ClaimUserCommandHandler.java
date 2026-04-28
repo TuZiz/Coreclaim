@@ -25,6 +25,7 @@ final class ClaimUserCommandHandler {
             case "info" -> playerCommands.handleCurrentClaimInfo(sender);
             case "list" -> playerCommands.handleList(sender);
             case "menu" -> playerCommands.handleMenu(sender);
+            case "set" -> playerCommands.handlePermissionSettings(sender);
             case "show" -> playerCommands.handleShow(sender, args);
             case "create" -> playerCommands.handleCreate(sender, args);
             case "edit" -> playerCommands.handleEdit(sender, args);

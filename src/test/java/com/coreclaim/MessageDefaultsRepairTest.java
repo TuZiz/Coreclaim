@@ -62,7 +62,7 @@ class MessageDefaultsRepairTest {
         assertEquals("new denied players", existing.getString("claim-detail-denied"));
         assertEquals(List.of(
             "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置禁足",
-            "&#FACC15/claim flag [list] &#CBD5E1查看或调整特殊规则"
+            "&#FACC15/claim set &#CBD5E1打开当前领地权限设置"
         ), existing.getStringList("help-player"));
     }
 }

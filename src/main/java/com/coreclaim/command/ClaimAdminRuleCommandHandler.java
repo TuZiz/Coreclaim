@@ -39,23 +39,10 @@ final class ClaimAdminRuleCommandHandler {
     boolean handlePermission(CommandSender sender, String[] args) {
         String stateInput;
         String permissionInput;
-        Claim claim;
-        if (!AdminAccess.hasPermissionManageAccess(sender)) {
-            sender.sendMessage(plugin.message("no-permission"));
-            return true;
-        }
         if (args.length == 4 && sender instanceof Player player) {
-            claim = resolveCurrentAdminClaim(player, "/claim admin permission", current -> claimActionService.canManagePermissions(player, current));
-            if (claim == null) {
-                return true;
-            }
             permissionInput = args[2];
             stateInput = args[3];
         } else if (args.length >= 5) {
-            claim = resolver.resolveAdminClaimSelector(sender, resolver.joinArgs(args, 2, args.length - 2));
-            if (claim == null) {
-                return true;
-            }
             permissionInput = args[args.length - 2];
             stateInput = args[args.length - 1];
         } else {
@@ -63,65 +50,73 @@ final class ClaimAdminRuleCommandHandler {
             return true;
         }
         ClaimPermission permission = resolver.parsePermission(permissionInput);
-        if (permission == null) {
+        ClaimFlag flag = permission == null ? ClaimFlag.fromKey(permissionInput) : null;
+        if (permission == null && flag == null) {
             sender.sendMessage(plugin.message("admin-permission-invalid", "{permission}", permissionInput));
             return true;
         }
-        Boolean allowed = resolver.parseAllowDeny(stateInput);
-        if (allowed == null) {
+
+        boolean managesPermission = permission != null;
+        if (managesPermission && !AdminAccess.hasPermissionManageAccess(sender)) {
+            sender.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+        if (!managesPermission && !AdminAccess.hasPermissionManageAccess(sender) && !AdminAccess.hasFlagManageAccess(sender)) {
+            sender.sendMessage(plugin.message("no-permission"));
+            return true;
+        }
+
+        Claim claim;
+        if (args.length == 4 && sender instanceof Player player) {
+            claim = resolveCurrentAdminClaim(player, "/claim admin permission", current ->
+                managesPermission
+                    ? claimActionService.canManagePermissions(player, current)
+                    : claimActionService.canManagePermissions(player, current) || claimActionService.canManageFlags(player, current)
+            );
+            if (claim == null) {
+                return true;
+            }
+        } else {
+            claim = resolver.resolveAdminClaimSelector(sender, resolver.joinArgs(args, 2, args.length - 2));
+            if (claim == null) {
+                return true;
+            }
+        }
+
+        UUID actorId = actorId(sender);
+        if (managesPermission) {
+            Boolean allowed = resolver.parseAllowDeny(stateInput);
+            if (allowed == null) {
+                sender.sendMessage(plugin.message("admin-permission-state-invalid"));
+                return true;
+            }
+            claimService.updatePermission(claim, permission, allowed, actorId);
+            sender.sendMessage(plugin.message(
+                "admin-permission-updated",
+                "{name}", claim.name(),
+                "{permission}", permission.name().toLowerCase(Locale.ROOT),
+                "{state}", formatter.stateText(allowed)
+            ));
+            return true;
+        }
+
+        ClaimFlagState state = ClaimFlagState.fromInput(stateInput);
+        if (state == null) {
             sender.sendMessage(plugin.message("admin-permission-state-invalid"));
             return true;
         }
-        UUID actorId = actorId(sender);
-        claimService.updatePermission(claim, permission, allowed, actorId);
+        claimService.updateFlagState(claim, flag, state, actorId);
         sender.sendMessage(plugin.message(
             "admin-permission-updated",
             "{name}", claim.name(),
-            "{permission}", permission.name().toLowerCase(Locale.ROOT),
-            "{state}", formatter.stateText(allowed)
+            "{permission}", flag.key(),
+            "{state}", formatter.flagStateText(flag, state)
         ));
         return true;
     }
 
     boolean handleFlag(CommandSender sender, String[] args) {
-        String stateInput;
-        String flagInput;
-        Claim claim;
-        if (!AdminAccess.hasFlagManageAccess(sender)) {
-            sender.sendMessage(plugin.message("no-permission"));
-            return true;
-        }
-        if (args.length == 4 && sender instanceof Player player) {
-            claim = resolveCurrentAdminClaim(player, "/claim admin flag", current -> claimActionService.canManageFlags(player, current));
-            if (claim == null) {
-                return true;
-            }
-            flagInput = args[2];
-            stateInput = args[3];
-        } else if (args.length >= 5) {
-            claim = resolver.resolveAdminClaimSelector(sender, resolver.joinArgs(args, 2, args.length - 2));
-            if (claim == null) {
-                return true;
-            }
-            flagInput = args[args.length - 2];
-            stateInput = args[args.length - 1];
-        } else {
-            sender.sendMessage(plugin.message("admin-flag-usage"));
-            return true;
-        }
-        ClaimFlag flag = ClaimFlag.fromKey(flagInput);
-        if (flag == null) {
-            sender.sendMessage(plugin.message("admin-flag-invalid", "{flag}", flagInput));
-            return true;
-        }
-        ClaimFlagState state = ClaimFlagState.fromInput(stateInput);
-        if (state == null) {
-            sender.sendMessage(plugin.message("admin-flag-state-invalid"));
-            return true;
-        }
-        UUID actorId = actorId(sender);
-        claimService.updateFlagState(claim, flag, state, actorId);
-        sender.sendMessage(plugin.message("admin-flag-updated", "{name}", claim.name(), "{flag}", flag.key(), "{state}", formatter.flagStateText(flag, state)));
+        sender.sendMessage(plugin.message("admin-flag-command-migrated"));
         return true;
     }
 

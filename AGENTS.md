@@ -40,7 +40,7 @@
   - `src/main/java/com/coreclaim/service/ClaimInputService.java`
   - `src/main/java/com/coreclaim/listener/ClaimInputListener.java`
 
-- **领地交互保护 / flag / 规则**
+- **领地交互保护 / 权限 / 规则**
   - `src/main/java/com/coreclaim/listener/ClaimProtectionListener.java`
   - `src/main/java/com/coreclaim/listener/protection/*`
   - `src/main/java/com/coreclaim/listener/protection/ProtectionRuleSupport.java`

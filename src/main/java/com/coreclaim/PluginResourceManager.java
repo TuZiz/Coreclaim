@@ -42,7 +42,7 @@ final class PluginResourceManager {
         Map.entry("gui/claim-expand-confirm.yml", "layout-version: 1"),
         Map.entry("gui/trust-online-add.yml", "layout-version: 3"),
         Map.entry("gui/core.yml", "layout-version: 6"),
-        Map.entry("gui/claim-permissions.yml", "layout-version: 10"),
+        Map.entry("gui/claim-permissions.yml", "layout-version: 11"),
         Map.entry("gui/trust.yml", "layout-version: 5"),
         Map.entry("gui/selection-create.yml", "layout-version: 3")
     );
@@ -174,7 +174,7 @@ final class PluginResourceManager {
                 changed |= migrateLegacySection(legacyFlags.getConfigurationSection("new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
                 changed |= migrateLegacySection(legacyFlags.getConfigurationSection("system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
                 if (changed) {
-                    plugin.getLogger().info("Migrated legacy flag defaults from flags.yml to rules.yml");
+                    plugin.getLogger().info("Migrated legacy permission defaults from flags.yml to rules.yml");
                 }
             }
             changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("flags.new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");

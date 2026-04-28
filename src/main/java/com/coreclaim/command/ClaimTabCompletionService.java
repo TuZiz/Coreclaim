@@ -40,10 +40,10 @@ final class ClaimTabCompletionService {
             options.add("info");
             options.add("list");
             options.add("menu");
+            options.add("set");
             options.add("create");
             options.add("tp");
             options.add("tpset");
-            options.add("flag");
             options.add("add");
             options.add("unadd");
             options.add("remove");
@@ -76,11 +76,6 @@ final class ClaimTabCompletionService {
             options.add("take");
             return filter(options, args[1]);
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("flag")) {
-            options.add("list");
-            options.addAll(flagKeys());
-            return filter(options, args[1]);
-        }
         if (args.length == 2 && args[0].equalsIgnoreCase("admin") && hasAnyAdminPermission(sender)) {
             options.add("create");
             options.add("info");
@@ -92,7 +87,6 @@ final class ClaimTabCompletionService {
             options.add("deny");
             options.add("undeny");
             options.add("permission");
-            options.add("flag");
             options.add("cleanup");
             options.add("setserver");
             return filter(options, args[1]);
@@ -154,12 +148,6 @@ final class ClaimTabCompletionService {
             options.add("off");
             return filter(options, args[2]);
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("flag")) {
-            options.add("allow");
-            options.add("deny");
-            options.add("unset");
-            return filter(options, args[2]);
-        }
         if (args.length == 3 && args[0].equalsIgnoreCase("activity")) {
             options.addAll(knownPlayerNames());
             return filter(options, args[2]);
@@ -197,11 +185,6 @@ final class ClaimTabCompletionService {
             options.addAll(permissionKeys());
             return filter(options, args[2]);
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("flag")) {
-            options.add("list");
-            options.addAll(flagKeys());
-            return filter(options, args[2]);
-        }
         if (args.length == 3 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("cleanup")) {
             options.add("list");
             options.add("run");
@@ -216,12 +199,9 @@ final class ClaimTabCompletionService {
         if (args.length == 4 && args[0].equalsIgnoreCase("admin") && (args[1].equalsIgnoreCase("permission") || args[1].equalsIgnoreCase("perm"))) {
             options.add("allow");
             options.add("deny");
-            return filter(options, args[3]);
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("flag")) {
-            options.add("allow");
-            options.add("deny");
-            options.add("unset");
+            if (ClaimFlag.fromKey(args[2]) != null) {
+                options.add("unset");
+            }
             return filter(options, args[3]);
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("cleanup")) {
@@ -390,9 +370,11 @@ final class ClaimTabCompletionService {
     }
 
     private List<String> permissionKeys() {
-        return Arrays.stream(ClaimPermission.values())
+        ArrayList<String> keys = new ArrayList<>(Arrays.stream(ClaimPermission.values())
             .map(permission -> permission.name().toLowerCase(Locale.ROOT))
-            .toList();
+            .toList());
+        keys.addAll(flagKeys());
+        return keys;
     }
 
     private List<String> claimSelectorOptions(List<Claim> claims) {

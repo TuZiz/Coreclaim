@@ -113,13 +113,22 @@ final class PluginConfigLoader {
     }
 
     static Map<ClaimFlag, ClaimFlagState> loadNewClaimFlagDefaults(FileConfiguration rulesConfig, FileConfiguration legacyConfig) {
-        return loadFlagDefaults(rulesConfig, legacyConfig, "new-claim-defaults.flags", "new-claim-defaults", "flags.new-claim-defaults", false);
+        return loadFlagDefaults(
+            rulesConfig,
+            legacyConfig,
+            "new-claim-defaults.permissions",
+            "new-claim-defaults.flags",
+            "new-claim-defaults",
+            "flags.new-claim-defaults",
+            false
+        );
     }
 
     static Map<ClaimFlag, ClaimFlagState> loadFlagDefaults(
         FileConfiguration primaryConfig,
         FileConfiguration legacyConfig,
         String primaryPath,
+        String legacyPrimaryPath,
         String legacyFilePath,
         String legacyPath,
         boolean systemDefaults
@@ -130,6 +139,7 @@ final class PluginConfigLoader {
                 readString(
                     primaryConfig,
                     primaryPath + "." + flag.key(),
+                    legacyPrimaryPath + "." + flag.key(),
                     legacyConfig,
                     legacyFilePath + "." + flag.key(),
                     legacyPath + "." + flag.key(),
@@ -154,6 +164,7 @@ final class PluginConfigLoader {
     private static String readString(
         FileConfiguration primaryConfig,
         String primaryPath,
+        String legacyPrimaryPath,
         FileConfiguration fallbackConfig,
         String fallbackPrimaryPath,
         String fallbackSecondaryPath,
@@ -161,6 +172,9 @@ final class PluginConfigLoader {
     ) {
         if (primaryConfig != null && primaryConfig.isSet(primaryPath)) {
             return primaryConfig.getString(primaryPath, defaultValue);
+        }
+        if (primaryConfig != null && primaryConfig.isSet(legacyPrimaryPath)) {
+            return primaryConfig.getString(legacyPrimaryPath, defaultValue);
         }
         if (fallbackConfig != null && fallbackConfig.isSet(fallbackPrimaryPath)) {
             return fallbackConfig.getString(fallbackPrimaryPath, defaultValue);

@@ -29,6 +29,8 @@ class RuleDefaultsRepairTest {
         existing.set("new-claim-defaults.flags.use-trapdoor", "allow");
         existing.set("new-claim-defaults.flags.use-fence-gate", "allow");
         existing.set("new-claim-defaults.flags.use-bed", "allow");
+        existing.set("new-claim-defaults.flags.liquid-flow", "allow");
+        existing.set("new-claim-defaults.flags.time-cycle", "night");
 
         assertTrue(RuleDefaultsRepair.applyKnownReplacements(existing, defaults));
         assertFalse(existing.getBoolean("new-claim-defaults.permissions.flight"));
@@ -43,5 +45,9 @@ class RuleDefaultsRepairTest {
         assertFalse(existing.isSet("new-claim-defaults.flags.use-trapdoor"));
         assertFalse(existing.isSet("new-claim-defaults.flags.use-fence-gate"));
         assertFalse(existing.isSet("new-claim-defaults.flags.use-bed"));
+        assertEquals("allow", existing.getString("new-claim-defaults.permissions.liquid-flow"));
+        assertEquals("night", existing.getString("new-claim-defaults.permissions.time-cycle"));
+        assertFalse(existing.isSet("new-claim-defaults.flags.liquid-flow"));
+        assertFalse(existing.isSet("new-claim-defaults.flags.time-cycle"));
     }
 }

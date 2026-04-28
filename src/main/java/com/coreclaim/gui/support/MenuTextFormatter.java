@@ -71,8 +71,8 @@ public final class MenuTextFormatter {
 
     public String flagItemKey(ClaimFlag flag) {
         return switch (flag) {
-            case TIME_CYCLE -> "flag-time-cycle";
-            case LIQUID_FLOW -> "flag-liquid-flow";
+            case TIME_CYCLE -> "perm-time-cycle";
+            case LIQUID_FLOW -> "perm-liquid-flow";
         };
     }
 

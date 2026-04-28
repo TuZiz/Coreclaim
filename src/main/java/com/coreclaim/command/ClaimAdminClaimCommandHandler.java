@@ -128,11 +128,11 @@ final class ClaimAdminClaimCommandHandler {
         sender.sendMessage(plugin.color("&6[Claim] &fOwner: &b" + claim.ownerName() + " &8| &fServer ID: &e" + claimService.displayServerId(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f当前服 server-id: &e" + plugin.settings().serverId() + " &8| &f是否本服: " + (localClaim ? "&a是" : "&c否")));
         sender.sendMessage(plugin.color("&6[Claim] &f系统领地: " + (claim.systemManaged() ? "&6是&8| &f计入配额: &c否" : "&7否&8| &f计入配额: &a是")));
-        sender.sendMessage(plugin.color("&6[Claim] &f规则来源: " + formatter.ruleSourceSummary(claim)));
+        sender.sendMessage(plugin.color("&6[Claim] &f权限来源: " + formatter.ruleSourceSummary(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f世界状态: " + (worldLoaded ? "&a已加载" : "&e未加载或不在本服")));
         sender.sendMessage(plugin.color("&6[Claim] &fTP 路由: &b" + route));
         sender.sendMessage(plugin.color("&6[Claim] &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭") + " &8| &fDenied: &c" + claim.deniedMembers().size() + " &8| &fTrusted: &a" + claim.trustedCount()));
-        sender.sendMessage(plugin.color("&6[Claim] &f细分权限: " + formatter.summarizeFlags(claim)));
+        sender.sendMessage(plugin.color("&6[Claim] &f扩展权限: " + formatter.summarizeFlags(claim)));
         return true;
     }
 

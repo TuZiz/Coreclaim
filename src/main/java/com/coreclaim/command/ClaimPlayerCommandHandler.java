@@ -55,6 +55,22 @@ final class ClaimPlayerCommandHandler {
         return true;
     }
 
+    boolean handlePermissionSettings(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(command.plugin().message("player-only"));
+            return true;
+        }
+        Claim claim = command.resolveCurrentEditableClaim(player, "/claim set", current ->
+            command.claimActionService().canManagePermissions(player, current)
+                || command.claimActionService().canManageFlags(player, current)
+        );
+        if (claim == null) {
+            return true;
+        }
+        command.menuService().openClaimPermissionsMenu(player, claim);
+        return true;
+    }
+
     boolean handleCurrentClaimInfo(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(command.plugin().message("player-only"));

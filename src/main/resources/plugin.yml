@@ -23,9 +23,6 @@ permissions:
   coreclaim.manage.tpset:
     description: Set the teleport point for the current claim
     default: true
-  coreclaim.manage.flags:
-    description: Manage special rules on the current claim
-    default: true
   coreclaim.admin:
     description: Full CoreClaim administrator access
     default: op
@@ -45,10 +42,7 @@ permissions:
     description: Force-manage claim members and denied players
     default: op
   coreclaim.admin.permission.manage:
-    description: Force-manage default claim permissions
-    default: op
-  coreclaim.admin.flag.manage:
-    description: Force-manage claim special rules
+    description: Force-manage claim permissions
     default: op
   coreclaim.admin.claim.manage:
     description: Force-manage claim ownership, server, deletion, and system claims

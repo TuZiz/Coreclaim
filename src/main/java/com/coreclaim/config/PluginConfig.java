@@ -178,6 +178,7 @@ public final class PluginConfig {
         this.systemClaimFlagDefaults = loadFlagDefaults(
             rulesConfig,
             config,
+            "system-claim-defaults.permissions",
             "system-claim-defaults.flags",
             "system-claim-defaults",
             "flags.system-claim-defaults",

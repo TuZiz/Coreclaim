@@ -20,6 +20,7 @@ final class MessageDefaultsRepair {
             changed = true;
         }
         if (CoreClaimPlugin.MESSAGE_RESOURCE_PATH.equals(resourcePath)) {
+            changed |= replaceMessageIfExact(messagesConfig, defaults, "admin-usage", "&#FF6B6B用法 &#475569| &#CBD5E1/claim admin <create|info|playerclaims|diagnose|add|remove|unadd|deny|undeny|permission|flag|cleanup|setserver> ...");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "prefix", "&#55FFAA&l[领地系统] &#F8FAFC");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-join-reminder", "&#4CC9F0领地 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟可获得第一块领地核心，当前还差 &#F8FAFC{remaining} &#CBD5E1分钟。");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-reminder", "&#FFD166提醒 &#475569| &#CBD5E1累计在线满 &#F8FAFC{minutes} &#CBD5E1分钟会自动发放新人核心，当前还需 &#F8FAFC{remaining} &#CBD5E1分钟。");
@@ -54,13 +55,16 @@ final class MessageDefaultsRepair {
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAA旗标 &#475569| &#CBD5E1细分权限 - &#F8FAFC{name}");
             changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置门禁", "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置禁足");
             changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim undeny <玩家|*|全部> &#CBD5E1取消门禁", "&#FACC15/claim undeny <玩家|*|全部> &#CBD5E1取消禁足");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1查看或调整交互旗标", "&#FACC15/claim flag [list] &#CBD5E1查看或调整特殊规则");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1查看或调整细分权限", "&#FACC15/claim flag [list] &#CBD5E1查看或调整特殊规则");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1查看或调整交互旗标", "&#FACC15/claim set &#CBD5E1打开当前领地权限设置");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1查看或调整细分权限", "&#FACC15/claim set &#CBD5E1打开当前领地权限设置");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1查看或调整特殊规则", "&#FACC15/claim set &#CBD5E1打开当前领地权限设置");
             changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin deny <玩家|*|全部> &#CBD5E1强制修改门禁", "&#FACC15/claim admin deny <玩家|*|全部> &#CBD5E1强制修改禁足");
             changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin undeny <玩家|*|全部> &#CBD5E1取消门禁", "&#FACC15/claim admin undeny <玩家|*|全部> &#CBD5E1取消禁足");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改交互旗标", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改特殊规则");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改细分权限", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改特殊规则");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改交互旗标", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1强制修改权限");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改细分权限", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1强制修改权限");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1强制修改特殊规则", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1强制修改权限");
         } else if (CoreClaimPlugin.ENGLISH_MESSAGE_RESOURCE_PATH.equals(resourcePath)) {
+            changed |= replaceMessageIfExact(messagesConfig, defaults, "admin-usage", "&#FF6B6BUsage &#475569| &#CBD5E1/claim admin <create|info|playerclaims|diagnose|add|remove|unadd|deny|undeny|permission|flag|cleanup|setserver> ...");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "prefix", "&#55FFAA&l[CoreClaim] &#F8FAFC");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-join-reminder", "&#4CC9F0Claim &#475569| &#CBD5E1Stay online for &#F8FAFC{minutes} &#CBD5E1minutes to receive your first claim core. &#F8FAFC{remaining} &#CBD5E1minutes remaining.");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "starter-core-reminder", "&#FFD166Reminder &#475569| &#CBD5E1A starter core will be granted after &#F8FAFC{minutes} &#CBD5E1minutes online. &#F8FAFC{remaining} &#CBD5E1minutes remaining.");
@@ -76,10 +80,12 @@ final class MessageDefaultsRepair {
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-flags", "&#55FFAADetail &#475569| &#CBD5E1Detailed Permissions: {flags}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAAFlag &#475569| &#CBD5E1Interaction Flags - &#F8FAFC{name}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAAFlag &#475569| &#CBD5E1Detailed Permissions - &#F8FAFC{name}");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update interaction flags", "&#FACC15/claim flag [list] &#CBD5E1View or update special rules");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update detailed permissions", "&#FACC15/claim flag [list] &#CBD5E1View or update special rules");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update interaction flags", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update special rules");
-            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update detailed permissions", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update special rules");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update interaction flags", "&#FACC15/claim set &#CBD5E1Open current claim permission settings");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update detailed permissions", "&#FACC15/claim set &#CBD5E1Open current claim permission settings");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update special rules", "&#FACC15/claim set &#CBD5E1Open current claim permission settings");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update interaction flags", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update detailed permissions", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
+            changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update special rules", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
         }
         return changed;
     }

@@ -4,6 +4,7 @@ new-claim-defaults:
     place: false
     break: false
     interact: false
+    mob-interact: false
     redstone: false
     explosion: false
     bucket: false
@@ -18,6 +19,7 @@ system-claim-defaults:
     place: false
     break: false
     interact: false
+    mob-interact: false
     redstone: false
     explosion: false
     bucket: false

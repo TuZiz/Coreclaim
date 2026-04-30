@@ -73,6 +73,7 @@ final class DatabaseSchemaInitializer {
                 allow_break %s NOT NULL DEFAULT 1,
                 allow_interact %s NOT NULL DEFAULT 1,
                 allow_container %s NOT NULL DEFAULT 1,
+                allow_mob_interact %s NOT NULL DEFAULT 0,
                 allow_redstone %s NOT NULL DEFAULT 1,
                 allow_explosion %s NOT NULL DEFAULT 0,
                 allow_bucket %s NOT NULL DEFAULT 1,
@@ -92,7 +93,7 @@ final class DatabaseSchemaInitializer {
                 autoIncrementPrimaryKey(), uuidType(), shortTextType(), shortTextType(), booleanType(), worldType(), shortTextType(),
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
-                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
+                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
             ),
             statement -> {
@@ -114,6 +115,7 @@ final class DatabaseSchemaInitializer {
         ensureColumn("claims", "allow_break", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_interact", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_container", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_mob_interact", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_redstone", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_bucket", booleanType() + " NOT NULL DEFAULT 1");
@@ -175,6 +177,7 @@ final class DatabaseSchemaInitializer {
                 allow_break %s NOT NULL DEFAULT 0,
                 allow_interact %s NOT NULL DEFAULT 0,
                 allow_container %s NOT NULL DEFAULT 0,
+                allow_mob_interact %s NOT NULL DEFAULT 0,
                 allow_redstone %s NOT NULL DEFAULT 0,
                 allow_explosion %s NOT NULL DEFAULT 0,
                 allow_bucket %s NOT NULL DEFAULT 0,
@@ -184,7 +187,7 @@ final class DatabaseSchemaInitializer {
                 FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
             )%s
             """.formatted(
-                integerType(), uuidType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
+                integerType(), uuidType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), tableOptions()
             ),
             statement -> {
@@ -216,6 +219,7 @@ final class DatabaseSchemaInitializer {
             }
         );
         ensureColumn("claim_member_permissions", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_member_permissions", "allow_mob_interact", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_flight", booleanType() + " NOT NULL DEFAULT 1");

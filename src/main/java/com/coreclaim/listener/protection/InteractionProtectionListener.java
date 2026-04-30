@@ -35,6 +35,7 @@ public final class InteractionProtectionListener implements Listener {
         Optional<Claim> claim = support.claimService().findClaim(event.getRightClicked().getLocation());
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
+            && !support.isMobEntity(event.getRightClicked())
             && !support.isBypassing(event.getPlayer())) {
             if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
@@ -58,6 +59,7 @@ public final class InteractionProtectionListener implements Listener {
         Optional<Claim> claim = support.claimService().findClaim(event.getRightClicked().getLocation());
         if (claim.isPresent()
             && event.getRightClicked() instanceof InventoryHolder
+            && !support.isMobEntity(event.getRightClicked())
             && !support.isBypassing(event.getPlayer())) {
             if (!support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.INTERACT)) {
                 event.setCancelled(true);
@@ -90,6 +92,9 @@ public final class InteractionProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onLeash(PlayerLeashEntityEvent event) {
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
+        if (support.denyIfNeeded(event.getPlayer(), claim, ClaimPermission.MOB_INTERACT, event)) {
+            return;
+        }
         if (claim.isPresent() && !support.isBypassing(event.getPlayer())) {
             support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
         }
@@ -98,6 +103,9 @@ public final class InteractionProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onUnleash(PlayerUnleashEntityEvent event) {
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
+        if (support.denyIfNeeded(event.getPlayer(), claim, ClaimPermission.MOB_INTERACT, event)) {
+            return;
+        }
         if (claim.isPresent() && !support.isBypassing(event.getPlayer())) {
             support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
         }
@@ -131,7 +139,7 @@ public final class InteractionProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = support.claimService().findClaim(event.getMount().getLocation());
-        support.denyIfNeeded(rider, claim, ClaimPermission.INTERACT, event);
+        support.denyIfNeeded(rider, claim, support.requiredPermissionForEntityInteract(rider, event.getMount()), event);
     }
 
     @EventHandler(ignoreCancelled = true)

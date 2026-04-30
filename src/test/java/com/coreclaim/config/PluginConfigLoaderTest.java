@@ -30,10 +30,16 @@ class PluginConfigLoaderTest {
 
     @Test
     void systemClaimFallbackKeepsPublicUseDefaults() {
+        assertFalse(PluginConfigLoader.defaultPermissionValue(ClaimPermission.MOB_INTERACT, true));
         assertFalse(PluginConfigLoader.defaultPermissionValue(ClaimPermission.INTERACT, true));
         assertTrue(PluginConfigLoader.defaultPermissionValue(ClaimPermission.TELEPORT, true));
         assertFalse(PluginConfigLoader.defaultPermissionValue(ClaimPermission.FLIGHT, true));
         assertEquals("deny", PluginConfigLoader.defaultFlagValue(ClaimFlag.LIQUID_FLOW, true));
+    }
+
+    @Test
+    void permissionKeysUseConfigFriendlyNames() {
+        assertEquals("mob-interact", ClaimPermission.MOB_INTERACT.key());
     }
 
     @Test

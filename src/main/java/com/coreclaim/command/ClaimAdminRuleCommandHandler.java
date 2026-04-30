@@ -8,7 +8,6 @@ import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.util.AdminAccess;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Predicate;
 import org.bukkit.command.CommandSender;
@@ -94,7 +93,7 @@ final class ClaimAdminRuleCommandHandler {
             sender.sendMessage(plugin.message(
                 "admin-permission-updated",
                 "{name}", claim.name(),
-                "{permission}", permission.name().toLowerCase(Locale.ROOT),
+                "{permission}", permission.key(),
                 "{state}", formatter.stateText(allowed)
             ));
             return true;

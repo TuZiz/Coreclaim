@@ -123,10 +123,11 @@ final class ClaimCommandResolver {
         if (rawValue == null || rawValue.isBlank()) {
             return null;
         }
-        return switch (rawValue.trim().toLowerCase(Locale.ROOT).replace('-', '_')) {
+        return switch (rawValue.trim().toLowerCase(Locale.ROOT).replace('_', '-')) {
             case "place" -> ClaimPermission.PLACE;
             case "break" -> ClaimPermission.BREAK;
             case "interact" -> ClaimPermission.INTERACT;
+            case "mob-interact", "mob", "entity", "entity-interact", "mob-damage", "entity-damage" -> ClaimPermission.MOB_INTERACT;
             case "redstone" -> ClaimPermission.REDSTONE;
             case "explosion" -> ClaimPermission.EXPLOSION;
             case "bucket" -> ClaimPermission.BUCKET;

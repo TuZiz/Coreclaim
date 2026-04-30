@@ -10,12 +10,15 @@ import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import com.coreclaim.util.AdminAccess;
 import java.util.Optional;
+import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
@@ -27,6 +30,84 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.projectiles.ProjectileSource;
 
 public final class ProtectionRuleSupport {
+
+    private static final Set<String> COMPOSTABLE_ITEM_NAMES = Set.of(
+        "APPLE",
+        "ALLIUM",
+        "AZURE_BLUET",
+        "AZALEA",
+        "BAMBOO",
+        "BAMBOO_SAPLING",
+        "BAKED_POTATO",
+        "BEETROOT",
+        "BEETROOT_SEEDS",
+        "BIG_DRIPLEAF",
+        "BLUE_ORCHID",
+        "BREAD",
+        "BROWN_MUSHROOM",
+        "BROWN_MUSHROOM_BLOCK",
+        "CACTUS",
+        "CAKE",
+        "CARROT",
+        "COCOA_BEANS",
+        "CORNFLOWER",
+        "COOKIE",
+        "DANDELION",
+        "DEAD_BUSH",
+        "DRIED_KELP",
+        "DRIED_KELP_BLOCK",
+        "FERN",
+        "FLOWERING_AZALEA",
+        "FLOWERING_AZALEA_LEAVES",
+        "GLOW_BERRIES",
+        "GLOW_LICHEN",
+        "GRASS",
+        "HANGING_ROOTS",
+        "HAY_BLOCK",
+        "KELP",
+        "LARGE_FERN",
+        "LILAC",
+        "LILY_OF_THE_VALLEY",
+        "LILY_PAD",
+        "MANGROVE_PROPAGULE",
+        "MANGROVE_ROOTS",
+        "MELON",
+        "MELON_SEEDS",
+        "MELON_SLICE",
+        "MOSS_BLOCK",
+        "MOSS_CARPET",
+        "NETHER_SPROUTS",
+        "NETHER_WART",
+        "NETHER_WART_BLOCK",
+        "OXEYE_DAISY",
+        "PINK_PETALS",
+        "PEONY",
+        "PITCHER_POD",
+        "POPPY",
+        "POTATO",
+        "PUMPKIN",
+        "PUMPKIN_PIE",
+        "PUMPKIN_SEEDS",
+        "RED_MUSHROOM",
+        "RED_MUSHROOM_BLOCK",
+        "ROSE_BUSH",
+        "SEA_PICKLE",
+        "SEAGRASS",
+        "SHORT_GRASS",
+        "SHROOMLIGHT",
+        "SMALL_DRIPLEAF",
+        "SPORE_BLOSSOM",
+        "SUGAR_CANE",
+        "SUNFLOWER",
+        "SWEET_BERRIES",
+        "TALL_GRASS",
+        "TORCHFLOWER_SEEDS",
+        "VINE",
+        "WARPED_WART_BLOCK",
+        "WHEAT",
+        "WHEAT_SEEDS",
+        "WITHER_ROSE"
+    );
 
     private final CoreClaimPlugin plugin;
     private final ClaimService claimService;
@@ -190,7 +271,7 @@ public final class ProtectionRuleSupport {
             return null;
         }
         if (isAxe(item) && isStrippableWood(material)) {
-            return ClaimPermission.INTERACT;
+            return ClaimPermission.BREAK;
         }
         if (isAxe(item) && isWeatheredOrWaxedCopper(material)) {
             return ClaimPermission.BREAK;
@@ -210,15 +291,66 @@ public final class ProtectionRuleSupport {
         return null;
     }
 
+    public boolean isComposterCompostInput(Block block, ItemStack item) {
+        if (block == null || block.getType() != Material.COMPOSTER) {
+            return false;
+        }
+        if (!(block.getBlockData() instanceof Levelled levelled)) {
+            return false;
+        }
+        return isComposterCompostInput(block.getType(), levelled.getLevel() >= levelled.getMaximumLevel(), item);
+    }
+
+    public boolean isComposterCompostInput(Material material, boolean composterFull, ItemStack item) {
+        return material == Material.COMPOSTER
+            && !composterFull
+            && item != null
+            && isCompostableMaterial(item.getType());
+    }
+
+    public boolean isCompostableMaterial(Material material) {
+        if (material == null || material.isAir()) {
+            return false;
+        }
+        String name = material.name();
+        return COMPOSTABLE_ITEM_NAMES.contains(name)
+            || name.endsWith("_SEEDS")
+            || name.endsWith("_SAPLING")
+            || name.endsWith("_LEAVES")
+            || name.endsWith("_PETALS")
+            || name.endsWith("_TULIP")
+            || name.endsWith("_VINES")
+            || name.endsWith("_VINES_PLANT")
+            || name.endsWith("_FUNGUS")
+            || name.endsWith("_ROOTS")
+            || name.endsWith("_MUSHROOM")
+            || name.endsWith("_MUSHROOM_BLOCK");
+    }
+
     public ClaimPermission requiredPermissionForEntityInteract(Player player, Entity entity) {
         if (entity instanceof ArmorStand) {
             return ClaimPermission.BREAK;
+        }
+        if (isMobEntity(entity)) {
+            return ClaimPermission.MOB_INTERACT;
         }
         if (entity instanceof InventoryHolder) {
             return ClaimPermission.INTERACT;
         }
         Material held = player.getInventory().getItemInMainHand().getType();
         return held == Material.NAME_TAG ? ClaimPermission.BREAK : ClaimPermission.INTERACT;
+    }
+
+    public ClaimPermission requiredPermissionForEntityDamage(Entity entity) {
+        return isMobEntity(entity) ? ClaimPermission.MOB_INTERACT : ClaimPermission.BREAK;
+    }
+
+    public boolean isMobEntity(Entity entity) {
+        return isMobEntityType(entity instanceof LivingEntity, entity instanceof Player, entity instanceof ArmorStand);
+    }
+
+    static boolean isMobEntityType(boolean livingEntity, boolean player, boolean armorStand) {
+        return livingEntity && !player && !armorStand;
     }
 
     public boolean isHazardousProjectile(Entity entity) {
@@ -247,6 +379,10 @@ public final class ProtectionRuleSupport {
 
     public ClaimPermission projectilePermission(Entity entity) {
         return isExplosionEntity(entity) ? ClaimPermission.EXPLOSION : ClaimPermission.BREAK;
+    }
+
+    public ClaimPermission projectileEntityPermission(Entity projectile, Entity target) {
+        return isExplosionEntity(projectile) ? ClaimPermission.EXPLOSION : requiredPermissionForEntityDamage(target);
     }
 
     public Player resolveOwnedEntityPlayer(Entity entity) {

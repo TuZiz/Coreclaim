@@ -57,6 +57,7 @@ public final class ClaimDefaultsService {
             claim.permission(ClaimPermission.BREAK),
             claim.permission(ClaimPermission.INTERACT),
             claim.permission(ClaimPermission.INTERACT),
+            claim.permission(ClaimPermission.MOB_INTERACT),
             claim.permission(ClaimPermission.REDSTONE),
             claim.permission(ClaimPermission.EXPLOSION),
             claim.permission(ClaimPermission.BUCKET),

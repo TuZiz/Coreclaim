@@ -8,6 +8,33 @@ final class MessageDefaultsRepair {
 
     private static final String OLD_ADMIN_USAGE =
         "&#FF6B6B鐢ㄦ硶 &8| &7/claim admin <create|info|playerclaims|diagnose|add|unadd|deny|undeny|permission|flag|cleanup|setserver> ...";
+    private static final String[] CLAIM_DETAIL_KEYS = {
+        "claim-detail-claim-id",
+        "claim-detail-server-id",
+        "claim-detail-system",
+        "claim-detail-quota",
+        "claim-detail-name",
+        "claim-detail-owner",
+        "claim-detail-world",
+        "claim-detail-core",
+        "claim-detail-size",
+        "claim-detail-bounds",
+        "claim-detail-height-full",
+        "claim-detail-height-selection",
+        "claim-detail-teleport-custom",
+        "claim-detail-teleport-core",
+        "claim-detail-deny",
+        "claim-detail-rules",
+        "claim-detail-permissions",
+        "claim-detail-permissions-extra",
+        "claim-detail-flags",
+        "claim-detail-core-visible",
+        "claim-detail-enter-message",
+        "claim-detail-leave-message",
+        "claim-detail-trusted",
+        "claim-detail-denied",
+        "claim-detail-teleport-yaw-pitch"
+    };
 
     private MessageDefaultsRepair() {
     }
@@ -48,9 +75,11 @@ final class MessageDefaultsRepair {
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-deny", "&#55FFAA详情 &#475569| &#CBD5E1Deny 状态: &#FF6B6B{denied} &#CBD5E1人 &#475569| &#CBD5E1deny *: {deny_all}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions", "&#55FFAA详情 &#475569| &#CBD5E1默认权限: &#94A3B8放置 {place} &#475569| &#94A3B8破坏 {break} &#475569| &#94A3B8交互 {interact} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions", "&#55FFAA详情 &#475569| &#CBD5E1默认权限: &#94A3B8放置 {place} &#475569| &#94A3B8破坏 {break} &#475569| &#94A3B8使用 {interact} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}");
+            changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions-extra", "        &#94A3B8爆炸 {explosion} &#475569| &#94A3B8桶 {bucket} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-flags", "&#55FFAA详情 &#475569| &#CBD5E1交互旗标: {flags}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-flags", "&#55FFAA详情 &#475569| &#CBD5E1细分权限: {flags}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-denied", "&#55FFAA详情 &#475569| &#CBD5E1Denied 玩家: {players}");
+            changed |= replaceMessagesWithPrefix(messagesConfig, defaults, CLAIM_DETAIL_KEYS, "&#55FFAA详情 &#475569| ");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAA旗标 &#475569| &#CBD5E1交互旗标 - &#F8FAFC{name}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAA旗标 &#475569| &#CBD5E1细分权限 - &#F8FAFC{name}");
             changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置门禁", "&#FACC15/claim deny <玩家|*|全部> &#CBD5E1设置禁足");
@@ -76,8 +105,10 @@ final class MessageDefaultsRepair {
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-deny-all-disabled", "&#55FFAADeny Mode &#475569| &#CBD5E1Disabled &#F8FAFCdeny * &#CBD5E1for claim &#F8FAFC{name}&#CBD5E1.");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions", "&#55FFAADetail &#475569| &#CBD5E1Default Permissions: &#94A3B8Place {place} &#475569| &#94A3B8Break {break} &#475569| &#94A3B8Interact {interact} &#475569| &#94A3B8Teleport {teleport} &#475569| &#94A3B8Flight {flight}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions", "&#55FFAADetail &#475569| &#CBD5E1Default Permissions: &#94A3B8Place {place} &#475569| &#94A3B8Break {break} &#475569| &#94A3B8Use {interact} &#475569| &#94A3B8Teleport {teleport} &#475569| &#94A3B8Flight {flight}");
+            changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-permissions-extra", "             &#94A3B8Explosion {explosion} &#475569| &#94A3B8Bucket {bucket} &#475569| &#94A3B8Teleport {teleport} &#475569| &#94A3B8Flight {flight}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-flags", "&#55FFAADetail &#475569| &#CBD5E1Interaction Flags: {flags}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "claim-detail-flags", "&#55FFAADetail &#475569| &#CBD5E1Detailed Permissions: {flags}");
+            changed |= replaceMessagesWithPrefix(messagesConfig, defaults, CLAIM_DETAIL_KEYS, "&#55FFAADetail &#475569| ");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAAFlag &#475569| &#CBD5E1Interaction Flags - &#F8FAFC{name}");
             changed |= replaceMessageIfExact(messagesConfig, defaults, "flag-summary-header", "&#55FFAAFlag &#475569| &#CBD5E1Detailed Permissions - &#F8FAFC{name}");
             changed |= replaceListEntryIfExact(messagesConfig, "help-player", "&#FACC15/claim flag [list] &#CBD5E1View or update interaction flags", "&#FACC15/claim set &#CBD5E1Open current claim permission settings");
@@ -86,6 +117,25 @@ final class MessageDefaultsRepair {
             changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update interaction flags", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
             changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update detailed permissions", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
             changed |= replaceListEntryIfExact(messagesConfig, "help-admin", "&#FACC15/claim admin flag <flag> <allow|deny|unset> &#CBD5E1Force-update special rules", "&#FACC15/claim admin permission <permission> <allow|deny|unset> &#CBD5E1Force-update permission");
+        }
+        return changed;
+    }
+
+    private static boolean replaceMessagesWithPrefix(
+        FileConfiguration messagesConfig,
+        FileConfiguration defaults,
+        String[] paths,
+        String oldPrefix
+    ) {
+        boolean changed = false;
+        for (String path : paths) {
+            String value = messagesConfig.getString(path);
+            String defaultValue = defaults.getString(path);
+            if (value == null || defaultValue == null || !value.startsWith(oldPrefix) || value.equals(defaultValue)) {
+                continue;
+            }
+            messagesConfig.set(path, defaultValue);
+            changed = true;
         }
         return changed;
     }

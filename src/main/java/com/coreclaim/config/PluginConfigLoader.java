@@ -202,7 +202,7 @@ final class PluginConfigLoader {
     }
 
     private static String permissionKey(ClaimPermission permission) {
-        return permission.name().toLowerCase(Locale.ROOT);
+        return permission.key();
     }
 
     static String defaultFlagValue(ClaimFlag flag, boolean systemDefaults) {

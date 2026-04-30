@@ -25,7 +25,8 @@ public final class EntityProtectionListener implements Listener {
         }
 
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
-        if (claim.isPresent() && !support.claimService().hasPermission(claim.get(), attacker.getUniqueId(), ClaimPermission.BREAK)) {
+        ClaimPermission permission = support.requiredPermissionForEntityDamage(event.getEntity());
+        if (claim.isPresent() && !support.claimService().hasPermission(claim.get(), attacker.getUniqueId(), permission)) {
             event.setCancelled(true);
             support.sendProtectionDeny(attacker, claim.get());
         }
@@ -38,7 +39,9 @@ public final class EntityProtectionListener implements Listener {
             return;
         }
         Optional<Claim> claim = support.claimService().findClaim(event.getEntity().getLocation());
-        ClaimPermission permission = support.isExplosionEntity(event.getCombuster()) ? ClaimPermission.EXPLOSION : ClaimPermission.BREAK;
+        ClaimPermission permission = support.isExplosionEntity(event.getCombuster())
+            ? ClaimPermission.EXPLOSION
+            : support.requiredPermissionForEntityDamage(event.getEntity());
         if (claim.isPresent() && !support.claimService().hasPermission(claim.get(), attacker.getUniqueId(), permission)) {
             event.setCancelled(true);
             support.sendProtectionDeny(attacker, claim.get());

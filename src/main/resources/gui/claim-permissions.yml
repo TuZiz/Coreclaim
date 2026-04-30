@@ -1,10 +1,10 @@
-layout-version: 11
+layout-version: 12
 title: '&#475569[&#A855F7权限&#475569] &#A855F7&l权限管理 - {name}'
 
 Shape:
   - 'FFFFIFFFF'
   - 'FFPBHREFF'
-  - 'FFKTYFFFF'
+  - 'FFKTYCFFF'
   - 'FFF9MFFFF'
   - 'FFFFDFFFF'
   - 'FFFFXFFFF'
@@ -28,6 +28,7 @@ items:
       - ' &#CBD5E1已自定义权限: &#FFD166{custom_count}'
       - ''
       - ' &#CBD5E1交互权限包含容器、门、床和普通右键'
+      - ' &#CBD5E1生物交互控制攻击、喂养、繁殖、骑乘和牵引生物'
       - ' &#CBD5E1红石权限包含按钮、拉杆和压力板'
       - ' &#CBD5E1液体流入独立于桶权限'
 
@@ -132,6 +133,20 @@ items:
       - ' &#FFD166点击切换默认权限'
     sound: UI_BUTTON_CLICK
 
+  perm-mob-interact:
+    char: 'C'
+    material: ZOMBIE_HEAD
+    custom-model-data: 1614
+    name: '&#A7F3D0&l生物交互权限'
+    lore:
+      - ''
+      - ' &#CBD5E1权限当前状态: {state}'
+      - ' &#CBD5E1控制动物、怪物和村民等生物的攻击与右键互动'
+      - ' &#CBD5E1包括喂养、繁殖、骑乘、牵引、钓竿拉拽和药水影响'
+      - ''
+      - ' &#FFD166点击切换默认权限'
+    sound: UI_BUTTON_CLICK
+
   perm-liquid-flow:
     char: '9'
     material: WATER_BUCKET
@@ -167,7 +182,7 @@ items:
     name: '&#FF6B6B&l一键禁止危险权限'
     lore:
       - ''
-      - ' &#CBD5E1会禁止放置、破坏、交互、红石、爆炸、桶'
+      - ' &#CBD5E1会禁止放置、破坏、交互、生物交互、红石、爆炸、桶'
       - ' &#CBD5E1并禁止外部液体流入领地'
       - ' &#CBD5E1不会修改传送、飞行和领地时间'
       - ''

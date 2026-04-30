@@ -371,7 +371,7 @@ final class ClaimTabCompletionService {
 
     private List<String> permissionKeys() {
         ArrayList<String> keys = new ArrayList<>(Arrays.stream(ClaimPermission.values())
-            .map(permission -> permission.name().toLowerCase(Locale.ROOT))
+            .map(ClaimPermission::key)
             .toList());
         keys.addAll(flagKeys());
         return keys;

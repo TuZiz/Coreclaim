@@ -39,46 +39,56 @@ final class ClaimCommandFormatter {
             canSeeSensitive = claim.owner().equals(player.getUniqueId()) || AdminAccess.hasViewAccess(player);
         }
         if (adminView) {
-            sender.sendMessage(plugin.message("claim-detail-claim-id", "{id}", String.valueOf(claim.id())));
-            sender.sendMessage(plugin.message("claim-detail-server-id", "{server}", claimService.displayServerId(claim)));
-            sender.sendMessage(plugin.message("claim-detail-system", "{value}", claim.systemManaged() ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no")));
-            sender.sendMessage(plugin.message("claim-detail-quota", "{value}", claimService.countsTowardQuota(claim) ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no")));
+            sendDetail(sender, "claim-detail-claim-id", "{id}", String.valueOf(claim.id()));
+            sendDetail(sender, "claim-detail-server-id", "{server}", claimService.displayServerId(claim));
+            sendDetail(sender, "claim-detail-system", "{value}", claim.systemManaged() ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no"));
+            sendDetail(sender, "claim-detail-quota", "{value}", claimService.countsTowardQuota(claim) ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no"));
         }
-        sender.sendMessage(plugin.message("claim-detail-name", "{name}", (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name()));
-        sender.sendMessage(plugin.message("claim-detail-owner", "{owner}", claim.ownerName()));
-        sender.sendMessage(plugin.message("claim-detail-world", "{world}", claim.world()));
-        sender.sendMessage(plugin.message("claim-detail-core", "{x}", String.valueOf(claim.centerX()), "{y}", String.valueOf(claim.centerY()), "{z}", String.valueOf(claim.centerZ())));
-        sender.sendMessage(plugin.message("claim-detail-size", "{width}", String.valueOf(claim.width()), "{depth}", String.valueOf(claim.depth()), "{area}", String.valueOf(claim.area())));
-        sender.sendMessage(plugin.message("claim-detail-bounds", "{min_x}", String.valueOf(claim.minX()), "{max_x}", String.valueOf(claim.maxX()), "{min_z}", String.valueOf(claim.minZ()), "{max_z}", String.valueOf(claim.maxZ())));
-        sender.sendMessage(claim.fullHeight()
-            ? plugin.message("claim-detail-height-full")
-            : plugin.message("claim-detail-height-selection", "{min_y}", String.valueOf(claim.minY()), "{max_y}", String.valueOf(claim.maxY()), "{height}", String.valueOf(claim.height())));
-        sender.sendMessage(claim.hasTeleportPoint()
-            ? plugin.message("claim-detail-teleport-custom", "{point}", formatTeleportPoint(claim))
-            : plugin.message("claim-detail-teleport-core"));
-        sender.sendMessage(plugin.message("claim-detail-deny", "{denied}", String.valueOf(claim.deniedMembers().size()), "{deny_all}", claim.denyAll() ? plugin.plainMessage("state-enabled") : plugin.plainMessage("state-disabled")));
-        sender.sendMessage(plugin.message("claim-detail-rules", "{source}", ruleSourceSummary(claim)));
-        sender.sendMessage(plugin.message(
+        sendDetail(sender, "claim-detail-name", "{name}", (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name());
+        sendDetail(sender, "claim-detail-owner", "{owner}", claim.ownerName());
+        sendDetail(sender, "claim-detail-world", "{world}", claim.world());
+        sendDetail(sender, "claim-detail-core", "{x}", String.valueOf(claim.centerX()), "{y}", String.valueOf(claim.centerY()), "{z}", String.valueOf(claim.centerZ()));
+        sendDetail(sender, "claim-detail-size", "{width}", String.valueOf(claim.width()), "{depth}", String.valueOf(claim.depth()), "{area}", String.valueOf(claim.area()));
+        sendDetail(sender, "claim-detail-bounds", "{min_x}", String.valueOf(claim.minX()), "{max_x}", String.valueOf(claim.maxX()), "{min_z}", String.valueOf(claim.minZ()), "{max_z}", String.valueOf(claim.maxZ()));
+        if (claim.fullHeight()) {
+            sendDetail(sender, "claim-detail-height-full");
+        } else {
+            sendDetail(sender, "claim-detail-height-selection", "{min_y}", String.valueOf(claim.minY()), "{max_y}", String.valueOf(claim.maxY()), "{height}", String.valueOf(claim.height()));
+        }
+        if (claim.hasTeleportPoint()) {
+            sendDetail(sender, "claim-detail-teleport-custom", "{point}", formatTeleportPoint(claim));
+        } else {
+            sendDetail(sender, "claim-detail-teleport-core");
+        }
+        sendDetail(sender, "claim-detail-deny", "{denied}", String.valueOf(claim.deniedMembers().size()), "{deny_all}", claim.denyAll() ? plugin.plainMessage("state-enabled") : plugin.plainMessage("state-disabled"));
+        sendDetail(sender, "claim-detail-rules", "{source}", ruleSourceSummary(claim));
+        sendDetail(
+            sender,
             "claim-detail-permissions",
             "{place}", stateText(claim.permission(ClaimPermission.PLACE)),
             "{break}", stateText(claim.permission(ClaimPermission.BREAK)),
             "{interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
-            "{redstone}", stateText(claim.permission(ClaimPermission.REDSTONE)),
+            "{redstone}", stateText(claim.permission(ClaimPermission.REDSTONE))
+        );
+        sendDetail(
+            sender,
+            "claim-detail-permissions-extra",
+            "{mob_interact}", stateText(claim.permission(ClaimPermission.MOB_INTERACT)),
             "{explosion}", stateText(claim.permission(ClaimPermission.EXPLOSION)),
             "{bucket}", stateText(claim.permission(ClaimPermission.BUCKET)),
             "{teleport}", stateText(claim.permission(ClaimPermission.TELEPORT)),
             "{flight}", stateText(claim.permission(ClaimPermission.FLIGHT))
-        ));
-        sender.sendMessage(plugin.message("claim-detail-flags", "{flags}", summarizeFlags(claim)));
-        sender.sendMessage(plugin.message("claim-detail-core-visible", "{value}", claim.coreVisible() ? plugin.plainMessage("state-core-visible") : plugin.plainMessage("state-core-hidden")));
-        sender.sendMessage(plugin.message("claim-detail-enter-message", "{message}", previewMessage(claim.enterMessage(), claim, plugin.plainMessage("claim-detail-default-enter"))));
-        sender.sendMessage(plugin.message("claim-detail-leave-message", "{message}", previewMessage(claim.leaveMessage(), claim, plugin.plainMessage("claim-detail-default-leave"))));
+        );
+        sendDetail(sender, "claim-detail-flags", "{flags}", summarizeFlags(claim));
+        sendDetail(sender, "claim-detail-core-visible", "{value}", claim.coreVisible() ? plugin.plainMessage("state-core-visible") : plugin.plainMessage("state-core-hidden"));
+        sendDetail(sender, "claim-detail-enter-message", "{message}", previewMessage(claim.enterMessage(), claim, plugin.plainMessage("claim-detail-default-enter")));
+        sendDetail(sender, "claim-detail-leave-message", "{message}", previewMessage(claim.leaveMessage(), claim, plugin.plainMessage("claim-detail-default-leave")));
         if (canSeeSensitive) {
-            sender.sendMessage(plugin.message("claim-detail-trusted", "{players}", joinPlayerNames(claim.trustedMembers())));
-            sender.sendMessage(plugin.message("claim-detail-denied", "{players}", joinPlayerNames(claim.deniedMembers())));
+            sendDetail(sender, "claim-detail-trusted", "{players}", joinPlayerNames(claim.trustedMembers()));
+            sendDetail(sender, "claim-detail-denied", "{players}", joinPlayerNames(claim.deniedMembers()));
         }
         if (adminView && claim.hasTeleportPoint()) {
-            sender.sendMessage(plugin.message("claim-detail-teleport-yaw-pitch", "{yaw}", formatYawPitch(claim.teleportYaw()), "{pitch}", formatYawPitch(claim.teleportPitch())));
+            sendDetail(sender, "claim-detail-teleport-yaw-pitch", "{yaw}", formatYawPitch(claim.teleportYaw()), "{pitch}", formatYawPitch(claim.teleportPitch()));
         }
     }
 
@@ -119,6 +129,10 @@ final class ClaimCommandFormatter {
 
     String stateText(boolean enabled) {
         return plugin.plainMessage(enabled ? "state-allow" : "state-deny");
+    }
+
+    private void sendDetail(CommandSender sender, String path, String... replacements) {
+        sender.sendMessage(plugin.plainMessage(path, replacements));
     }
 
     void sendCleanupEntries(CommandSender sender, String title, List<ClaimCleanupService.CleanupEntry> entries, boolean showGrace) {

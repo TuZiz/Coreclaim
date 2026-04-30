@@ -58,7 +58,7 @@ public final class ProjectileProtectionListener implements Listener {
         }
         Optional<Claim> claim = support.claimService().findClaim(event.getHitEntity().getLocation());
         if (claim.isPresent() && support.isHazardousProjectile(event.getEntity())
-            && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectilePermission(event.getEntity()))) {
+            && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectileEntityPermission(event.getEntity(), event.getHitEntity()))) {
             event.setCancelled(true);
             event.getEntity().remove();
             support.sendProtectionDeny(shooter, claim.get());
@@ -75,7 +75,7 @@ public final class ProjectileProtectionListener implements Listener {
         Claim deniedClaim = null;
         for (LivingEntity entity : event.getAffectedEntities()) {
             Optional<Claim> claim = support.claimService().findClaim(entity.getLocation());
-            if (claim.isPresent() && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectilePermission(event.getEntity()))) {
+            if (claim.isPresent() && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectileEntityPermission(event.getEntity(), entity))) {
                 event.setIntensity(entity, 0D);
                 blocked = true;
                 if (deniedClaim == null) {
@@ -111,7 +111,7 @@ public final class ProjectileProtectionListener implements Listener {
         Claim[] deniedClaim = new Claim[1];
         boolean blocked = event.getAffectedEntities().removeIf(entity -> {
             Optional<Claim> claim = support.claimService().findClaim(entity.getLocation());
-            boolean denied = claim.isPresent() && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectilePermission(event.getEntity()));
+            boolean denied = claim.isPresent() && !support.claimService().hasPermission(claim.get(), shooter.getUniqueId(), support.projectileEntityPermission(event.getEntity(), entity));
             if (denied && deniedClaim[0] == null) {
                 deniedClaim[0] = claim.get();
             }

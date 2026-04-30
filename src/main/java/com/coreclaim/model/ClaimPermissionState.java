@@ -5,6 +5,7 @@ final class ClaimPermissionState {
     private boolean allowPlace;
     private boolean allowBreak;
     private boolean allowInteract;
+    private boolean allowMobInteract;
     private boolean allowRedstone;
     private boolean allowExplosion;
     private boolean allowBucket;
@@ -16,6 +17,7 @@ final class ClaimPermissionState {
         boolean allowBreak,
         boolean allowInteract,
         boolean allowContainer,
+        boolean allowMobInteract,
         boolean allowRedstone,
         boolean allowExplosion,
         boolean allowBucket,
@@ -25,6 +27,7 @@ final class ClaimPermissionState {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
         this.allowInteract = allowInteract && allowContainer;
+        this.allowMobInteract = allowMobInteract;
         this.allowRedstone = allowRedstone;
         this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
@@ -40,6 +43,7 @@ final class ClaimPermissionState {
             case PLACE -> allowPlace;
             case BREAK -> allowBreak;
             case INTERACT -> allowInteract;
+            case MOB_INTERACT -> allowMobInteract;
             case REDSTONE -> allowRedstone;
             case EXPLOSION -> allowExplosion;
             case BUCKET -> allowBucket;
@@ -57,6 +61,7 @@ final class ClaimPermissionState {
             case PLACE -> allowPlace = allowed;
             case BREAK -> allowBreak = allowed;
             case INTERACT -> allowInteract = allowed;
+            case MOB_INTERACT -> allowMobInteract = allowed;
             case REDSTONE -> allowRedstone = allowed;
             case EXPLOSION -> allowExplosion = allowed;
             case BUCKET -> allowBucket = allowed;

@@ -6,6 +6,8 @@ public final class ClaimMemberSettings {
     private boolean allowBreak;
     private boolean allowInteract;
     private boolean allowMobInteract;
+    private boolean allowAnimalSpawn;
+    private boolean allowMonsterSpawn;
     private boolean allowRedstone;
     private boolean allowExplosion;
     private boolean allowBucket;
@@ -18,6 +20,8 @@ public final class ClaimMemberSettings {
         boolean allowInteract,
         boolean allowContainer,
         boolean allowMobInteract,
+        boolean allowAnimalSpawn,
+        boolean allowMonsterSpawn,
         boolean allowRedstone,
         boolean allowExplosion,
         boolean allowBucket,
@@ -28,6 +32,8 @@ public final class ClaimMemberSettings {
         this.allowBreak = allowBreak;
         this.allowInteract = allowInteract && allowContainer;
         this.allowMobInteract = allowMobInteract;
+        this.allowAnimalSpawn = allowAnimalSpawn;
+        this.allowMonsterSpawn = allowMonsterSpawn;
         this.allowRedstone = allowRedstone;
         this.allowExplosion = allowExplosion;
         this.allowBucket = allowBucket;
@@ -47,6 +53,12 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.MOB_INTERACT) {
             return allowMobInteract;
+        }
+        if (permission == ClaimPermission.ANIMAL_SPAWN) {
+            return allowAnimalSpawn;
+        }
+        if (permission == ClaimPermission.MONSTER_SPAWN) {
+            return allowMonsterSpawn;
         }
         if (permission == ClaimPermission.REDSTONE) {
             return allowRedstone;
@@ -78,6 +90,14 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.MOB_INTERACT) {
             allowMobInteract = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.ANIMAL_SPAWN) {
+            allowAnimalSpawn = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.MONSTER_SPAWN) {
+            allowMonsterSpawn = allowed;
             return;
         }
         if (permission == ClaimPermission.REDSTONE) {

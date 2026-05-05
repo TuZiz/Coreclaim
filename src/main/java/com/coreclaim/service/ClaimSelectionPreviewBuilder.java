@@ -85,7 +85,7 @@ final class ClaimSelectionPreviewBuilder {
         if (!plugin.settings().isClaimWorld(world.getName())) {
             return basePreview.withFailure(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorldsDisplay()));
         }
-        if (Math.max(Math.max(east, west), Math.max(north, south)) > group.maxDistance()) {
+        if (group.exceedsDistanceLimit(east, south, west, north)) {
             return basePreview.withFailure(plugin.message("selection-too-large", "{max}", String.valueOf(group.maxDistance() * 2 + 1)));
         }
 

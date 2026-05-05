@@ -79,6 +79,12 @@ final class ClaimCommandFormatter {
             "{teleport}", stateText(claim.permission(ClaimPermission.TELEPORT)),
             "{flight}", stateText(claim.permission(ClaimPermission.FLIGHT))
         );
+        sendDetail(
+            sender,
+            "claim-detail-permissions-spawn",
+            "{animal_spawn}", stateText(claim.permission(ClaimPermission.ANIMAL_SPAWN)),
+            "{monster_spawn}", stateText(claim.permission(ClaimPermission.MONSTER_SPAWN))
+        );
         sendDetail(sender, "claim-detail-flags", "{flags}", summarizeFlags(claim));
         sendDetail(sender, "claim-detail-core-visible", "{value}", claim.coreVisible() ? plugin.plainMessage("state-core-visible") : plugin.plainMessage("state-core-hidden"));
         sendDetail(sender, "claim-detail-enter-message", "{message}", previewMessage(claim.enterMessage(), claim, plugin.plainMessage("claim-detail-default-enter")));

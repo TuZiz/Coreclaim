@@ -100,6 +100,8 @@ class ClaimInputAccessTest {
             true,
             true,
             true,
+            true,
+            true,
             false,
             false,
             null,

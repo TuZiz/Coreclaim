@@ -327,6 +327,20 @@ public final class ProtectionRuleSupport {
             || name.endsWith("_MUSHROOM_BLOCK");
     }
 
+    public boolean isCakeConsumption(Material material, ItemStack item) {
+        if (!isCakeBlock(material)) {
+            return false;
+        }
+        if (material != Material.CAKE) {
+            return true;
+        }
+        if (item == null || item.getType().isAir()) {
+            return true;
+        }
+        String name = item.getType().name();
+        return !name.equals("CANDLE") && !name.endsWith("_CANDLE");
+    }
+
     public ClaimPermission requiredPermissionForEntityInteract(Player player, Entity entity) {
         if (entity instanceof ArmorStand) {
             return ClaimPermission.BREAK;
@@ -513,6 +527,16 @@ public final class ProtectionRuleSupport {
             || name.endsWith("CAULDRON")
             || material == Material.BEEHIVE
             || material == Material.BEE_NEST;
+    }
+
+    private boolean isCakeBlock(Material material) {
+        if (material == null) {
+            return false;
+        }
+        String name = material.name();
+        return material == Material.CAKE
+            || name.equals("CANDLE_CAKE")
+            || name.endsWith("_CANDLE_CAKE");
     }
 
     private boolean isStrippableWood(Material material) {

@@ -27,6 +27,7 @@ final class MessageDefaultsRepair {
         "claim-detail-rules",
         "claim-detail-permissions",
         "claim-detail-permissions-extra",
+        "claim-detail-permissions-spawn",
         "claim-detail-flags",
         "claim-detail-core-visible",
         "claim-detail-enter-message",

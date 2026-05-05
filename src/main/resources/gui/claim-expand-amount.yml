@@ -26,7 +26,7 @@ items:
       - ' &#CBD5E1本次扩建: &#55FFAA{amount} &#CBD5E1格'
       - ' &#CBD5E1当前该方向: &#FFD166{current}'
       - ' &#CBD5E1目标该方向: &#FFD166{target}'
-      - ' &#CBD5E1最大可选: &#4CC9F0{max} &#CBD5E1格'
+      - ' &#CBD5E1最大可选: &#4CC9F0{max}'
       - ''
       - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{depth}'
       - ' &#CBD5E1预计花费: &#F59E0B{price}'
@@ -96,7 +96,7 @@ items:
     name: '&#4CC9F0&l选择最大可扩'
     lore:
       - ''
-      - ' &#CBD5E1当前方向最多可选: &#4CC9F0{max} &#CBD5E1格'
+      - ' &#CBD5E1当前方向最多可选: &#4CC9F0{max}'
       - ' &#CBD5E1如果存在重叠，确认页会阻止扣费'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 

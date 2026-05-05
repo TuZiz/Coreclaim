@@ -42,7 +42,7 @@ final class PluginResourceManager {
         Map.entry("gui/claim-expand-confirm.yml", "layout-version: 1"),
         Map.entry("gui/trust-online-add.yml", "layout-version: 3"),
         Map.entry("gui/core.yml", "layout-version: 6"),
-        Map.entry("gui/claim-permissions.yml", "layout-version: 11"),
+        Map.entry("gui/claim-permissions.yml", "layout-version: 13"),
         Map.entry("gui/trust.yml", "layout-version: 5"),
         Map.entry("gui/selection-create.yml", "layout-version: 3")
     );
@@ -143,16 +143,43 @@ final class PluginResourceManager {
             FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             FileConfiguration config = plugin.getConfig();
             List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, config);
-            if (missingPaths.isEmpty()) {
+            boolean changed = false;
+            if (!missingPaths.isEmpty()) {
+                config.setDefaults(defaults);
+                config.options().copyDefaults(true);
+                changed = true;
+            }
+            changed |= repairLegacySpacingDefaults(config, defaults);
+            if (!changed) {
                 return;
             }
-            config.setDefaults(defaults);
-            config.options().copyDefaults(true);
             plugin.saveConfig();
-            plugin.getLogger().info("Added missing config defaults: " + String.join(", ", missingPaths));
+            if (!missingPaths.isEmpty()) {
+                plugin.getLogger().info("Added missing config defaults: " + String.join(", ", missingPaths));
+            }
         } catch (Exception exception) {
             plugin.getLogger().warning("Failed to merge config defaults: " + exception.getMessage());
         }
+    }
+
+    private boolean repairLegacySpacingDefaults(FileConfiguration config, FileConfiguration defaults) {
+        boolean changed = false;
+        changed |= replaceLegacyIntDefault(config, defaults, "minimum-gap", 50);
+        changed |= replaceLegacyIntDefault(config, defaults, "selection-minimum-gap", 10);
+        return changed;
+    }
+
+    private boolean replaceLegacyIntDefault(FileConfiguration config, FileConfiguration defaults, String path, int legacyValue) {
+        if (!config.isSet(path) || config.getInt(path) != legacyValue) {
+            return false;
+        }
+        int replacement = defaults.getInt(path, legacyValue);
+        if (replacement == legacyValue) {
+            return false;
+        }
+        config.set(path, replacement);
+        plugin.getLogger().info("Updated legacy config default " + path + " from " + legacyValue + " to " + replacement + ".");
+        return true;
     }
 
     private void ensureRulesDefaults() {

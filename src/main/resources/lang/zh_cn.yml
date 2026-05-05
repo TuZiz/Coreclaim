@@ -22,7 +22,7 @@ world-missing: '&#FF6B6B&l! &#CBD5E1目标世界不存在或未加载。'
 
 # 领地创建与限制
 claim-overlap: '&#FF6B6B&l! &#CBD5E1这里离其他领地太近了，请换个地方试试。'
-claim-core-too-close: '&#FF6B6B&l! &#CBD5E1保护区重叠：&#F8FAFC50x50 &#CBD5E1范围内只能存在一个领地核心。'
+claim-core-too-close: '&#FF6B6B&l! &#CBD5E1领地核心距离过近，请调整位置后重试。'
 starter-core-first-only: '&#FF6B6B&l! &#CBD5E1新人核心只能用于创建第一块领地。'
 starter-core-join-reminder: '&#93C5FD在线奖励 &#64748B| &#CBD5E1累计在线 &#E2E8F0{minutes} &#CBD5E1分钟可获得第一块领地核心，还差 &#E2E8F0{remaining} &#CBD5E1分钟。'
 starter-core-reminder: '&#FCD34D提醒 &#64748B| &#CBD5E1累计在线 &#E2E8F0{minutes} &#CBD5E1分钟会自动发放新人核心，还需 &#E2E8F0{remaining} &#CBD5E1分钟。'
@@ -243,8 +243,8 @@ claim-server-updated: '&#55FFAA已修复 &#475569| &#CBD5E1已将领地 &#4CC9F0
 # 选区与跨服补充
 selection-create-system-success: '&#55FFAA系统领地 &#475569| &#CBD5E1已创建 &#F8FAFC{name} &#CBD5E1，大小 &#F8FAFC{width}x{height}x{depth} &#CBD5E1，已标记为 &#FFD166[SYSTEM]&#CBD5E1。'
 selection-core-blocked: '&#FF6B6B&l! &#CBD5E1选区中心位置被占用，请整体平移后再试。'
-selection-claim-too-close: '&#FF6B6B&l! &#CBD5E1锄头圈地之间至少需要保留 &#F8FAFC{gap} &#CBD5E1格间隔。'
-selection-near-core-claim: '&#FF6B6B&l! &#CBD5E1锄头圈地不能贴着核心领地创建，至少保留 &#F8FAFC{gap} &#CBD5E1格。'
+selection-claim-too-close: '&#FF6B6B&l! &#CBD5E1锄头圈地之间当前配置要求保留 &#F8FAFC{gap} &#CBD5E1格间隔。'
+selection-near-core-claim: '&#FF6B6B&l! &#CBD5E1锄头圈地与核心领地当前配置要求保留 &#F8FAFC{gap} &#CBD5E1格间隔。'
 selection-move-suggestion: ' &#CBD5E1建议向 &#FACC15{direction} &#CBD5E1移动 &#FACC15{blocks} &#CBD5E1格。'
 cross-server-teleport-server-id-misconfigured: '&#FF6B6B&l! &#CBD5E1当前服的跨服路由未配置完成，请先设置唯一的 &#F8FAFCserver-id&#CBD5E1。'
 system-claim-market-denied: '&#FF6B6B&l! &#CBD5E1系统领地不能参与玩家市场操作。'
@@ -303,6 +303,7 @@ claim-detail-deny: '&#CBD5E1禁足状态: &#FF6B6B{denied} &#CBD5E1人 &#475569|
 claim-detail-rules: '&#CBD5E1权限来源: {source}'
 claim-detail-permissions: '&#CBD5E1权限: &#94A3B8放置 {place} &#475569| &#94A3B8破坏 {break} &#475569| &#94A3B8交互 {interact} &#475569| &#94A3B8红石 {redstone}'
 claim-detail-permissions-extra: '        &#94A3B8生物 {mob_interact} &#475569| &#94A3B8爆炸 {explosion} &#475569| &#94A3B8桶 {bucket} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}'
+claim-detail-permissions-spawn: '        &#94A3B8动物生成 {animal_spawn} &#475569| &#94A3B8怪物生成 {monster_spawn}'
 claim-detail-flags: '&#CBD5E1扩展权限: {flags}'
 claim-detail-core-visible: '&#CBD5E1核心显示: {value}'
 claim-detail-enter-message: '&#CBD5E1进入提示: &#4CC9F0{message}'

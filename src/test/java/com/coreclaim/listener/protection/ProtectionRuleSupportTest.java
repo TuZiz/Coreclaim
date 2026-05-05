@@ -63,6 +63,18 @@ class ProtectionRuleSupportTest {
     }
 
     @Test
+    void cakeConsumptionCanBeAllowedWithoutAllowingCandlePlacement() {
+        assertTrue(support.isCakeConsumption(Material.CAKE, null));
+        assertTrue(support.isCakeConsumption(Material.CAKE, new ItemStack(Material.AIR)));
+        assertTrue(support.isCakeConsumption(Material.CAKE, new ItemStack(Material.STICK)));
+        assertTrue(support.isCakeConsumption(Material.CANDLE_CAKE, null));
+        assertTrue(support.isCakeConsumption(Material.WHITE_CANDLE_CAKE, new ItemStack(Material.STICK)));
+        assertFalse(support.isCakeConsumption(Material.CAKE, new ItemStack(Material.CANDLE)));
+        assertFalse(support.isCakeConsumption(Material.CAKE, new ItemStack(Material.WHITE_CANDLE)));
+        assertFalse(support.isCakeConsumption(Material.OAK_LOG, new ItemStack(Material.STICK)));
+    }
+
+    @Test
     void mergedInteractionPermissionsClassifyCommonBlocks() {
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.CHEST, null));
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_DOOR, null));

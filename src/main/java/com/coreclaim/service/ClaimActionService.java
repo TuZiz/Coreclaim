@@ -183,9 +183,11 @@ public final class ClaimActionService {
         World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
         if (world != null) {
             Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
-            if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
-                coreLocation.getBlock().setType(org.bukkit.Material.AIR, false);
-            }
+            plugin.platformScheduler().runLocationTask(coreLocation, () -> {
+                if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
+                    coreLocation.getBlock().setType(org.bukkit.Material.AIR, false);
+                }
+            });
         }
         player.sendMessage(plugin.message("claim-core-hidden", "{name}", claim.name()));
         return true;
@@ -302,7 +304,7 @@ public final class ClaimActionService {
         int north = claim.north();
 
         int currentDistance = claim.distance(direction);
-        int expandAmount = Math.max(0, Math.min(Math.max(0, amount), group.maxDistance() - currentDistance));
+        int expandAmount = group.clampExpandAmount(currentDistance, amount);
         if (expandAmount <= 0) {
             return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.depth(), east, south, west, north, true, false);
         }

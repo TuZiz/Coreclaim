@@ -3,6 +3,7 @@ package com.coreclaim.listener.protection;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimPermission;
 import java.util.Optional;
+import java.util.UUID;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
@@ -34,6 +35,9 @@ public final class VehicleProtectionListener implements Listener {
         Optional<Claim> fromClaim = support.claimService().findClaim(event.getFrom());
         Optional<Claim> toClaim = support.claimService().findClaim(event.getTo());
         if (support.claimId(fromClaim) == support.claimId(toClaim) || toClaim.isEmpty()) {
+            return;
+        }
+        if (canMountedPlayerEnterClaim(toClaim.get(), event.getPlayer().getUniqueId())) {
             return;
         }
         if (support.claimService().hasPermission(toClaim.get(), event.getPlayer().getUniqueId(), ClaimPermission.TELEPORT)) {
@@ -108,5 +112,18 @@ public final class VehicleProtectionListener implements Listener {
         if (notifier != null) {
             support.sendProtectionDeny(notifier, toClaim.get());
         }
+    }
+
+    static boolean canMountedPlayerEnterClaim(Claim claim, UUID playerId) {
+        if (claim == null || playerId == null) {
+            return false;
+        }
+        if (claim.owner().equals(playerId) || claim.isTrusted(playerId)) {
+            return true;
+        }
+        if (claim.isDenied(playerId)) {
+            return false;
+        }
+        return !claim.denyAll();
     }
 }

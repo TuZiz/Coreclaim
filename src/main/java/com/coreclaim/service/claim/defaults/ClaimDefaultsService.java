@@ -52,17 +52,23 @@ public final class ClaimDefaultsService {
     }
 
     public ClaimMemberSettings createMemberSettings(Claim claim) {
+        return createTrustedMemberSettings();
+    }
+
+    public ClaimMemberSettings createTrustedMemberSettings() {
         return new ClaimMemberSettings(
-            claim.permission(ClaimPermission.PLACE),
-            claim.permission(ClaimPermission.BREAK),
-            claim.permission(ClaimPermission.INTERACT),
-            claim.permission(ClaimPermission.INTERACT),
-            claim.permission(ClaimPermission.MOB_INTERACT),
-            claim.permission(ClaimPermission.REDSTONE),
-            claim.permission(ClaimPermission.EXPLOSION),
-            claim.permission(ClaimPermission.BUCKET),
-            claim.permission(ClaimPermission.TELEPORT),
-            claim.permission(ClaimPermission.FLIGHT)
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
         );
     }
 

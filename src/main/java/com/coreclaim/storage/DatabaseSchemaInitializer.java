@@ -5,6 +5,8 @@ import static com.coreclaim.storage.DatabaseManager.SCHEMA_VERSION_KEY;
 
 final class DatabaseSchemaInitializer {
 
+    private static final String LEGACY_PUBLIC_PERMISSIONS_REPAIRED_KEY = "legacy_public_permissions_repaired";
+
     private final DatabaseManager database;
 
     DatabaseSchemaInitializer(DatabaseManager database) {
@@ -69,16 +71,18 @@ final class DatabaseSchemaInitializer {
                 north %s NOT NULL DEFAULT 0,
                 enter_message %s,
                 leave_message %s,
-                allow_place %s NOT NULL DEFAULT 1,
-                allow_break %s NOT NULL DEFAULT 1,
-                allow_interact %s NOT NULL DEFAULT 1,
-                allow_container %s NOT NULL DEFAULT 1,
+                allow_place %s NOT NULL DEFAULT 0,
+                allow_break %s NOT NULL DEFAULT 0,
+                allow_interact %s NOT NULL DEFAULT 0,
+                allow_container %s NOT NULL DEFAULT 0,
                 allow_mob_interact %s NOT NULL DEFAULT 0,
-                allow_redstone %s NOT NULL DEFAULT 1,
+                allow_animal_spawn %s NOT NULL DEFAULT 1,
+                allow_monster_spawn %s NOT NULL DEFAULT 1,
+                allow_redstone %s NOT NULL DEFAULT 0,
                 allow_explosion %s NOT NULL DEFAULT 0,
-                allow_bucket %s NOT NULL DEFAULT 1,
-                allow_teleport %s NOT NULL DEFAULT 1,
-                allow_flight %s NOT NULL DEFAULT 1,
+                allow_bucket %s NOT NULL DEFAULT 0,
+                allow_teleport %s NOT NULL DEFAULT 0,
+                allow_flight %s NOT NULL DEFAULT 0,
                 system_managed %s NOT NULL DEFAULT 0,
                 deny_all %s NOT NULL DEFAULT 0,
                 tp_x %s,
@@ -94,7 +98,7 @@ final class DatabaseSchemaInitializer {
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
-                booleanType(), booleanType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
+                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
             ),
             statement -> {
             }
@@ -111,16 +115,18 @@ final class DatabaseSchemaInitializer {
         ensureColumn("claims", "north", integerType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "enter_message", messageType());
         ensureColumn("claims", "leave_message", messageType());
-        ensureColumn("claims", "allow_place", booleanType() + " NOT NULL DEFAULT 1");
-        ensureColumn("claims", "allow_break", booleanType() + " NOT NULL DEFAULT 1");
-        ensureColumn("claims", "allow_interact", booleanType() + " NOT NULL DEFAULT 1");
-        ensureColumn("claims", "allow_container", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_place", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "allow_break", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "allow_interact", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_mob_interact", booleanType() + " NOT NULL DEFAULT 0");
-        ensureColumn("claims", "allow_redstone", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_animal_spawn", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_monster_spawn", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
-        ensureColumn("claims", "allow_bucket", booleanType() + " NOT NULL DEFAULT 1");
-        ensureColumn("claims", "allow_teleport", booleanType() + " NOT NULL DEFAULT 1");
-        ensureColumn("claims", "allow_flight", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claims", "allow_bucket", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "allow_teleport", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "allow_flight", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "system_managed", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "deny_all", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "tp_x", doubleType());
@@ -178,6 +184,8 @@ final class DatabaseSchemaInitializer {
                 allow_interact %s NOT NULL DEFAULT 0,
                 allow_container %s NOT NULL DEFAULT 0,
                 allow_mob_interact %s NOT NULL DEFAULT 0,
+                allow_animal_spawn %s NOT NULL DEFAULT 1,
+                allow_monster_spawn %s NOT NULL DEFAULT 1,
                 allow_redstone %s NOT NULL DEFAULT 0,
                 allow_explosion %s NOT NULL DEFAULT 0,
                 allow_bucket %s NOT NULL DEFAULT 0,
@@ -188,7 +196,7 @@ final class DatabaseSchemaInitializer {
             )%s
             """.formatted(
                 integerType(), uuidType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
-                booleanType(), booleanType(), booleanType(), booleanType(), tableOptions()
+                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), tableOptions()
             ),
             statement -> {
             }
@@ -220,6 +228,8 @@ final class DatabaseSchemaInitializer {
         );
         ensureColumn("claim_member_permissions", "allow_container", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_mob_interact", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claim_member_permissions", "allow_animal_spawn", booleanType() + " NOT NULL DEFAULT 1");
+        ensureColumn("claim_member_permissions", "allow_monster_spawn", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claim_member_permissions", "allow_redstone", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_explosion", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_member_permissions", "allow_flight", booleanType() + " NOT NULL DEFAULT 1");
@@ -285,6 +295,7 @@ final class DatabaseSchemaInitializer {
             statement -> {
             }
         );
+        repairLegacyPublicPermissionDefaults();
         ensureColumn("claim_cleanup_state", "has_build_evidence", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_cleanup_state", "has_interaction_evidence", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claim_cleanup_state", "grace_marked_at", longType() + " NOT NULL DEFAULT 0");
@@ -293,6 +304,31 @@ final class DatabaseSchemaInitializer {
         ensureColumn("claim_cleanup_state", "legacy_unknown", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claim_cleanup_state", "last_reason", shortTextType() + " NOT NULL DEFAULT ''");
         setMeta(SCHEMA_VERSION_KEY, String.valueOf(SCHEMA_VERSION));
+    }
+
+    private void repairLegacyPublicPermissionDefaults() {
+        if ("true".equalsIgnoreCase(database.getMeta(LEGACY_PUBLIC_PERMISSIONS_REPAIRED_KEY))) {
+            return;
+        }
+        update(
+            """
+            UPDATE claims
+            SET allow_place = 0,
+                allow_break = 0,
+                allow_interact = 0,
+                allow_container = 0,
+                allow_mob_interact = 0,
+                allow_redstone = 0,
+                allow_explosion = 0,
+                allow_bucket = 0,
+                allow_teleport = 0,
+                allow_flight = 0
+            WHERE system_managed = 0
+            """,
+            statement -> {
+            }
+        );
+        setMeta(LEGACY_PUBLIC_PERMISSIONS_REPAIRED_KEY, "true");
     }
 
     private int update(String sql, DatabaseManager.StatementBinder binder) {

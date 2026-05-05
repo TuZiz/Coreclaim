@@ -51,7 +51,7 @@ public final class ClaimPersistenceRepository {
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                   allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
+                   allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
                    system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
             FROM claims
             WHERE id = ?
@@ -69,7 +69,7 @@ public final class ClaimPersistenceRepository {
             """
             SELECT id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                   allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
+                   allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
                    system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
             FROM claims
             """,
@@ -133,7 +133,7 @@ public final class ClaimPersistenceRepository {
         );
         runtime.databaseManager().query(
             """
-            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
+            SELECT claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
             FROM claim_member_permissions
             """,
             statement -> {
@@ -189,7 +189,7 @@ public final class ClaimPersistenceRepository {
         );
         runtime.databaseManager().query(
             """
-            SELECT player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
+            SELECT player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
             FROM claim_member_permissions
             WHERE claim_id = ?
             """,
@@ -234,28 +234,30 @@ public final class ClaimPersistenceRepository {
                     statement.setInt(23, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                     statement.setInt(24, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                     statement.setInt(25, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
-                    statement.setInt(26, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                    statement.setInt(27, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
-                    statement.setInt(28, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                    statement.setInt(29, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                    statement.setInt(30, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
-                    statement.setInt(31, claim.systemManaged() ? 1 : 0);
-                    statement.setInt(32, claim.denyAll() ? 1 : 0);
+                    statement.setInt(26, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
+                    statement.setInt(27, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
+                    statement.setInt(28, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                    statement.setInt(29, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                    statement.setInt(30, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                    statement.setInt(31, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                    statement.setInt(32, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
+                    statement.setInt(33, claim.systemManaged() ? 1 : 0);
+                    statement.setInt(34, claim.denyAll() ? 1 : 0);
                     if (claim.hasTeleportPoint()) {
-                        statement.setDouble(33, claim.teleportX());
-                        statement.setDouble(34, claim.teleportY());
-                        statement.setDouble(35, claim.teleportZ());
-                        statement.setDouble(36, claim.teleportYaw());
-                        statement.setDouble(37, claim.teleportPitch());
+                        statement.setDouble(35, claim.teleportX());
+                        statement.setDouble(36, claim.teleportY());
+                        statement.setDouble(37, claim.teleportZ());
+                        statement.setDouble(38, claim.teleportYaw());
+                        statement.setDouble(39, claim.teleportPitch());
                     } else {
-                        statement.setNull(33, java.sql.Types.DOUBLE);
-                        statement.setNull(34, java.sql.Types.DOUBLE);
                         statement.setNull(35, java.sql.Types.DOUBLE);
                         statement.setNull(36, java.sql.Types.DOUBLE);
                         statement.setNull(37, java.sql.Types.DOUBLE);
+                        statement.setNull(38, java.sql.Types.DOUBLE);
+                        statement.setNull(39, java.sql.Types.DOUBLE);
                     }
-                    statement.setLong(38, claim.lastExpandedAt());
-                    statement.setLong(39, claim.createdAt());
+                    statement.setLong(40, claim.lastExpandedAt());
+                    statement.setLong(41, claim.createdAt());
                 }
             );
             for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
@@ -302,6 +304,8 @@ public final class ClaimPersistenceRepository {
                 allow_interact = ?,
                 allow_container = ?,
                 allow_mob_interact = ?,
+                allow_animal_spawn = ?,
+                allow_monster_spawn = ?,
                 allow_redstone = ?,
                 allow_explosion = ?,
                 allow_bucket = ?,
@@ -316,13 +320,15 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(3, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(4, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(5, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
-                statement.setInt(6, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                statement.setInt(7, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
-                statement.setInt(8, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                statement.setInt(9, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                statement.setInt(10, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
-                statement.setInt(11, 0);
-                statement.setInt(12, claim.id());
+                statement.setInt(6, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
+                statement.setInt(7, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
+                statement.setInt(8, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                statement.setInt(9, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                statement.setInt(10, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                statement.setInt(11, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                statement.setInt(12, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
+                statement.setInt(13, 0);
+                statement.setInt(14, claim.id());
             }
         );
     }
@@ -338,11 +344,13 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(6, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
                 statement.setInt(7, settings.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
-                statement.setInt(8, settings.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                statement.setInt(9, settings.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
-                statement.setInt(10, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                statement.setInt(11, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                statement.setInt(12, settings.permission(ClaimPermission.FLIGHT) ? 1 : 0);
+                statement.setInt(8, settings.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
+                statement.setInt(9, settings.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
+                statement.setInt(10, settings.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                statement.setInt(11, settings.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                statement.setInt(12, settings.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                statement.setInt(13, settings.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                statement.setInt(14, settings.permission(ClaimPermission.FLIGHT) ? 1 : 0);
             }
         );
     }

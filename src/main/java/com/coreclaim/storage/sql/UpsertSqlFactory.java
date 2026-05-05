@@ -84,9 +84,9 @@ public final class UpsertSqlFactory {
                 INSERT INTO claims (
                     id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                    allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone,
+                    allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone,
                     allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     owner_uuid = VALUES(owner_uuid),
                     owner_name = VALUES(owner_name),
@@ -112,6 +112,8 @@ public final class UpsertSqlFactory {
                     allow_interact = VALUES(allow_interact),
                     allow_container = VALUES(allow_container),
                     allow_mob_interact = VALUES(allow_mob_interact),
+                    allow_animal_spawn = VALUES(allow_animal_spawn),
+                    allow_monster_spawn = VALUES(allow_monster_spawn),
                     allow_redstone = VALUES(allow_redstone),
                     allow_explosion = VALUES(allow_explosion),
                     allow_bucket = VALUES(allow_bucket),
@@ -132,8 +134,8 @@ public final class UpsertSqlFactory {
             INSERT INTO claims (
                 id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 owner_uuid = excluded.owner_uuid,
                 owner_name = excluded.owner_name,
@@ -159,6 +161,8 @@ public final class UpsertSqlFactory {
                 allow_interact = excluded.allow_interact,
                 allow_container = excluded.allow_container,
                 allow_mob_interact = excluded.allow_mob_interact,
+                allow_animal_spawn = excluded.allow_animal_spawn,
+                allow_monster_spawn = excluded.allow_monster_spawn,
                 allow_redstone = excluded.allow_redstone,
                 allow_explosion = excluded.allow_explosion,
                 allow_bucket = excluded.allow_bucket,
@@ -181,14 +185,16 @@ public final class UpsertSqlFactory {
             return """
                 INSERT INTO claim_member_permissions (
                     claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container,
-                    allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     allow_place = VALUES(allow_place),
                     allow_break = VALUES(allow_break),
                     allow_interact = VALUES(allow_interact),
                     allow_container = VALUES(allow_container),
                     allow_mob_interact = VALUES(allow_mob_interact),
+                    allow_animal_spawn = VALUES(allow_animal_spawn),
+                    allow_monster_spawn = VALUES(allow_monster_spawn),
                     allow_redstone = VALUES(allow_redstone),
                     allow_explosion = VALUES(allow_explosion),
                     allow_bucket = VALUES(allow_bucket),
@@ -198,14 +204,16 @@ public final class UpsertSqlFactory {
         }
         return """
             INSERT INTO claim_member_permissions (
-                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                claim_id, player_uuid, allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(claim_id, player_uuid) DO UPDATE SET
                 allow_place = excluded.allow_place,
                 allow_break = excluded.allow_break,
                 allow_interact = excluded.allow_interact,
                 allow_container = excluded.allow_container,
                 allow_mob_interact = excluded.allow_mob_interact,
+                allow_animal_spawn = excluded.allow_animal_spawn,
+                allow_monster_spawn = excluded.allow_monster_spawn,
                 allow_redstone = excluded.allow_redstone,
                 allow_explosion = excluded.allow_explosion,
                 allow_bucket = excluded.allow_bucket,

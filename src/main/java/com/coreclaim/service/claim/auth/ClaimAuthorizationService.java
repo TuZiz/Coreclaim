@@ -32,13 +32,10 @@ public final class ClaimAuthorizationService {
         if (claim.isDenied(playerId)) {
             return false;
         }
-        if (claim.canAccess(playerId)) {
+        if (claim.isTrusted(playerId) || isGloballyTrusted(claim, playerId)) {
             return true;
         }
-        if (claim.denyAll()) {
-            return false;
-        }
-        return runtime.profileService().isGloballyTrusted(claim.owner(), playerId);
+        return !claim.denyAll();
     }
 
     public boolean hasPermission(Claim claim, UUID playerId, ClaimPermission permission) {
@@ -51,19 +48,14 @@ public final class ClaimAuthorizationService {
         if (claim.isDenied(playerId)) {
             return false;
         }
-        if (claim.isTrusted(playerId)) {
-            return true;
+        boolean globallyTrusted = isGloballyTrusted(claim, playerId);
+        if (claim.isTrusted(playerId) || globallyTrusted) {
+            return claim.memberPermission(playerId, permission, true);
         }
         if (claim.denyAll()) {
             return false;
         }
-        if (claim.systemManaged()) {
-            return claim.permission(permission);
-        }
-        if (runtime.profileService().isGloballyTrusted(claim.owner(), playerId)) {
-            return claim.permission(permission);
-        }
-        return false;
+        return claim.permission(permission);
     }
 
     public boolean hasFlagPermission(Claim claim, UUID playerId, ClaimFlag flag) {
@@ -78,18 +70,21 @@ public final class ClaimAuthorizationService {
         }
 
         ClaimFlagState state = claim.flagState(flag);
-        if (claim.isTrusted(playerId)) {
-            return true;
+        boolean globallyTrusted = isGloballyTrusted(claim, playerId);
+        if (claim.isTrusted(playerId) || globallyTrusted) {
+            return state.resolve(claim.memberPermission(playerId, flag.fallbackPermission(), true));
         }
         if (claim.denyAll()) {
             return false;
         }
-        if (claim.systemManaged()) {
-            return state.resolve(claim.permission(flag.fallbackPermission()));
-        }
-        if (runtime.profileService().isGloballyTrusted(claim.owner(), playerId)) {
-            return state.resolve(claim.permission(flag.fallbackPermission()));
-        }
-        return false;
+        return state.resolve(claim.permission(flag.fallbackPermission()));
+    }
+
+    private boolean isGloballyTrusted(Claim claim, UUID playerId) {
+        return runtime != null
+            && runtime.profileService() != null
+            && claim != null
+            && playerId != null
+            && runtime.profileService().isGloballyTrusted(claim.owner(), playerId);
     }
 }

@@ -107,7 +107,7 @@ public final class ClaimExpansionMenuController {
         }
         if (slot == menu.slot("claim-expand-amount", "max")) {
             menu.playConfiguredSound(player, "claim-expand-amount", "max");
-            menu.openClaimExpandAmountMenu(player, claim, holder.direction, menu.expansionSupport().maxAmount(player, claim, holder.direction));
+            menu.openClaimExpandAmountMenu(player, claim, holder.direction, menu.expansionSupport().maxButtonAmount(player, claim, holder.direction, holder.amount));
             return;
         }
         if (slot == menu.slot("claim-expand-amount", "confirm")) {

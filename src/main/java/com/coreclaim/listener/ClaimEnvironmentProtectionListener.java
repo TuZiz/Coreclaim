@@ -16,14 +16,21 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Directional;
+import org.bukkit.entity.Ambient;
+import org.bukkit.entity.Animals;
+import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Enemy;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.Fox;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Tameable;
 import org.bukkit.entity.Turtle;
 import org.bukkit.entity.Villager;
+import org.bukkit.entity.WaterMob;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBurnEvent;
@@ -34,6 +41,7 @@ import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
@@ -123,7 +131,30 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             && isVillagerFarmChange(event.getBlock().getType(), event.getTo())) {
             return;
         }
+        if (event.getEntity() instanceof Fox
+            && isFoxSweetBerryChange(event.getBlock().getType(), event.getTo())) {
+            return;
+        }
+        if (event.getEntity() instanceof Bee
+            && isBeeHiveStateChange(event.getBlock().getType(), event.getTo())) {
+            return;
+        }
         if (claimService.findClaim(event.getBlock().getLocation()).isPresent()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        if (!isManagedCreatureSpawnReason(event.getSpawnReason())) {
+            return;
+        }
+        ClaimPermission permission = spawnPermissionForCreature(event.getEntity());
+        if (permission == null) {
+            return;
+        }
+        Optional<Claim> claim = claimService.findClaim(event.getLocation());
+        if (claim.isPresent() && !claim.get().permission(permission)) {
             event.setCancelled(true);
         }
     }
@@ -263,6 +294,47 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return true;
         }
         return isAirBlock(from) && isVillagerCrop(to);
+    }
+
+    static boolean isFoxSweetBerryChange(Material from, Material to) {
+        if (from == Material.SWEET_BERRY_BUSH) {
+            return to == Material.SWEET_BERRY_BUSH || isAirBlock(to);
+        }
+        if (from == Material.CAVE_VINES || from == Material.CAVE_VINES_PLANT) {
+            return to == Material.CAVE_VINES
+                || to == Material.CAVE_VINES_PLANT
+                || isAirBlock(to);
+        }
+        return false;
+    }
+
+    static boolean isBeeHiveStateChange(Material from, Material to) {
+        return (from == Material.BEEHIVE || from == Material.BEE_NEST) && from == to;
+    }
+
+    static boolean isManagedCreatureSpawnReason(CreatureSpawnEvent.SpawnReason reason) {
+        return reason != CreatureSpawnEvent.SpawnReason.CUSTOM
+            && reason != CreatureSpawnEvent.SpawnReason.COMMAND
+            && reason != CreatureSpawnEvent.SpawnReason.DEFAULT;
+    }
+
+    static ClaimPermission spawnPermissionForCreature(boolean enemy, boolean animal, boolean waterMob, boolean ambient) {
+        if (enemy) {
+            return ClaimPermission.MONSTER_SPAWN;
+        }
+        if (animal || waterMob || ambient) {
+            return ClaimPermission.ANIMAL_SPAWN;
+        }
+        return null;
+    }
+
+    private static ClaimPermission spawnPermissionForCreature(LivingEntity entity) {
+        return spawnPermissionForCreature(
+            entity instanceof Enemy,
+            entity instanceof Animals,
+            entity instanceof WaterMob,
+            entity instanceof Ambient
+        );
     }
 
     private static boolean isVillagerCrop(Material material) {

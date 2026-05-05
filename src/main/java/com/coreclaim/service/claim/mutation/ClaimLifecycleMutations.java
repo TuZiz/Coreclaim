@@ -31,9 +31,11 @@ final class ClaimLifecycleMutations {
             World world = context.lookupService.isLocalClaim(claim) ? context.runtime.plugin().getServer().getWorld(claim.world()) : null;
             if (world != null) {
                 Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
-                if (coreLocation.getBlock().getType() == context.runtime.plugin().settings().coreMaterial()) {
-                    coreLocation.getBlock().setType(Material.AIR, false);
-                }
+                context.runtime.plugin().platformScheduler().runLocationTask(coreLocation, () -> {
+                    if (coreLocation.getBlock().getType() == context.runtime.plugin().settings().coreMaterial()) {
+                        coreLocation.getBlock().setType(Material.AIR, false);
+                    }
+                });
             }
             context.publishClaimSync(ClaimSyncEventType.CLAIM_DELETED, claim.id());
             context.untrackClaim(claim.id());

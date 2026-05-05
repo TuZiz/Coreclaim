@@ -14,7 +14,7 @@ import java.util.Locale;
 
 public final class DatabaseManager {
 
-    static final int SCHEMA_VERSION = 6;
+    static final int SCHEMA_VERSION = 9;
     static final String SCHEMA_VERSION_KEY = "schema_version";
     private final CoreClaimPlugin plugin;
     private final DatabaseType databaseType;

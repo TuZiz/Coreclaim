@@ -20,7 +20,8 @@ final class ClaimRelationMutations {
                 return false;
             }
             claim.removeDeniedMember(memberId);
-            claim.removeMemberSettings(memberId);
+            ClaimMemberSettings settings = context.defaultsService.createTrustedMemberSettings();
+            claim.setMemberSettings(memberId, settings);
             context.runtime.databaseManager().update(
                 context.runtime.databaseManager().insertIgnoreSql("claim_members", "claim_id, player_uuid", "?, ?"),
                 statement -> {
@@ -30,6 +31,7 @@ final class ClaimRelationMutations {
             );
             deleteRelation("claim_blacklist", claim.id(), memberId);
             deleteRelation("claim_member_permissions", claim.id(), memberId);
+            context.persistenceRepository.saveMemberSettings(claim.id(), memberId, settings);
             context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
             context.recordInteractionActivity(claim, actorId);
             return true;

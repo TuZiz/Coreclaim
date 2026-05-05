@@ -21,6 +21,8 @@
 | 投掷物触发方块或实体 | `ProjectileHitEvent` / 药水/滞留药水/区域效果云 | 爆炸型投掷物为 `EXPLOSION`；非爆炸危险投掷物命中生物为 `MOB_INTERACT`，命中其他实体为 `BREAK`；敏感红石块为 `REDSTONE` 或 `INTERACT` | 取消事件、移除投掷物、或清空药水影响 | 不记录活跃值 |
 | 爆炸破坏方块 | `ExplosionPrimeEvent` / `EntityExplodeEvent` | 来源玩家需要 `EXPLOSION`；无来源默认不破坏领地方块 | 取消爆炸或移除 blockList 中的领地方块 | 不记录活跃值 |
 | 村民收割/补种作物 | `EntityChangeBlockEvent` | 不需要玩家权限；仅限村民对小麦、胡萝卜、土豆、甜菜的收割和补种变化 | 直接放行；其他实体改方块仍按环境保护取消 | 不记录活跃值 |
+| 狐狸采集甜浆果 | `EntityChangeBlockEvent` | 不需要玩家权限；仅限狐狸对甜浆果丛的采集变化 | 直接放行；其他实体改方块仍按环境保护取消 | 不记录活跃值 |
+| 动物/怪物生成 | `CreatureSpawnEvent` | 被动生物按 `ANIMAL_SPAWN`；敌对生物按 `MONSTER_SPAWN`；命令和插件自定义生成交给调用方 | 对应领地权限关闭时 `setCancelled(true)` | 不记录活跃值 |
 | 玩家坐骑跨界、珍珠/紫颂果/传送门进入 | `PlayerMoveEvent` / `PlayerTeleportEvent` / `PlayerPortalEvent` | `TELEPORT`，可由配置项放行对应入口 | 回退位置或取消传送 | 不记录活跃值 |
 | 载具跨界 | `VehicleMoveEvent` | 车上至少一名可解析玩家拥有 `TELEPORT` 或强制绕过 | 传回原位置并清速度 | 不记录活跃值 |
 

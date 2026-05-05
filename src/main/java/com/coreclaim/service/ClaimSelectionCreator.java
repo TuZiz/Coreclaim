@@ -186,7 +186,7 @@ final class ClaimSelectionCreator {
     }
 
     private void finishCreatedClaim(Player player, Claim claim, ClaimSelectionService.SelectionPreview preview) {
-        preview.coreLocation().getBlock().setType(plugin.settings().coreMaterial(), false);
+        plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> preview.coreLocation().getBlock().setType(plugin.settings().coreMaterial(), false));
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);
         sessions.remove(player.getUniqueId());

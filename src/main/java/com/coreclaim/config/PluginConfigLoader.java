@@ -152,6 +152,9 @@ final class PluginConfigLoader {
     }
 
     static boolean defaultPermissionValue(ClaimPermission permission, boolean systemDefaults) {
+        if (permission == ClaimPermission.ANIMAL_SPAWN || permission == ClaimPermission.MONSTER_SPAWN) {
+            return true;
+        }
         if (!systemDefaults) {
             return false;
         }

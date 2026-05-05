@@ -5,6 +5,8 @@ new-claim-defaults:
     break: false
     interact: false
     mob-interact: false
+    animal-spawn: true
+    monster-spawn: true
     redstone: false
     explosion: false
     bucket: false
@@ -20,6 +22,8 @@ system-claim-defaults:
     break: false
     interact: false
     mob-interact: false
+    animal-spawn: true
+    monster-spawn: true
     redstone: false
     explosion: false
     bucket: false

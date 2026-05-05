@@ -26,7 +26,7 @@ public final class GroupConfig {
                 section.getInt("priority", 0),
                 section.getString("permission", ""),
                 Math.max(1, section.getInt("initial-distance", 8)),
-                Math.max(1, section.getInt("max-distance", 50)),
+                resolveMaxDistance(section),
                 Math.max(0D, section.getDouble("core-create-price-per-block", 0D)),
                 Math.max(0D, section.getDouble("selection-create-price-per-block", section.getDouble("expand-price-per-block", 50D))),
                 Math.max(0D, section.getDouble("expand-price-per-block", 50D)),
@@ -35,7 +35,7 @@ public final class GroupConfig {
         }
 
         if (loadedGroups.isEmpty()) {
-            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 50, 0D, 50D, 50D, 3));
+            loadedGroups.add(new ClaimGroup("default", "Default", 0, "", 8, 0, 0D, 0.16D, 16D, 5));
         }
 
         loadedGroups.sort(Comparator.comparingInt(ClaimGroup::priority).reversed());
@@ -73,6 +73,11 @@ public final class GroupConfig {
                 migratedMax = Math.max(migratedMax, Math.max(1, slotsSection.getInt(slotKey, 1)));
             }
         }
-        return migratedMax > 0 ? migratedMax : 3;
+        return migratedMax > 0 ? migratedMax : 5;
+    }
+
+    private int resolveMaxDistance(ConfigurationSection section) {
+        int configuredMax = section.getInt("max-distance", 50);
+        return configuredMax <= 0 ? 0 : Math.max(1, configuredMax);
     }
 }

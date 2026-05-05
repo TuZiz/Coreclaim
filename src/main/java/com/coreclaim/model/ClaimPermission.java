@@ -7,6 +7,8 @@ public enum ClaimPermission {
     BREAK,
     INTERACT,
     MOB_INTERACT,
+    ANIMAL_SPAWN,
+    MONSTER_SPAWN,
     REDSTONE,
     EXPLOSION,
     BUCKET,

@@ -3,19 +3,19 @@ default:
   priority: 0
   permission: ''
   initial-distance: 8
-  max-distance: 50
-  max-claims: 3
+  max-distance: 0
+  max-claims: 5
   core-create-price-per-block: 0.0
-  selection-create-price-per-block: 0.2
-  expand-price-per-block: 20.0
+  selection-create-price-per-block: 0.16
+  expand-price-per-block: 16.0
 
 vip:
   display-name: '&6VIP'
   priority: 100
   permission: 'coreclaim.group.vip'
   initial-distance: 12
-  max-distance: 80
+  max-distance: 0
   max-claims: 6
   core-create-price-per-block: 0.0
-  selection-create-price-per-block: 0.14
-  expand-price-per-block: 14.0
+  selection-create-price-per-block: 0.12
+  expand-price-per-block: 12.0

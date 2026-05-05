@@ -130,7 +130,7 @@ public final class PendingClaimService {
         }
         boolean firstOrdinaryClaim = validation.claimCount() == 0;
         Claim claim = null;
-        coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false);
+        placeCoreBlock(coreLocation);
         try {
             claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
             hologramService.spawnClaimHologram(claim);
@@ -186,9 +186,18 @@ public final class PendingClaimService {
         if (coreLocation == null || coreLocation.getWorld() == null) {
             return;
         }
-        if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
-            coreLocation.getBlock().setType(Material.AIR, false);
+        plugin.platformScheduler().runLocationTask(coreLocation, () -> {
+            if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
+                coreLocation.getBlock().setType(Material.AIR, false);
+            }
+        });
+    }
+
+    private void placeCoreBlock(Location coreLocation) {
+        if (coreLocation == null || coreLocation.getWorld() == null) {
+            return;
         }
+        plugin.platformScheduler().runLocationTask(coreLocation, () -> coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false));
     }
 
     public void cancelPendingClaim(Player player, boolean notify) {

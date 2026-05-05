@@ -13,12 +13,12 @@ starter-reward-minutes: 30
 direction-expand-amount: 10
 
 # 领地核心之间的最小间隔
-# 当前版本会保证 50x50 内只能存在一个领地核心
-minimum-gap: 50
+# 设为 0 时只禁止领地重叠，允许两个领地边界挨在一起
+minimum-gap: 0
 
 # 锄头选区创建领地之间的最小边界间隔
-# 只检查领地边界，不再沿用核心的 100 格限制
-selection-minimum-gap: 10
+# 设为 0 时只禁止领地重叠，允许两个领地边界挨在一起
+selection-minimum-gap: 0
 
 # 领地名称最大长度
 claim-name-max-length: 16

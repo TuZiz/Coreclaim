@@ -140,7 +140,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
             claimEnterLeaveListener.shutdown();
         }
         if (hologramService != null) {
-            hologramService.clearAllLoadedHolograms();
+            hologramService.shutdown();
         }
         if (databaseManager != null) {
             databaseManager.close();

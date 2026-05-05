@@ -88,6 +88,12 @@ public final class BlockProtectionListener implements Listener {
         }
         Material clickedType = event.getClickedBlock().getType();
         boolean containerInteraction = support.isContainerMaterial(clickedType);
+        if (claim.isPresent() && support.isCakeConsumption(clickedType, event.getItem())) {
+            if (!support.isBypassing(event.getPlayer())) {
+                support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
+            }
+            return;
+        }
         if (claim.isPresent() && support.isComposterCompostInput(event.getClickedBlock(), event.getItem())) {
             if (!support.isBypassing(event.getPlayer())) {
                 support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());

@@ -111,9 +111,12 @@ public final class PluginConfig {
         this.starterRewardMinutes = Math.max(1, config.getInt("starter-reward-minutes", 30));
         this.starterReclaimReminderIntervalMinutes = Math.max(1, config.getInt("starter-reclaim-reminder-interval-minutes", 5));
         this.directionExpandAmount = Math.max(1, config.getInt("direction-expand-amount", 10));
-        this.minimumGap = Math.max(5, config.getInt("minimum-gap", config.getInt("minimum-core-spacing", 100)));
+        int configuredMinimumGap = config.isSet("minimum-gap")
+            ? config.getInt("minimum-gap")
+            : config.getInt("minimum-core-spacing", 0);
+        this.minimumGap = Math.max(0, configuredMinimumGap);
         this.minimumCoreSpacing = minimumGap;
-        this.selectionMinimumGap = Math.max(0, config.getInt("selection-minimum-gap", 10));
+        this.selectionMinimumGap = Math.max(0, config.getInt("selection-minimum-gap", 0));
         this.claimNameMaxLength = Math.max(3, config.getInt("claim-name-max-length", 16));
         this.chatInputTimeoutSeconds = Math.max(5, config.getInt("chat-input-timeout-seconds", 30));
         this.selectionToolMaterial = resolveMaterial(config.getString("selection-tool.material", "GOLDEN_HOE"), Material.GOLDEN_HOE);

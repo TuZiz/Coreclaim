@@ -209,6 +209,8 @@ final class ClaimPropertyMutations {
             case BREAK -> "allow_break";
             case INTERACT -> "allow_interact";
             case MOB_INTERACT -> "allow_mob_interact";
+            case ANIMAL_SPAWN -> "allow_animal_spawn";
+            case MONSTER_SPAWN -> "allow_monster_spawn";
             case REDSTONE -> "allow_redstone";
             case EXPLOSION -> "allow_explosion";
             case BUCKET -> "allow_bucket";

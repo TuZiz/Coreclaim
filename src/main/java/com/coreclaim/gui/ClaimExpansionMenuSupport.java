@@ -18,6 +18,10 @@ public final class ClaimExpansionMenuSupport {
     }
 
     public int normalizeAmount(Player player, Claim claim, ClaimDirection direction, int requestedAmount) {
+        ClaimGroup group = plugin.groups().resolve(player);
+        if (!group.hasDistanceLimit()) {
+            return Math.max(1, requestedAmount);
+        }
         int maxAmount = maxAmount(player, claim, direction);
         if (maxAmount <= 0) {
             return 1;
@@ -27,7 +31,16 @@ public final class ClaimExpansionMenuSupport {
 
     public int maxAmount(Player player, Claim claim, ClaimDirection direction) {
         ClaimGroup group = plugin.groups().resolve(player);
-        return Math.max(0, group.maxDistance() - claim.distance(direction));
+        return group.hasDistanceLimit() ? group.remainingDistance(claim.distance(direction)) : -1;
+    }
+
+    public int maxButtonAmount(Player player, Claim claim, ClaimDirection direction, int currentAmount) {
+        int maxAmount = maxAmount(player, claim, direction);
+        if (maxAmount >= 0) {
+            return maxAmount;
+        }
+        int quickUnlimitedAmount = Math.max(plugin.settings().directionExpandAmount() * 10, 100);
+        return Math.max(currentAmount, quickUnlimitedAmount);
     }
 
     public String[] replacements(Player player, Claim claim, ClaimDirection direction, int amount, ClaimActionService.ExpansionPreview preview) {
@@ -36,7 +49,7 @@ public final class ClaimExpansionMenuSupport {
             "{name}", claim.name(),
             "{direction}", directionLabel(direction),
             "{amount}", String.valueOf(amount),
-            "{max}", String.valueOf(maxAmount),
+            "{max}", maxAmount < 0 ? "无限" : String.valueOf(maxAmount),
             "{current}", String.valueOf(claim.distance(direction)),
             "{target}", String.valueOf(preview.targetDistance()),
             "{price}", preview.costText(),

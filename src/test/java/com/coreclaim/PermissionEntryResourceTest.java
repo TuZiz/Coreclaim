@@ -15,6 +15,8 @@ class PermissionEntryResourceTest {
         String menu = resourceText("/gui/claim-permissions.yml");
 
         assertTrue(menu.contains("perm-mob-interact:"));
+        assertTrue(menu.contains("perm-animal-spawn:"));
+        assertTrue(menu.contains("perm-monster-spawn:"));
         assertTrue(menu.contains("perm-liquid-flow:"));
         assertTrue(menu.contains("perm-time-cycle:"));
         assertFalse(menu.contains("flag-liquid-flow:"));
@@ -43,13 +45,19 @@ class PermissionEntryResourceTest {
         assertTrue(enUs.contains("claim-detail-permissions-extra:"));
         assertTrue(zhCn.contains("{mob_interact}"));
         assertTrue(enUs.contains("{mob_interact}"));
+        assertTrue(zhCn.contains("{animal_spawn}"));
+        assertTrue(enUs.contains("{animal_spawn}"));
+        assertTrue(zhCn.contains("{monster_spawn}"));
+        assertTrue(enUs.contains("{monster_spawn}"));
     }
 
     @Test
-    void rulesExposeMobInteractionPermissionDefaults() throws Exception {
+    void rulesExposeMobAndSpawnPermissionDefaults() throws Exception {
         String rules = resourceText("/rules.yml");
 
         assertTrue(rules.contains("mob-interact: false"));
+        assertTrue(rules.contains("animal-spawn: true"));
+        assertTrue(rules.contains("monster-spawn: true"));
     }
 
     private String resourceText(String path) throws Exception {

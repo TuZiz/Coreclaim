@@ -7,6 +7,7 @@ import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.PendingClaimService;
 import com.coreclaim.util.AdminAccess;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -109,6 +110,7 @@ public final class ClaimCoreInteractionListener implements Listener {
             return;
         }
 
-        plugin.platformScheduler().runLater(() -> claimActionService.syncClaimCoreState(claim), 1L);
+        Location coreLocation = block.getLocation();
+        plugin.platformScheduler().runLocationLater(coreLocation, () -> claimActionService.syncClaimCoreState(claim), 1L);
     }
 }

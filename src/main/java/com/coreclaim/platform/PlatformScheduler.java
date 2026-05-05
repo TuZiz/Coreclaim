@@ -3,6 +3,7 @@ package com.coreclaim.platform;
 import com.coreclaim.CoreClaimPlugin;
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -70,6 +71,54 @@ public final class PlatformScheduler {
             return () -> cancelReflectively(scheduledTask);
         } catch (Throwable exception) {
             throw foliaSchedulerFailure("global delayed task", exception);
+        }
+    }
+
+    public TaskHandle runLocationLater(Location location, Runnable runnable, long delayTicks) {
+        if (!folia) {
+            return runBukkitLater(runnable, delayTicks);
+        }
+
+        Location taskLocation = requireWorldLocation(location);
+        long foliaDelayTicks = positiveFoliaTicks(delayTicks);
+        try {
+            Object scheduler = plugin.getServer().getClass().getMethod("getRegionScheduler").invoke(plugin.getServer());
+            Object scheduledTask = scheduler.getClass().getMethod(
+                "runDelayed",
+                org.bukkit.plugin.Plugin.class,
+                Location.class,
+                Consumer.class,
+                long.class
+            ).invoke(
+                scheduler,
+                plugin,
+                taskLocation,
+                (Consumer<Object>) ignored -> runnable.run(),
+                foliaDelayTicks
+            );
+            return () -> cancelReflectively(scheduledTask);
+        } catch (Throwable exception) {
+            throw foliaSchedulerFailure("region delayed task", exception);
+        }
+    }
+
+    public void runLocationTask(Location location, Runnable runnable) {
+        if (!folia) {
+            Bukkit.getScheduler().runTask(plugin, runnable);
+            return;
+        }
+
+        Location taskLocation = requireWorldLocation(location);
+        try {
+            Object scheduler = plugin.getServer().getClass().getMethod("getRegionScheduler").invoke(plugin.getServer());
+            scheduler.getClass().getMethod(
+                "execute",
+                org.bukkit.plugin.Plugin.class,
+                Location.class,
+                Runnable.class
+            ).invoke(scheduler, plugin, taskLocation, runnable);
+        } catch (Throwable exception) {
+            throw foliaSchedulerFailure("region task", exception);
         }
     }
 
@@ -174,6 +223,13 @@ public final class PlatformScheduler {
 
     static long positiveFoliaTicks(long ticks) {
         return Math.max(1L, ticks);
+    }
+
+    private Location requireWorldLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            throw new IllegalArgumentException("Location must include a loaded world for region scheduling.");
+        }
+        return location.clone();
     }
 
     private IllegalStateException foliaSchedulerFailure(String operation, Throwable throwable) {

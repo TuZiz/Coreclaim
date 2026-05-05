@@ -45,11 +45,13 @@ final class ClaimCreationMutations {
                 "",
                 false,
                 false,
+                true,
+                true,
                 false,
                 false,
                 false,
-                false,
-                false,
+                true,
+                true,
                 false,
                 false,
                 true,
@@ -115,6 +117,8 @@ final class ClaimCreationMutations {
                 false,
                 false,
                 false,
+                false,
+                false,
                 true,
                 systemManaged,
                 false,
@@ -152,8 +156,8 @@ final class ClaimCreationMutations {
             INSERT INTO claims (
                 owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, last_expanded_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             statement -> {
                 statement.setString(1, owner.toString());
@@ -180,14 +184,16 @@ final class ClaimCreationMutations {
                 statement.setInt(22, 0);
                 statement.setInt(23, 0);
                 statement.setInt(24, 0);
-                statement.setInt(25, 0);
-                statement.setInt(26, 0);
+                statement.setInt(25, 1);
+                statement.setInt(26, 1);
                 statement.setInt(27, 0);
                 statement.setInt(28, 0);
-                statement.setInt(29, 1);
-                statement.setInt(30, systemManaged ? 1 : 0);
-                statement.setLong(31, 0L);
-                statement.setLong(32, createdAt);
+                statement.setInt(29, 0);
+                statement.setInt(30, 0);
+                statement.setInt(31, 1);
+                statement.setInt(32, systemManaged ? 1 : 0);
+                statement.setLong(33, 0L);
+                statement.setLong(34, createdAt);
             }
         );
     }

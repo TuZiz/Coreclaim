@@ -4,7 +4,7 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
-import com.coreclaim.service.ClaimCleanupService;
+import com.coreclaim.cleanup.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import com.coreclaim.util.AdminAccess;

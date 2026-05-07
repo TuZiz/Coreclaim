@@ -3,7 +3,7 @@ package com.coreclaim.gui.controller;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.gui.holder.SelectionCreateHolder;
 import com.coreclaim.service.ClaimActionService;
-import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.selection.ClaimSelectionService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;

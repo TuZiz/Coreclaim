@@ -8,7 +8,7 @@ import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.platform.PlatformScheduler;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ClaimVisualService;
-import com.coreclaim.service.ProfileService;
+import com.coreclaim.profile.ProfileService;
 import com.coreclaim.util.AdminAccess;
 import java.util.Map;
 import java.util.UUID;
@@ -487,19 +487,4 @@ public final class ClaimEnterLeaveListener implements Listener {
             + " baselineFlying=" + session.baselineFlying);
     }
 
-    private static final class PlayerFlightSession {
-        private Integer currentClaimId;
-        private boolean managingClaimFlight;
-        private boolean managingClaimTime;
-        private boolean baselineAllowFlight;
-        private boolean baselineFlying;
-        private boolean graceActive;
-        private PlatformScheduler.TaskHandle graceTask;
-
-        private void beginManagedFlight(boolean baselineAllowFlight, boolean baselineFlying) {
-            this.managingClaimFlight = true;
-            this.baselineAllowFlight = baselineAllowFlight;
-            this.baselineFlying = baselineFlying;
-        }
-    }
 }

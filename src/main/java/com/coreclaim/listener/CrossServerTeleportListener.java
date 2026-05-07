@@ -1,7 +1,7 @@
 package com.coreclaim.listener;
 
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.service.CrossServerTeleportService;
+import com.coreclaim.teleport.CrossServerTeleportService;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;

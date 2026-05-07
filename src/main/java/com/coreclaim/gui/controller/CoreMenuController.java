@@ -4,7 +4,7 @@ import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.gui.holder.CoreMenuHolder;
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.PlayerProfile;
+import com.coreclaim.profile.PlayerProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;

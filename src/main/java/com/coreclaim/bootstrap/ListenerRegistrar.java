@@ -12,12 +12,12 @@ import com.coreclaim.listener.CrossServerTeleportListener;
 import com.coreclaim.listener.MenuListener;
 import com.coreclaim.listener.RemovalConfirmListener;
 import com.coreclaim.listener.SelectionToolListener;
-import com.coreclaim.listener.protection.BlockProtectionListener;
-import com.coreclaim.listener.protection.EntityProtectionListener;
-import com.coreclaim.listener.protection.InteractionProtectionListener;
-import com.coreclaim.listener.protection.ProjectileProtectionListener;
-import com.coreclaim.listener.protection.ProtectionRuleSupport;
-import com.coreclaim.listener.protection.VehicleProtectionListener;
+import com.coreclaim.protection.listener.BlockProtectionListener;
+import com.coreclaim.protection.listener.EntityProtectionListener;
+import com.coreclaim.protection.listener.InteractionProtectionListener;
+import com.coreclaim.protection.listener.ProjectileProtectionListener;
+import com.coreclaim.protection.listener.ProtectionRuleSupport;
+import com.coreclaim.protection.listener.VehicleProtectionListener;
 
 public final class ListenerRegistrar {
 

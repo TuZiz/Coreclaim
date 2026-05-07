@@ -2,12 +2,16 @@ package com.coreclaim.command;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimActionService;
-import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.selection.ClaimSelectionService;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.claim.auth.ClaimAuthorizationService.AuthorizationDecision;
 import com.coreclaim.service.RemovalConfirmationService;
 import com.coreclaim.util.AdminAccess;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Predicate;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -111,14 +115,46 @@ final class ClaimAdminClaimCommandHandler {
             sender.sendMessage(plugin.message("no-permission"));
             return true;
         }
-        if (args.length < 3) {
-            sender.sendMessage(plugin.message("admin-diagnose-usage"));
+        DiagnoseRequest request = diagnoseRequest(sender, args);
+        if (request == null) {
             return true;
         }
-        Claim claim = resolver.resolveAdminClaimSelector(sender, resolver.joinArgs(args, 2));
+        Claim claim = resolver.resolveAdminClaimSelector(sender, request.claimSelector());
         if (claim == null) {
             return true;
         }
+        sendClaimDiagnostics(sender, claim, request.target());
+        return true;
+    }
+
+    private DiagnoseRequest diagnoseRequest(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(plugin.message("admin-diagnose-usage"));
+            return null;
+        }
+        int playerOptionIndex = -1;
+        for (int index = 2; index < args.length; index++) {
+            if (args[index].equalsIgnoreCase("--player") || args[index].equalsIgnoreCase("-p")) {
+                playerOptionIndex = index;
+                break;
+            }
+        }
+        if (playerOptionIndex < 0) {
+            return new DiagnoseRequest(resolver.joinArgs(args, 2), null);
+        }
+        if (playerOptionIndex == 2 || playerOptionIndex + 2 != args.length) {
+            sender.sendMessage(plugin.message("admin-diagnose-usage"));
+            return null;
+        }
+        OfflinePlayer target = resolver.resolveKnownPlayer(args[playerOptionIndex + 1]);
+        if (target == null || target.getUniqueId() == null) {
+            sender.sendMessage(plugin.message("trust-no-target"));
+            return null;
+        }
+        return new DiagnoseRequest(resolver.joinArgs(args, 2, playerOptionIndex), target);
+    }
+
+    private void sendClaimDiagnostics(CommandSender sender, Claim claim, OfflinePlayer target) {
         boolean localClaim = claimService.isLocalClaim(claim);
         boolean worldLoaded = localClaim && Bukkit.getWorld(claim.world()) != null;
         String route = localClaim
@@ -132,8 +168,46 @@ final class ClaimAdminClaimCommandHandler {
         sender.sendMessage(plugin.color("&6[Claim] &f世界状态: " + (worldLoaded ? "&a已加载" : "&e未加载或不在本服")));
         sender.sendMessage(plugin.color("&6[Claim] &fTP 路由: &b" + route));
         sender.sendMessage(plugin.color("&6[Claim] &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭") + " &8| &fDenied: &c" + claim.deniedMembers().size() + " &8| &fTrusted: &a" + claim.trustedCount()));
+        sender.sendMessage(plugin.color("&6[Claim] &f公开权限: &cBREAK " + formatter.stateText(claim.permission(ClaimPermission.BREAK))
+            + " &8| &bINTERACT " + formatter.stateText(claim.permission(ClaimPermission.INTERACT))));
+        sender.sendMessage(plugin.color("&6[Claim] &f成员列表: " + formatMembers(claim.trustedMembers())));
         sender.sendMessage(plugin.color("&6[Claim] &f扩展权限: " + formatter.summarizeFlags(claim)));
-        return true;
+        if (target != null) {
+            sendTargetAuthorizationDiagnostics(sender, claim, target);
+        }
+    }
+
+    private void sendTargetAuthorizationDiagnostics(CommandSender sender, Claim claim, OfflinePlayer target) {
+        UUID playerId = target.getUniqueId();
+        boolean bypassing = target instanceof Player player && AdminAccess.hasForceBypass(player);
+        AuthorizationDecision breakDecision = claimService.permissionDecision(claim, playerId, ClaimPermission.BREAK, bypassing);
+        AuthorizationDecision interactDecision = claimService.permissionDecision(claim, playerId, ClaimPermission.INTERACT, bypassing);
+        sender.sendMessage(plugin.color("&6[Claim] &f目标玩家: &e" + resolver.displayName(target) + " &7(" + playerId + ")"));
+        sender.sendMessage(plugin.color("&6[Claim] &f授权来源: &cBREAK " + formatDecision(breakDecision)
+            + " &8| &bINTERACT " + formatDecision(interactDecision)));
+    }
+
+    private String formatDecision(AuthorizationDecision decision) {
+        String state = decision.allowed() ? "&aALLOW" : "&cDENY";
+        return "&e" + decision.source().name() + " " + state;
+    }
+
+    private String formatMembers(Set<UUID> members) {
+        if (members.isEmpty()) {
+            return "&7空";
+        }
+        return members.stream()
+            .map(playerId -> {
+                OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
+                String name = player.getName() == null ? playerId.toString() : player.getName();
+                return "&a" + name;
+            })
+            .limit(20)
+            .reduce((left, right) -> left + "&8, " + right)
+            .orElse("&7空");
+    }
+
+    private record DiagnoseRequest(String claimSelector, OfflinePlayer target) {
     }
 
     boolean handleRemove(CommandSender sender, String[] args) {

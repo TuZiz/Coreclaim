@@ -1,6 +1,6 @@
 package com.coreclaim.command;
 
-import com.coreclaim.model.PlayerProfile;
+import com.coreclaim.profile.PlayerProfile;
 import java.util.Locale;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;

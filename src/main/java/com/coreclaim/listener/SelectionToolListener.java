@@ -1,6 +1,6 @@
 package com.coreclaim.listener;
 
-import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.selection.ClaimSelectionService;
 import com.coreclaim.service.OnlineRewardService;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;

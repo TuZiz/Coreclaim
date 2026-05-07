@@ -1,17 +1,21 @@
 package com.coreclaim.service;
 
+import com.coreclaim.sync.ClaimSyncPublisher;
+import com.coreclaim.cleanup.ClaimCleanupService;
+import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
-import com.coreclaim.service.claim.ClaimRuntime;
-import com.coreclaim.service.claim.auth.ClaimAuthorizationService;
-import com.coreclaim.service.claim.defaults.ClaimDefaultsService;
-import com.coreclaim.service.claim.mutation.ClaimMutationService;
-import com.coreclaim.service.claim.persistence.ClaimPersistenceRepository;
-import com.coreclaim.service.claim.query.ClaimLookupService;
+import com.coreclaim.claim.ClaimRuntime;
+import com.coreclaim.claim.auth.ClaimAuthorizationService.AuthorizationDecision;
+import com.coreclaim.claim.auth.ClaimAuthorizationService;
+import com.coreclaim.claim.defaults.ClaimDefaultsService;
+import com.coreclaim.claim.mutation.ClaimMutationService;
+import com.coreclaim.claim.persistence.ClaimPersistenceRepository;
+import com.coreclaim.claim.query.ClaimLookupService;
 import com.coreclaim.storage.DatabaseManager;
 import java.util.List;
 import java.util.Map;
@@ -113,6 +117,10 @@ public final class ClaimService {
 
     public boolean hasFlagPermission(Claim claim, UUID playerId, ClaimFlag flag) {
         return authorizationService.hasFlagPermission(claim, playerId, flag);
+    }
+
+    public AuthorizationDecision permissionDecision(Claim claim, UUID playerId, ClaimPermission permission, boolean bypassing) {
+        return authorizationService.permissionDecision(claim, playerId, permission, bypassing);
     }
 
     public Optional<Claim> findClaim(Location location) {

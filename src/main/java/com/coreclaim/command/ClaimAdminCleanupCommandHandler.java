@@ -2,8 +2,8 @@ package com.coreclaim.command;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
-import com.coreclaim.service.ClaimCleanupBaselineMode;
-import com.coreclaim.service.ClaimCleanupService;
+import com.coreclaim.cleanup.ClaimCleanupBaselineMode;
+import com.coreclaim.cleanup.ClaimCleanupService;
 import java.util.Locale;
 import org.bukkit.command.CommandSender;
 

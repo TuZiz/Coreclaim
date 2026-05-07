@@ -1,8 +1,10 @@
 package com.coreclaim.service;
 
+import com.coreclaim.cleanup.ClaimCleanupService;
+import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.item.ClaimCoreFactory;
-import com.coreclaim.model.PlayerProfile;
+import com.coreclaim.profile.PlayerProfile;
 import com.coreclaim.platform.PlatformScheduler;
 import java.util.List;
 import java.util.Map;

@@ -1,7 +1,7 @@
 package com.coreclaim.listener;
 
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.service.ClaimInputService;
+import com.coreclaim.input.ClaimInputService;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

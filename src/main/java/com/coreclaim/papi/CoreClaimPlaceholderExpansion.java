@@ -2,9 +2,9 @@ package com.coreclaim.papi;
 
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.PlayerProfile;
+import com.coreclaim.profile.PlayerProfile;
 import com.coreclaim.service.ClaimService;
-import com.coreclaim.service.ProfileService;
+import com.coreclaim.profile.ProfileService;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 

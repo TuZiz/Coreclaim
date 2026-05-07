@@ -17,6 +17,7 @@
 - **语言资源**：中文 `src/main/resources/lang/zh_cn.yml`；英文 `src/main/resources/lang/en_us.yml`
 - **语言选择**：`src/main/resources/config.yml` 的 `language: "zh_cn"` 可切换 `zh_cn` / `en_us`
 - **构建产物**：`.\gradlew.bat jar` → `build/libs/CoreClaim-1.0.jar`
+- **当前结构基线**：按领域包归类，主源码 Java 文件应尽量保持在 500 行以内；继续拆分时优先抽纯辅助类，避免重排保护判断顺序。
 
 ## 常见改动 → 先去哪些文件（最短路径）
 
@@ -26,6 +27,7 @@
   - `src/main/java/com/coreclaim/command/ClaimUserCommandHandler.java`
   - `src/main/java/com/coreclaim/command/ClaimAdminCommandHandler.java`
   - `src/main/java/com/coreclaim/command/ClaimTabCompletionService.java`
+  - `src/main/java/com/coreclaim/command/ClaimTabCompletionSupport.java`
   - 命令文档同步：`docs/coreclaim-commands.md`
   - 用户文案同步：`src/main/resources/lang/zh_cn.yml` / `src/main/resources/lang/en_us.yml`
 
@@ -37,17 +39,33 @@
   - GUI 配置：`src/main/resources/gui/*.yml`（优先改配置，再补代码支持）
 
 - **聊天输入（重命名/输入确认等）**
-  - `src/main/java/com/coreclaim/service/ClaimInputService.java`
+  - `src/main/java/com/coreclaim/input/ClaimInputService.java`
+  - `src/main/java/com/coreclaim/input/ClaimInputAccess.java`
   - `src/main/java/com/coreclaim/listener/ClaimInputListener.java`
 
 - **领地交互保护 / 权限 / 规则**
-  - `src/main/java/com/coreclaim/listener/ClaimProtectionListener.java`
-  - `src/main/java/com/coreclaim/listener/protection/*`
-  - `src/main/java/com/coreclaim/listener/protection/ProtectionRuleSupport.java`
+  - `src/main/java/com/coreclaim/protection/listener/*`
+  - `src/main/java/com/coreclaim/protection/listener/ProtectionRuleSupport.java`
+  - `src/main/java/com/coreclaim/protection/listener/ProtectionMaterialRules.java`
+  - 授权入口：`src/main/java/com/coreclaim/claim/auth/ClaimAuthorizationService.java`
+  - 成员增删/权限清理：`src/main/java/com/coreclaim/claim/mutation/ClaimRelationMutations.java`
 
 - **数据库/存储/跨服同步**
   - `src/main/java/com/coreclaim/storage/*`
-  - `src/main/java/com/coreclaim/service/claim/*`
+  - 领地持久化：`src/main/java/com/coreclaim/claim/persistence/*`
+  - 领地查询：`src/main/java/com/coreclaim/claim/query/*`
+  - 领地变更：`src/main/java/com/coreclaim/claim/mutation/*`
+  - 跨服同步：`src/main/java/com/coreclaim/sync/*`
+
+- **领域包速查**
+  - `src/main/java/com/coreclaim/claim/*`：领地运行时、授权、默认值、变更、持久化、查询。
+  - `src/main/java/com/coreclaim/profile/*`：玩家档案；全局信任已废弃，不要重新引入授权效果。
+  - `src/main/java/com/coreclaim/cleanup/*`：废弃/闲置领地清理状态与执行。
+  - `src/main/java/com/coreclaim/selection/*`：选区、预览、工具支持。
+  - `src/main/java/com/coreclaim/input/*`：聊天输入桥接。
+  - `src/main/java/com/coreclaim/market/*`：领地市场。
+  - `src/main/java/com/coreclaim/transfer/*`：领地转让。
+  - `src/main/java/com/coreclaim/teleport/*`：跨服传送。
 
 ## 高效检索（先搜最“可见”的东西）
 
@@ -66,10 +84,14 @@
 
 - **主线程安全优先**：不要在异步线程直接访问世界/区块/实体/背包/GUI 会话等 Bukkit 主线程 API。
 - **GUI 以配置为主**：新增/调整界面优先改 `src/main/resources/gui/*.yml`，代码只负责解析与行为。
+- **保护规则严禁放宽兜底**：遇到破坏、右键蛋糕、斧头去皮等问题，先同时追踪事件分类与 `ClaimAuthorizationService`，不要通过放开 `INTERACT/BREAK` 兜底解决。
+- **全局信任已废弃**：不要新增 `GLOBAL_TRUSTED` 授权来源；`unadd` 和 GUI 移除成员必须同时清理 `claim_members`、`claim_member_permissions` 和旧 `profile_global_members` 残留。
+- **旧授权残留优先查诊断**：怀疑旧成员仍有权限时，先用 `/claim admin diagnose <领地> --player <玩家>` 区分 `OWNER / TRUSTED / PUBLIC_PERMISSION / DENIED / BYPASS`，再改代码。
 - **编码/中文排查**：在 Windows PowerShell 读文件建议显式 `-Encoding UTF8`，不要把“显示乱码”误判成“文件损坏”。
 - **语言资源归位**：除 `config.yml/groups.yml/rules.yml` 和 `gui/*.yml` 必须保留的配置/GUI 文案外，中文用户提示统一放进 `src/main/resources/lang/zh_cn.yml`，英文同步放进 `src/main/resources/lang/en_us.yml`。
 - **不要动生成目录**：`build/**` 为构建输出；除非排查产物问题，不要在这里做源代码改动。
 - **改命令一定同步**：`plugin.yml` + `docs/coreclaim-commands.md` +（如有）`lang/zh_cn.yml` / `lang/en_us.yml` / GUI 引导文案。
+- **提交前验证**：行为改动至少跑 `.\gradlew.bat test --no-daemon`；准备发布或推送前跑 `.\gradlew.bat test jar --no-daemon`。
 
 ## MC Plugin Neuron 路由（有 MCP 工具时优先）
 

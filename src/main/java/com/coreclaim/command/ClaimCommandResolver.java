@@ -4,7 +4,7 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
-import com.coreclaim.service.ProfileService;
+import com.coreclaim.profile.ProfileService;
 import com.coreclaim.util.AdminAccess;
 import java.util.Arrays;
 import java.util.List;

@@ -1,11 +1,12 @@
 package com.coreclaim.service;
 
+import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
-import com.coreclaim.model.PlayerProfile;
+import com.coreclaim.profile.PlayerProfile;
 import java.util.logging.Level;
 import java.util.Map;
 import java.util.UUID;

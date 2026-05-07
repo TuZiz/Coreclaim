@@ -32,7 +32,7 @@ final class ClaimMemberCommandHandler {
             return true;
         }
         OfflinePlayer target = command.resolver().resolveKnownPlayer(args[1]);
-        if (target == null) {
+        if (target == null || target.getUniqueId() == null) {
             player.sendMessage(command.plugin().message("trust-no-target"));
             return true;
         }

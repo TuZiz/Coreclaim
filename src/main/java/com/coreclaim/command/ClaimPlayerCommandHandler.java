@@ -2,8 +2,8 @@ package com.coreclaim.command;
 
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
-import com.coreclaim.model.PlayerProfile;
-import com.coreclaim.service.ClaimSelectionService;
+import com.coreclaim.profile.PlayerProfile;
+import com.coreclaim.selection.ClaimSelectionService;
 import com.coreclaim.service.ClaimService;
 import java.util.Arrays;
 import java.util.List;

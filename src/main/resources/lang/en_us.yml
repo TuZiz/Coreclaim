@@ -66,7 +66,6 @@ claim-create-failed: '&#FF6B6B&l! &#CBD5E1Claim creation failed and this action 
 # Expansion and core actions
 claim-expand-cooldown: '&#FF6B6B&l! &#CBD5E1Expansion is on cooldown. Please wait &#F8FAFC{seconds}s&#CBD5E1.'
 claim-expand-success: '&#55FFAAExpand &#475569| &#CBD5E1Extended &#F8FAFC{amount} &#CBD5E1blocks toward &#F8FAFC{direction}&#CBD5E1. Cost: &#F8FAFC{cost}&#CBD5E1, new size: &#F8FAFC{width}x{depth}&#CBD5E1.'
-claim-core-info-opened: '&#55FFAAMenu &#475569| &#CBD5E1Opened the claim management panel.'
 claim-core-hidden: '&#55FFAAHidden &#475569| &#CBD5E1Removed the core model for &#F8FAFC{name}&#CBD5E1. The claim area is still protected.'
 claim-core-already-hidden: '&#FFD166&l! &#CBD5E1This claim core was already hidden.'
 claim-core-rewarded: '&#55FFAAReward &#475569| &#CBD5E1You reached &#F8FAFC{minutes} &#CBD5E1minutes online and received 1 starter core!'
@@ -182,9 +181,8 @@ claim-tpset-success: '&#55FFAATeleport Point &#475569| &#CBD5E1Updated the telep
 # Chat input
 input-cancelled: '&#FFD166Input &#475569| &#CBD5E1Current setting cancelled.'
 input-rename-prompt: '&#FFD166Naming &#475569| &#CBD5E1Enter the new claim name in chat. Type &#FF6B6Bcancel &#CBD5E1to stop.&#475569(Auto-cancel in {seconds}s)'
-input-notify-vars: '&#94A3B8Variables &#475569| &#CBD5E1Available: &#F8FAFC{claim_name} &#CBD5E1/ &#F8FAFC{owner} &#CBD5E1/ &#F8FAFC{name} &#475569(also supports %claim_name% / %owner%)'
-input-enter-prompt: '&#FFD166Enter Message &#475569| &#CBD5E1Enter the enter message. Type &#FACC15clear &#CBD5E1to restore default, or &#FF6B6Bcancel &#CBD5E1to stop.&#475569(Auto-cancel in {seconds}s)'
-input-leave-prompt: '&#FFD166Leave Message &#475569| &#CBD5E1Enter the leave message. Type &#FACC15clear &#CBD5E1to restore default, or &#FF6B6Bcancel &#CBD5E1to stop.&#475569(Auto-cancel in {seconds}s)'
+input-enter-prompt: '&#FFD166Enter Message &#475569| &#CBD5E1Enter a new enter message. Type &#FACC15clear &#CBD5E1to restore default, or &#FF6B6Bcancel &#CBD5E1to cancel.&#475569(Auto-cancel in {seconds}s)'
+input-leave-prompt: '&#FFD166Leave Message &#475569| &#CBD5E1Enter a new leave message. Type &#FACC15clear &#CBD5E1to restore default, or &#FF6B6Bcancel &#CBD5E1to cancel.&#475569(Auto-cancel in {seconds}s)'
 input-rename-success: '&#55FFAANaming &#475569| &#CBD5E1Renamed the claim to &#F8FAFC{name}&#CBD5E1.'
 input-enter-cleared: '&#55FFAAEnter Message &#475569| &#CBD5E1Restored the default enter message.'
 input-enter-empty: '&#FF6B6B&l! &#CBD5E1Enter message cannot be empty. Type &#FACC15clear &#CBD5E1to restore default.'
@@ -268,7 +266,7 @@ help-player:
 help-admin:
   - '&#55FFAA&lAdmin'
   - '&#FACC15/claim admin create system <claim name> &#CBD5E1Create a system claim from the current selection'
-  - '&#FACC15/claim admin info <claim name|#claimId> &#CBD5E1View full claim details'
+  - '&#FACC15/claim admin info <claim name|#claimId> &#CBD5E1View claim details'
   - '&#FACC15/claim admin playerclaims <player> &#CBD5E1View all claims owned by a player'
   - '&#FACC15/claim admin diagnose <claim name|#claimId> [--player player] &#CBD5E1View cross-server, TP, and permission source diagnostics'
   - '&#FACC15/claim admin add <player> &#CBD5E1Force-add a member'
@@ -283,8 +281,6 @@ help-admin:
   - '&#FACC15/claim givecore <player> [amount] &#CBD5E1Manually grant claim cores'
 
 # Claim details
-claim-detail-claim-id: '&#94A3B8Claim ID: &#F8FAFC{id}'
-claim-detail-server-id: '&#94A3B8Server ID: &#F8FAFC{server}'
 claim-detail-system: '&#94A3B8System Claim: {value}'
 claim-detail-quota: '&#94A3B8Counts Toward Quota: {value}'
 claim-detail-name: '&#CBD5E1Claim Name: &#FACC15{name}'
@@ -292,7 +288,6 @@ claim-detail-owner: '&#CBD5E1Owner: &#4CC9F0{owner}'
 claim-detail-world: '&#CBD5E1World: &#F8FAFC{world}'
 claim-detail-core: '&#CBD5E1Core Coordinates: &#F8FAFC{x}, {y}, {z}'
 claim-detail-size: '&#CBD5E1Claim Size: &#F8FAFC{width}x{depth} &#94A3B8(area {area})'
-claim-detail-bounds: '&#CBD5E1Bounds: &#94A3B8X {min_x} ~ {max_x} &#475569| &#94A3B8Z {min_z} ~ {max_z}'
 claim-detail-height-full: '&#CBD5E1Height Mode: &#55FFAAFull-height protection'
 claim-detail-height-selection: '&#CBD5E1Height Mode: &#4CC9F0Selection height &#94A3B8(Y {min_y} ~ {max_y}, height {height})'
 claim-detail-teleport-custom: '&#CBD5E1Teleport Point: &#55FFAACustom &#94A3B8({point})'
@@ -303,7 +298,6 @@ claim-detail-permissions: '&#CBD5E1Permissions: &#94A3B8Place {place} &#475569| 
 claim-detail-permissions-extra: '             &#94A3B8Mobs {mob_interact} &#475569| &#94A3B8Explosion {explosion} &#475569| &#94A3B8Bucket {bucket} &#475569| &#94A3B8Teleport {teleport} &#475569| &#94A3B8Flight {flight}'
 claim-detail-permissions-spawn: '             &#94A3B8Animal Spawn {animal_spawn} &#475569| &#94A3B8Monster Spawn {monster_spawn}'
 claim-detail-flags: '&#CBD5E1Extra Permissions: {flags}'
-claim-detail-core-visible: '&#CBD5E1Core Visible: {value}'
 claim-detail-enter-message: '&#CBD5E1Enter Message: &#4CC9F0{message}'
 claim-detail-leave-message: '&#CBD5E1Leave Message: &#FACC15{message}'
 claim-detail-trusted: '&#CBD5E1Member List: {players}'

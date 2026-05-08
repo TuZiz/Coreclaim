@@ -50,7 +50,6 @@ public final class ClaimInputService {
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.ENTER_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
-        player.sendMessage(plugin.plainMessage("input-notify-vars"));
         player.sendMessage(plugin.message("input-enter-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
     }
 
@@ -62,7 +61,6 @@ public final class ClaimInputService {
         pendingInputs.put(player.getUniqueId(), new PendingInput(claim.id(), InputMode.LEAVE_MESSAGE));
         scheduleTimeout(player.getUniqueId());
         player.closeInventory();
-        player.sendMessage(plugin.plainMessage("input-notify-vars"));
         player.sendMessage(plugin.message("input-leave-prompt", "{seconds}", String.valueOf(plugin.settings().chatInputTimeoutSeconds())));
     }
 

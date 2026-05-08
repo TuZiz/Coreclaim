@@ -39,8 +39,6 @@ final class ClaimCommandFormatter {
             canSeeSensitive = claim.owner().equals(player.getUniqueId()) || AdminAccess.hasViewAccess(player);
         }
         if (adminView) {
-            sendDetail(sender, "claim-detail-claim-id", "{id}", String.valueOf(claim.id()));
-            sendDetail(sender, "claim-detail-server-id", "{server}", claimService.displayServerId(claim));
             sendDetail(sender, "claim-detail-system", "{value}", claim.systemManaged() ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no"));
             sendDetail(sender, "claim-detail-quota", "{value}", claimService.countsTowardQuota(claim) ? plugin.plainMessage("state-yes") : plugin.plainMessage("state-no"));
         }
@@ -49,7 +47,6 @@ final class ClaimCommandFormatter {
         sendDetail(sender, "claim-detail-world", "{world}", claim.world());
         sendDetail(sender, "claim-detail-core", "{x}", String.valueOf(claim.centerX()), "{y}", String.valueOf(claim.centerY()), "{z}", String.valueOf(claim.centerZ()));
         sendDetail(sender, "claim-detail-size", "{width}", String.valueOf(claim.width()), "{depth}", String.valueOf(claim.depth()), "{area}", String.valueOf(claim.area()));
-        sendDetail(sender, "claim-detail-bounds", "{min_x}", String.valueOf(claim.minX()), "{max_x}", String.valueOf(claim.maxX()), "{min_z}", String.valueOf(claim.minZ()), "{max_z}", String.valueOf(claim.maxZ()));
         if (claim.fullHeight()) {
             sendDetail(sender, "claim-detail-height-full");
         } else {
@@ -86,7 +83,6 @@ final class ClaimCommandFormatter {
             "{monster_spawn}", stateText(claim.permission(ClaimPermission.MONSTER_SPAWN))
         );
         sendDetail(sender, "claim-detail-flags", "{flags}", summarizeFlags(claim));
-        sendDetail(sender, "claim-detail-core-visible", "{value}", claim.coreVisible() ? plugin.plainMessage("state-core-visible") : plugin.plainMessage("state-core-hidden"));
         sendDetail(sender, "claim-detail-enter-message", "{message}", previewMessage(claim.enterMessage(), claim, plugin.plainMessage("claim-detail-default-enter")));
         sendDetail(sender, "claim-detail-leave-message", "{message}", previewMessage(claim.leaveMessage(), claim, plugin.plainMessage("claim-detail-default-leave")));
         if (canSeeSensitive) {

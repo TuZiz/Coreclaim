@@ -62,6 +62,7 @@ public final class PluginConfig {
     private final boolean allowPortalEntry;
     private final boolean allowFishingHookInteract;
     private final boolean allowVehicleCrossBorder;
+    private final boolean protectionDebug;
     private final boolean blockSpecialExplosiveUse;
     private final boolean strictRedstoneInteract;
     private final Set<Material> alwaysProtectedInteract;
@@ -141,6 +142,7 @@ public final class PluginConfig {
         this.allowPortalEntry = config.getBoolean("protection.allow-portal-entry", false);
         this.allowFishingHookInteract = config.getBoolean("protection.allow-fishing-hook-interact", false);
         this.allowVehicleCrossBorder = config.getBoolean("protection.allow-vehicle-cross-border", false);
+        this.protectionDebug = config.getBoolean("protection.debug", false);
         this.blockSpecialExplosiveUse = config.getBoolean("protection.block-special-explosive-use", true);
         this.strictRedstoneInteract = config.getBoolean("protection.strict-redstone-interact", true);
         this.alwaysProtectedInteract = resolveMaterials(config.getStringList("protection.always-protected-interact"));
@@ -333,6 +335,10 @@ public final class PluginConfig {
 
     public boolean allowVehicleCrossBorder() {
         return allowVehicleCrossBorder;
+    }
+
+    public boolean protectionDebug() {
+        return protectionDebug;
     }
 
     public boolean blockSpecialExplosiveUse() {

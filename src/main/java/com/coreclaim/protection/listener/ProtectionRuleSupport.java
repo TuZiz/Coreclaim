@@ -203,6 +203,14 @@ public final class ProtectionRuleSupport {
         return ProtectionMaterialRules.isAxeStrippingWood(material, item);
     }
 
+    public boolean isBlockDrivenToolChange(Material material, ItemStack item) {
+        return ProtectionMaterialRules.isBlockDrivenToolChange(material, item);
+    }
+
+    public Material strippedWoodMaterial(Material material) {
+        return ProtectionMaterialRules.strippedWoodMaterial(material);
+    }
+
     public ClaimPermission requiredPermissionForEntityInteract(Player player, Entity entity) {
         if (entity instanceof ArmorStand) {
             return ClaimPermission.BREAK;

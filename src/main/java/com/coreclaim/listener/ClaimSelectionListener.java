@@ -26,7 +26,7 @@ public final class ClaimSelectionListener implements Listener {
 
         Player player = event.getPlayer();
         ItemStack mainHand = player.getInventory().getItemInMainHand();
-        if (!claimSelectionService.canUseSelectionTool(mainHand)) {
+        if (!claimSelectionService.isSelectionTool(mainHand)) {
             return;
         }
 

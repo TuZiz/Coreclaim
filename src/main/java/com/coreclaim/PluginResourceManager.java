@@ -2,26 +2,14 @@ package com.coreclaim;
 
 import com.coreclaim.config.ResourceConfig;
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 final class PluginResourceManager {
 
-    private static final String LEGACY_MESSAGE_RESOURCE_PATH = "messages.yml";
-    private static final List<String> BUNDLED_MESSAGE_RESOURCE_PATHS = List.of(
-        CoreClaimPlugin.MESSAGE_RESOURCE_PATH,
-        CoreClaimPlugin.ENGLISH_MESSAGE_RESOURCE_PATH
-    );
     private static final List<String> MENU_RESOURCE_PATHS = List.of(
         "gui/claim-list.yml",
         "gui/claim-view.yml",
@@ -33,18 +21,6 @@ final class PluginResourceManager {
         "gui/claim-expand-amount.yml",
         "gui/claim-expand-confirm.yml",
         "gui/core.yml"
-    );
-    private static final Map<String, String> OUTDATED_LAYOUT_MARKERS = Map.ofEntries(
-        Map.entry("gui/claim-list.yml", "layout-version: 2"),
-        Map.entry("gui/claim-view.yml", "layout-version: 1"),
-        Map.entry("gui/claim-manage.yml", "layout-version: 2"),
-        Map.entry("gui/claim-expand-amount.yml", "layout-version: 1"),
-        Map.entry("gui/claim-expand-confirm.yml", "layout-version: 1"),
-        Map.entry("gui/trust-online-add.yml", "layout-version: 3"),
-        Map.entry("gui/core.yml", "layout-version: 6"),
-        Map.entry("gui/claim-permissions.yml", "layout-version: 13"),
-        Map.entry("gui/trust.yml", "layout-version: 5"),
-        Map.entry("gui/selection-create.yml", "layout-version: 3")
     );
 
     private final CoreClaimPlugin plugin;
@@ -59,10 +35,6 @@ final class PluginResourceManager {
 
     PreparedResources prepare() {
         plugin.saveDefaultConfig();
-        ensureConfigDefaults();
-        ensureRulesDefaults();
-        ensureMessagesDefaults();
-        ensureHealthyGuiResources();
         messageResource = new ResourceConfig(plugin, messageResourcePath());
         groupsResource = new ResourceConfig(plugin, "groups.yml");
         rulesResource = new ResourceConfig(plugin, "rules.yml");
@@ -71,10 +43,6 @@ final class PluginResourceManager {
     }
 
     void reloadResources() {
-        ensureConfigDefaults();
-        ensureRulesDefaults();
-        ensureMessagesDefaults();
-        ensureHealthyGuiResources();
         messageResource = new ResourceConfig(plugin, messageResourcePath());
         groupsResource.reload();
         rulesResource.reload();
@@ -135,174 +103,6 @@ final class PluginResourceManager {
         }
     }
 
-    private void ensureConfigDefaults() {
-        try (InputStream inputStream = plugin.getResource("config.yml")) {
-            if (inputStream == null) {
-                return;
-            }
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration config = plugin.getConfig();
-            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, config);
-            boolean changed = false;
-            if (!missingPaths.isEmpty()) {
-                config.setDefaults(defaults);
-                config.options().copyDefaults(true);
-                changed = true;
-            }
-            changed |= repairLegacySpacingDefaults(config, defaults);
-            if (!changed) {
-                return;
-            }
-            plugin.saveConfig();
-            if (!missingPaths.isEmpty()) {
-                plugin.getLogger().info("Added missing config defaults: " + String.join(", ", missingPaths));
-            }
-        } catch (Exception exception) {
-            plugin.getLogger().warning("Failed to merge config defaults: " + exception.getMessage());
-        }
-    }
-
-    private boolean repairLegacySpacingDefaults(FileConfiguration config, FileConfiguration defaults) {
-        boolean changed = false;
-        changed |= replaceLegacyIntDefault(config, defaults, "minimum-gap", 50);
-        changed |= replaceLegacyIntDefault(config, defaults, "selection-minimum-gap", 10);
-        return changed;
-    }
-
-    private boolean replaceLegacyIntDefault(FileConfiguration config, FileConfiguration defaults, String path, int legacyValue) {
-        if (!config.isSet(path) || config.getInt(path) != legacyValue) {
-            return false;
-        }
-        int replacement = defaults.getInt(path, legacyValue);
-        if (replacement == legacyValue) {
-            return false;
-        }
-        config.set(path, replacement);
-        plugin.getLogger().info("Updated legacy config default " + path + " from " + legacyValue + " to " + replacement + ".");
-        return true;
-    }
-
-    private void ensureRulesDefaults() {
-        try (InputStream inputStream = plugin.getResource("rules.yml")) {
-            if (inputStream == null) {
-                return;
-            }
-            if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
-                throw new IllegalStateException("Unable to create plugin data folder.");
-            }
-            File file = new File(plugin.getDataFolder(), "rules.yml");
-            boolean existed = file.exists();
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration rulesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
-            boolean changed = false;
-            File legacyFlagsFile = new File(plugin.getDataFolder(), "flags.yml");
-            if (legacyFlagsFile.exists()) {
-                FileConfiguration legacyFlags = YamlConfiguration.loadConfiguration(legacyFlagsFile);
-                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
-                changed |= migrateLegacySection(legacyFlags.getConfigurationSection("system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
-                if (changed) {
-                    plugin.getLogger().info("Migrated legacy permission defaults from flags.yml to rules.yml");
-                }
-            }
-            changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("flags.new-claim-defaults"), rulesConfig, "new-claim-defaults.flags");
-            changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("flags.system-claim-defaults"), rulesConfig, "system-claim-defaults.flags");
-            changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("permissions.new-claim-defaults"), rulesConfig, "new-claim-defaults.permissions");
-            changed |= migrateLegacySection(plugin.getConfig().getConfigurationSection("permissions.system-claim-defaults"), rulesConfig, "system-claim-defaults.permissions");
-            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, rulesConfig);
-            if (!missingPaths.isEmpty()) {
-                rulesConfig.setDefaults(defaults);
-                rulesConfig.options().copyDefaults(true);
-                changed = true;
-            }
-            changed |= RuleDefaultsRepair.applyKnownReplacements(rulesConfig, defaults);
-            if (!existed || changed) {
-                rulesConfig.save(file);
-                if (!missingPaths.isEmpty()) {
-                    plugin.getLogger().info("Added missing rules defaults: " + String.join(", ", missingPaths));
-                }
-            }
-        } catch (Exception exception) {
-            plugin.getLogger().warning("Failed to prepare rules defaults: " + exception.getMessage());
-        }
-    }
-
-    private void ensureMessagesDefaults() {
-        for (String resourcePath : BUNDLED_MESSAGE_RESOURCE_PATHS) {
-            ensureMessageDefaults(resourcePath, CoreClaimPlugin.MESSAGE_RESOURCE_PATH.equals(resourcePath));
-        }
-    }
-
-    private void ensureMessageDefaults(String resourcePath, boolean migrateLegacyMessages) {
-        try (InputStream inputStream = plugin.getResource(resourcePath)) {
-            if (inputStream == null) {
-                return;
-            }
-            if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
-                throw new IllegalStateException("Unable to create plugin data folder.");
-            }
-            File file = new File(plugin.getDataFolder(), resourcePath);
-            if (migrateLegacyMessages) {
-                migrateLegacyMessagesFile(file);
-            }
-            boolean existed = file.exists();
-            FileConfiguration defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            FileConfiguration messagesConfig = existed ? YamlConfiguration.loadConfiguration(file) : new YamlConfiguration();
-            boolean changed = false;
-            List<String> missingPaths = ConfigurationDefaults.missingPaths(defaults, messagesConfig);
-            if (!missingPaths.isEmpty()) {
-                messagesConfig.setDefaults(defaults);
-                messagesConfig.options().copyDefaults(true);
-                changed = true;
-            }
-
-            changed |= MessageDefaultsRepair.applyKnownReplacements(messagesConfig, defaults, resourcePath);
-
-            if (!existed || changed) {
-                messagesConfig.save(file);
-                if (!missingPaths.isEmpty()) {
-                    plugin.getLogger().info("Added missing messages defaults to " + resourcePath + ": " + String.join(", ", missingPaths));
-                }
-            }
-        } catch (Exception exception) {
-            plugin.getLogger().warning("Failed to prepare messages defaults for " + resourcePath + ": " + exception.getMessage());
-        }
-    }
-
-    private void migrateLegacyMessagesFile(File targetFile) throws Exception {
-        File legacyFile = new File(plugin.getDataFolder(), LEGACY_MESSAGE_RESOURCE_PATH);
-        if (!legacyFile.exists() || targetFile.exists()) {
-            return;
-        }
-        File parent = targetFile.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IllegalStateException("Unable to create language directory: " + parent.getAbsolutePath());
-        }
-        Files.move(legacyFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        plugin.getLogger().info("Migrated legacy messages.yml to " + CoreClaimPlugin.MESSAGE_RESOURCE_PATH);
-    }
-
-    private boolean migrateLegacySection(ConfigurationSection source, FileConfiguration target, String prefix) {
-        if (source == null) {
-            return false;
-        }
-        return migrateLegacyValues(source, target, prefix);
-    }
-
-    private boolean migrateLegacyValues(ConfigurationSection source, FileConfiguration target, String prefix) {
-        boolean changed = false;
-        for (String key : source.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            Object value = source.get(key);
-            if (value instanceof ConfigurationSection section) {
-                changed |= migrateLegacyValues(section, target, path);
-            } else if (!target.isSet(path)) {
-                target.set(path, value);
-                changed = true;
-            }
-        }
-        return changed;
-    }
-
     private void loadMenuResources() {
         menuResources.put("claim-list", new ResourceConfig(plugin, "gui/claim-list.yml"));
         menuResources.put("claim-view", new ResourceConfig(plugin, "gui/claim-view.yml"));
@@ -314,46 +114,6 @@ final class PluginResourceManager {
         menuResources.put("claim-expand-amount", new ResourceConfig(plugin, "gui/claim-expand-amount.yml"));
         menuResources.put("claim-expand-confirm", new ResourceConfig(plugin, "gui/claim-expand-confirm.yml"));
         menuResources.put("core", new ResourceConfig(plugin, "gui/core.yml"));
-    }
-
-    private void ensureHealthyGuiResources() {
-        for (String resource : MENU_RESOURCE_PATHS) {
-            repairCorruptedGuiResource(resource);
-        }
-    }
-
-    private void repairCorruptedGuiResource(String fileName) {
-        try {
-            File file = new File(plugin.getDataFolder(), fileName);
-            if (!file.exists()) {
-                return;
-            }
-            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-            if (!looksLikeGuiMojibake(content) && !looksLikeOutdatedGuiLayout(fileName, content)) {
-                return;
-            }
-            plugin.saveResource(fileName, true);
-            plugin.getLogger().warning("Detected outdated or corrupted GUI content in " + fileName + ". Replaced it with the bundled resource.");
-        } catch (Exception exception) {
-            plugin.getLogger().warning("Failed to verify GUI resource " + fileName + ": " + exception.getMessage());
-        }
-    }
-
-    private boolean looksLikeGuiMojibake(String content) {
-        if (content == null || content.isBlank()) {
-            return false;
-        }
-        return content.contains("GuiPlain:")
-            && content.contains("custom-model-data:")
-            && java.util.regex.Pattern.compile("[\\u4E00-\\u9FFF]{3,}\\?").matcher(content).find();
-    }
-
-    private boolean looksLikeOutdatedGuiLayout(String fileName, String content) {
-        if (content == null || content.isBlank()) {
-            return false;
-        }
-        String marker = OUTDATED_LAYOUT_MARKERS.get(fileName);
-        return marker != null && !content.contains(marker);
     }
 
     record PreparedResources(

@@ -59,14 +59,15 @@ public final class ClaimCoreInteractionListener implements Listener {
             .orElse(null);
         if (claim != null) {
             event.setCancelled(true);
-            if (!claim.owner().equals(player.getUniqueId())
-                && !AdminAccess.hasViewAccess(player)
-                && !AdminAccess.hasAnyClaimWriteAccess(player)) {
+            if (!canOpenCoreMenu(player, claim)) {
                 player.sendMessage(plugin.message("trust-no-permission"));
                 return;
             }
-            menuService.openCoreMenu(player, claim);
-            player.sendMessage(plugin.message("claim-core-info-opened"));
+            if (canOpenManagementCoreMenu(player, claim)) {
+                menuService.openCoreMenu(player, claim);
+            } else {
+                menuService.openClaimViewMenu(player, claim.id(), 0);
+            }
             return;
         }
         if (pendingClaimService.hasPendingClaim(player.getUniqueId())) {
@@ -112,5 +113,22 @@ public final class ClaimCoreInteractionListener implements Listener {
 
         Location coreLocation = block.getLocation();
         plugin.platformScheduler().runLocationLater(coreLocation, () -> claimActionService.syncClaimCoreState(claim), 1L);
+    }
+
+    static boolean canOpenMemberCoreMenu(Claim claim, java.util.UUID playerId) {
+        return claim != null
+            && playerId != null
+            && claim.canAccess(playerId)
+            && !claim.isOwner(playerId);
+    }
+
+    private boolean canOpenCoreMenu(Player player, Claim claim) {
+        return canOpenManagementCoreMenu(player, claim) || canOpenMemberCoreMenu(claim, player.getUniqueId());
+    }
+
+    private boolean canOpenManagementCoreMenu(Player player, Claim claim) {
+        return claim.owner().equals(player.getUniqueId())
+            || AdminAccess.hasViewAccess(player)
+            || AdminAccess.hasAnyClaimWriteAccess(player);
     }
 }

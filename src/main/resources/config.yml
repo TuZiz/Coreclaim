@@ -1,6 +1,10 @@
 # 固定可创建领地的世界
 world: "world"
+
+# 当前子服编号；单服可保持 local，多服/MySQL 共享时每个子服必须唯一
 server-id: "local"
+
+# 留空表示允许所有世界创建领地；填写后只允许列表中的世界
 claim-worlds: []
 
 # 语言文件：zh_cn / en_us
@@ -43,23 +47,33 @@ warn-on-second-claim: true
 core-use-min-activity: 0
 
 inactive-claim-cleanup:
+  # 是否启用长期未活跃领地自动清理
   enabled: false
+  # 多少天无建造/交互后视为未活跃
   inactive-days: 90
+  # 达到未活跃天数后再等待多少天才真正清理
   grace-days: 14
+  # 后台扫描间隔，单位分钟
   scan-interval-minutes: 30
+  # 不参与自动清理的权限组名
   exempt-groups: []
+  # 拥有这些权限节点的玩家，其领地不参与自动清理
   exempt-permissions: []
+  # 是否跳过系统领地
   ignore-system-claims: true
 
 flight:
   # 离开可飞行领地后保留当前飞行的缓冲刻数
   exit-grace-ticks: 20
+  # 飞行状态纠正间隔，单位 tick；数值越小越及时，检查也越频繁
   reconcile-interval-ticks: 10
+  # 飞行权限调试日志；仅排查飞行问题时开启
   debug: false
 
 database:
+  # 兼容旧配置的数据库文件名；sqlite.sqlite.file 会优先生效
   file: coreclaim.db
-  # sqlite keeps the old single-server file database. mysql enables shared MySQL/MariaDB storage.
+  # sqlite 为单服本地文件数据库；mysql 用于多服共享 MySQL/MariaDB
   type: sqlite
   sqlite:
     file: coreclaim.db
@@ -72,18 +86,23 @@ database:
     use-ssl: false
     pool-size: 5
   migration:
-    # Only used when database.type is mysql. The target MySQL database must be empty.
+    # 仅在 database.type=mysql 时使用；目标 MySQL 库必须是空库
     enabled: false
+    # 从哪个旧 SQLite 文件迁移数据
     source-sqlite-file: coreclaim.db
 
 cross-server-teleport:
+  # 跨服传送开关；仅 MySQL 多服场景通常需要开启
   enabled: false
+  # 跨服连接等待超时，单位秒
   pending-timeout-seconds: 30
-  # Optional one-time legacy mapping for old claims without server_id.
+  # 旧数据没有 server_id 时可临时配置世界到子服的映射；迁移完成后可留空
   legacy-world-server-map: {}
 
 claim-sync:
+  # MySQL 多服共享时建议开启，用于同步各子服内存中的领地缓存
   enabled: false
+  # 当前仅推荐 redis
   transport: "redis"
   redis:
     host: "127.0.0.1"
@@ -91,6 +110,7 @@ claim-sync:
     password: ""
     database: 0
     channel: "coreclaim:claim-sync"
+    # Redis 断线后的重连间隔，单位秒
     reconnect-seconds: 5
 
 # 领地默认规则已迁移到 rules.yml
@@ -149,13 +169,23 @@ claim-visual:
 allow-interact: []
 
 protection:
+  # 领地保护调试日志；只在排查蛋糕、斧头去皮、右键交互等问题时开启
+  debug: false
+  # 是否允许末影珍珠进入无权限领地
   allow-ender-pearl-entry: false
+  # 是否允许紫颂果传送进入无权限领地
   allow-chorus-fruit-entry: false
+  # 是否允许传送门进入无权限领地
   allow-portal-entry: false
+  # 是否允许钓鱼钩跨领地交互
   allow-fishing-hook-interact: false
+  # 是否允许船、矿车等载具跨越领地边界
   allow-vehicle-cross-border: false
+  # 是否保护床、重生锚等在特殊维度可能爆炸的方块交互
   block-special-explosive-use: true
+  # 是否把按钮、拉杆、音符盒等红石类右键交互按红石权限处理
   strict-redstone-interact: true
+  # 即使 allow-interact 放行，也始终按领地权限保护的方块
   always-protected-interact:
     - "BELL"
     - "LEVER"

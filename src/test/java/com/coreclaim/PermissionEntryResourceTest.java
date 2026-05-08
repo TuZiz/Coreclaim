@@ -52,6 +52,21 @@ class PermissionEntryResourceTest {
     }
 
     @Test
+    void claimDetailsOmitVerboseChatFields() throws Exception {
+        String zhCn = resourceText("/lang/zh_cn.yml");
+        String enUs = resourceText("/lang/en_us.yml");
+
+        assertFalse(zhCn.contains("claim-detail-claim-id:"));
+        assertFalse(zhCn.contains("claim-detail-server-id:"));
+        assertFalse(zhCn.contains("claim-detail-bounds:"));
+        assertFalse(zhCn.contains("claim-detail-core-visible:"));
+        assertFalse(enUs.contains("claim-detail-claim-id:"));
+        assertFalse(enUs.contains("claim-detail-server-id:"));
+        assertFalse(enUs.contains("claim-detail-bounds:"));
+        assertFalse(enUs.contains("claim-detail-core-visible:"));
+    }
+
+    @Test
     void rulesExposeMobAndSpawnPermissionDefaults() throws Exception {
         String rules = resourceText("/rules.yml");
 

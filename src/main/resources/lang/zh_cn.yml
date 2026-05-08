@@ -66,7 +66,6 @@ claim-create-failed: '&#FF6B6B&l! &#CBD5E1领地创建失败，已回滚本次�
 # 扩建与核心操作
 claim-expand-cooldown: '&#FF6B6B&l! &#CBD5E1扩建冷却中... 请等待 &#F8FAFC{seconds}s&#CBD5E1。'
 claim-expand-success: '&#55FFAA扩建 &#475569| &#CBD5E1向 &#F8FAFC{direction} &#CBD5E1延伸 &#F8FAFC{amount} &#CBD5E1格。花费: &#F8FAFC{cost}&#CBD5E1，现大小: &#F8FAFC{width}x{depth}&#CBD5E1。'
-claim-core-info-opened: '&#55FFAA菜单 &#475569| &#CBD5E1已开启领地管理面板。'
 claim-core-hidden: '&#55FFAA隐藏 &#475569| &#CBD5E1已移除 &#F8FAFC{name} &#CBD5E1的核心模型，领地范围依然有效。'
 claim-core-already-hidden: '&#FFD166&l! &#CBD5E1该领地核心此前已被移除。'
 claim-core-rewarded: '&#55FFAA奖励 &#475569| &#CBD5E1累计在线达 &#F8FAFC{minutes} &#CBD5E1分钟，赠送 1 枚新人核心！'
@@ -182,9 +181,8 @@ claim-tpset-success: '&#55FFAA传送点 &#475569| &#CBD5E1已将领地 &#F8FAFC{
 # 聊天输入
 input-cancelled: '&#FFD166输入 &#475569| &#CBD5E1已取消当前设置。'
 input-rename-prompt: '&#FFD166命名 &#475569| &#CBD5E1请在聊天栏输入新的领地名字，输入 &#FF6B6B取消 &#CBD5E1可终止。&#475569({seconds} 秒后自动取消)'
-input-notify-vars: '&#94A3B8变量 &#475569| &#CBD5E1可用: &#F8FAFC{claim_name} &#CBD5E1/ &#F8FAFC{owner} &#CBD5E1/ &#F8FAFC{name} &#475569(也支持 %claim_name% / %owner%)'
-input-enter-prompt: '&#FFD166进入提示 &#475569| &#CBD5E1请输入进入提示，输入 &#FACC15清空 &#CBD5E1恢复默认，输入 &#FF6B6B取消 &#CBD5E1终止。&#475569({seconds} 秒后自动取消)'
-input-leave-prompt: '&#FFD166离开提示 &#475569| &#CBD5E1请输入离开提示，输入 &#FACC15清空 &#CBD5E1恢复默认，输入 &#FF6B6B取消 &#CBD5E1终止。&#475569({seconds} 秒后自动取消)'
+input-enter-prompt: '&#FFD166进入提示 &#475569| &#CBD5E1请输入新的进入提示。输入 &#FACC15清空 &#CBD5E1恢复默认，输入 &#FF6B6B取消 &#CBD5E1取消。&#475569({seconds} 秒后自动取消)'
+input-leave-prompt: '&#FFD166离开提示 &#475569| &#CBD5E1请输入新的离开提示。输入 &#FACC15清空 &#CBD5E1恢复默认，输入 &#FF6B6B取消 &#CBD5E1取消。&#475569({seconds} 秒后自动取消)'
 input-rename-success: '&#55FFAA命名 &#475569| &#CBD5E1已将领地重命名为 &#F8FAFC{name}&#CBD5E1。'
 input-enter-cleared: '&#55FFAA进入提示 &#475569| &#CBD5E1已恢复默认进入提示。'
 input-enter-empty: '&#FF6B6B&l! &#CBD5E1进入提示不能为空，或输入 &#FACC15清空 &#CBD5E1恢复默认。'
@@ -270,7 +268,7 @@ help-player:
 help-admin:
   - '&#55FFAA&l管理员'
   - '&#FACC15/claim admin create system <领地名> &#CBD5E1按当前选区创建系统领地'
-  - '&#FACC15/claim admin info <领地名|#claimId> &#CBD5E1查看领地完整详情'
+  - '&#FACC15/claim admin info <领地名|#claimId> &#CBD5E1查看领地详情'
   - '&#FACC15/claim admin playerclaims <玩家> &#CBD5E1查看玩家名下全部领地'
   - '&#FACC15/claim admin diagnose <领地名|#claimId> [--player 玩家] &#CBD5E1查看跨服、TP 与授权来源诊断'
   - '&#FACC15/claim admin add <玩家> &#CBD5E1强制添加成员'
@@ -285,8 +283,6 @@ help-admin:
   - '&#FACC15/claim givecore <玩家> [数量] &#CBD5E1手动发放领地核心'
 
 # 领地详情
-claim-detail-claim-id: '&#94A3B8Claim ID: &#F8FAFC{id}'
-claim-detail-server-id: '&#94A3B8Server ID: &#F8FAFC{server}'
 claim-detail-system: '&#94A3B8系统领地: {value}'
 claim-detail-quota: '&#94A3B8计入配额: {value}'
 claim-detail-name: '&#CBD5E1领地名称: &#FACC15{name}'
@@ -294,7 +290,6 @@ claim-detail-owner: '&#CBD5E1领地主人: &#4CC9F0{owner}'
 claim-detail-world: '&#CBD5E1所在世界: &#F8FAFC{world}'
 claim-detail-core: '&#CBD5E1核心坐标: &#F8FAFC{x}, {y}, {z}'
 claim-detail-size: '&#CBD5E1领地大小: &#F8FAFC{width}x{depth} &#94A3B8(面积 {area})'
-claim-detail-bounds: '&#CBD5E1边界范围: &#94A3B8X {min_x} ~ {max_x} &#475569| &#94A3B8Z {min_z} ~ {max_z}'
 claim-detail-height-full: '&#CBD5E1高度模式: &#55FFAA全高度保护'
 claim-detail-height-selection: '&#CBD5E1高度模式: &#4CC9F0选区高度 &#94A3B8(Y {min_y} ~ {max_y}, 高 {height})'
 claim-detail-teleport-custom: '&#CBD5E1传送点: &#55FFAA自定义 &#94A3B8({point})'
@@ -305,7 +300,6 @@ claim-detail-permissions: '&#CBD5E1权限: &#94A3B8放置 {place} &#475569| &#94
 claim-detail-permissions-extra: '        &#94A3B8生物 {mob_interact} &#475569| &#94A3B8爆炸 {explosion} &#475569| &#94A3B8桶 {bucket} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}'
 claim-detail-permissions-spawn: '        &#94A3B8动物生成 {animal_spawn} &#475569| &#94A3B8怪物生成 {monster_spawn}'
 claim-detail-flags: '&#CBD5E1扩展权限: {flags}'
-claim-detail-core-visible: '&#CBD5E1核心显示: {value}'
 claim-detail-enter-message: '&#CBD5E1进入提示: &#4CC9F0{message}'
 claim-detail-leave-message: '&#CBD5E1离开提示: &#FACC15{message}'
 claim-detail-trusted: '&#CBD5E1成员列表: {players}'

@@ -303,6 +303,10 @@ public final class ClaimService {
         mutationService.updateBounds(claim, east, south, west, north, actorId);
     }
 
+    public void updateHeightBounds(Claim claim, int minY, int maxY, boolean fullHeight, UUID actorId) {
+        mutationService.updateHeightBounds(claim, minY, maxY, fullHeight, actorId);
+    }
+
     public void updateCoreVisibility(Claim claim, boolean coreVisible) {
         updateCoreVisibility(claim, coreVisible, null);
     }

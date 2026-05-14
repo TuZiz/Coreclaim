@@ -105,6 +105,19 @@ final class ClaimPlayerCommandHandler {
             player.sendMessage(command.plugin().message("expand-usage"));
             return true;
         }
+        if (args.length >= 3) {
+            int amount = command.resolver().parsePositiveInt(args[2], player);
+            if (amount < 0) {
+                return true;
+            }
+            Claim claim = command.claimActionService().findOwnedClaim(player);
+            if (claim == null) {
+                player.sendMessage(command.plugin().message("claim-not-found"));
+                return true;
+            }
+            command.claimActionService().expandClaim(player, claim, direction, amount);
+            return true;
+        }
         command.claimActionService().expandCurrentClaim(player, direction);
         return true;
     }

@@ -65,7 +65,7 @@ claim-create-failed: '&#FF6B6B&l! &#CBD5E1领地创建失败，已回滚本次�
 
 # 扩建与核心操作
 claim-expand-cooldown: '&#FF6B6B&l! &#CBD5E1扩建冷却中... 请等待 &#F8FAFC{seconds}s&#CBD5E1。'
-claim-expand-success: '&#55FFAA扩建 &#475569| &#CBD5E1向 &#F8FAFC{direction} &#CBD5E1延伸 &#F8FAFC{amount} &#CBD5E1格。花费: &#F8FAFC{cost}&#CBD5E1，现大小: &#F8FAFC{width}x{depth}&#CBD5E1。'
+claim-expand-success: '&#55FFAA扩建 &#475569| &#CBD5E1向 &#F8FAFC{direction} &#CBD5E1延伸 &#F8FAFC{amount} &#CBD5E1格。花费: &#F8FAFC{cost}&#CBD5E1，现大小: &#F8FAFC{width}x{height}x{depth}&#CBD5E1。'
 claim-core-hidden: '&#55FFAA隐藏 &#475569| &#CBD5E1已移除 &#F8FAFC{name} &#CBD5E1的核心模型，领地范围依然有效。'
 claim-core-already-hidden: '&#FFD166&l! &#CBD5E1该领地核心此前已被移除。'
 claim-core-rewarded: '&#55FFAA奖励 &#475569| &#CBD5E1累计在线达 &#F8FAFC{minutes} &#CBD5E1分钟，赠送 1 枚新人核心！'
@@ -97,7 +97,7 @@ leave-claim: '&#FF6B6B&l« &#CBD5E1离开领地: &#CBD5E1{name}'
 database-ready: '&#55FFAA数据 &#475569| &#CBD5E1初始化成功: &#F8FAFC{file}'
 
 # 帮助与参数
-expand-usage: '&#FF6B6B用法 &#475569| &#CBD5E1/claim expand <east|south|west|north>'
+expand-usage: '&#FF6B6B用法 &#475569| &#CBD5E1/claim expand <east|south|west|north|up|down> [格数]'
 teleport-usage: '&#FF6B6B用法 &#475569| &#CBD5E1/claim tp <领地名称>'
 show-usage: '&#FF6B6B用法 &#475569| &#CBD5E1/claim show <领地名称> &#475569(不填默认显示所在领地)'
 remove-usage: '&#FF6B6B用法 &#475569| &#CBD5E1/claim remove <领地名称>'

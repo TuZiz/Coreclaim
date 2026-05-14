@@ -18,6 +18,13 @@ public final class ClaimExpansionMenuSupport {
     }
 
     public int normalizeAmount(Player player, Claim claim, ClaimDirection direction, int requestedAmount) {
+        if (direction.vertical()) {
+            int maxAmount = maxAmount(player, claim, direction);
+            if (maxAmount <= 0) {
+                return 1;
+            }
+            return Math.max(1, Math.min(requestedAmount, maxAmount));
+        }
         ClaimGroup group = plugin.groups().resolve(player);
         if (!group.hasDistanceLimit()) {
             return Math.max(1, requestedAmount);
@@ -30,6 +37,12 @@ public final class ClaimExpansionMenuSupport {
     }
 
     public int maxAmount(Player player, Claim claim, ClaimDirection direction) {
+        if (direction == ClaimDirection.UP) {
+            return Math.max(0, worldMaxY(player, claim) - claim.maxY());
+        }
+        if (direction == ClaimDirection.DOWN) {
+            return Math.max(0, claim.minY() - worldMinY(player, claim));
+        }
         ClaimGroup group = plugin.groups().resolve(player);
         return group.hasDistanceLimit() ? group.remainingDistance(claim.distance(direction)) : -1;
     }
@@ -54,7 +67,10 @@ public final class ClaimExpansionMenuSupport {
             "{target}", String.valueOf(preview.targetDistance()),
             "{price}", preview.costText(),
             "{width}", String.valueOf(preview.width()),
+            "{height}", String.valueOf(preview.height()),
             "{depth}", String.valueOf(preview.depth()),
+            "{min_y}", String.valueOf(preview.minY()),
+            "{max_y}", String.valueOf(preview.maxY()),
             "{status}", statusText(player, preview)
         };
     }
@@ -65,7 +81,13 @@ public final class ClaimExpansionMenuSupport {
             case SOUTH -> "南";
             case WEST -> "西";
             case EAST -> "东";
+            case UP -> "上";
+            case DOWN -> "下";
         };
+    }
+
+    public String[] directionReplacements(Player player, Claim claim, ClaimDirection direction, ClaimActionService.ExpansionPreview preview) {
+        return replacements(player, claim, direction, preview.expandAmount(), preview);
     }
 
     private String statusText(Player player, ClaimActionService.ExpansionPreview preview) {
@@ -85,5 +107,15 @@ public final class ClaimExpansionMenuSupport {
             return "&#FF6B6B余额不足";
         }
         return "&#55FFAA可以扩建";
+    }
+
+    private int worldMinY(Player player, Claim claim) {
+        org.bukkit.World world = player.getServer().getWorld(claim.world());
+        return world == null ? -64 : world.getMinHeight();
+    }
+
+    private int worldMaxY(Player player, Claim claim) {
+        org.bukkit.World world = player.getServer().getWorld(claim.world());
+        return world == null ? 319 : world.getMaxHeight() - 1;
     }
 }

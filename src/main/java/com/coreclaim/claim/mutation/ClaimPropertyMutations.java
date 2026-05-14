@@ -80,6 +80,26 @@ final class ClaimPropertyMutations {
         context.recordBuildActivity(claim, actorId);
     }
 
+    void updateHeightBounds(Claim claim, int minY, int maxY, boolean fullHeight, UUID actorId) {
+        synchronized (context.runtime.mutationLock()) {
+            claim.setHeightBounds(minY, maxY, fullHeight);
+            claim.setLastExpandedAt(Instant.now().getEpochSecond());
+            context.runtime.databaseManager().update(
+                "UPDATE claims SET min_y = ?, max_y = ?, full_height = ?, last_expanded_at = ? WHERE id = ?",
+                statement -> {
+                    statement.setInt(1, claim.minY());
+                    statement.setInt(2, claim.maxY());
+                    statement.setInt(3, claim.fullHeight() ? 1 : 0);
+                    statement.setLong(4, claim.lastExpandedAt());
+                    statement.setInt(5, claim.id());
+                }
+            );
+            context.lookupService.rebuildClaimChunkIndex();
+            context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
+        }
+        context.recordBuildActivity(claim, actorId);
+    }
+
     void updateCoreVisibility(Claim claim, boolean coreVisible, UUID actorId) {
         updateBooleanClaimColumn(claim, "core_visible", coreVisible, changed -> claim.setCoreVisible(coreVisible));
         context.recordInteractionActivity(claim, actorId);

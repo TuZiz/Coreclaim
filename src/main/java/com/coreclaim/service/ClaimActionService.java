@@ -127,13 +127,18 @@ public final class ClaimActionService {
             }
         }
 
-        claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north(), player.getUniqueId());
+        if (direction.vertical()) {
+            claimService.updateHeightBounds(claim, preview.minY(), preview.maxY(), preview.fullHeight(), player.getUniqueId());
+        } else {
+            claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north(), player.getUniqueId());
+        }
         player.sendMessage(plugin.message(
             "claim-expand-success",
             "{direction}", direction.displayName(),
             "{amount}", String.valueOf(preview.expandAmount()),
             "{cost}", MONEY.format(preview.cost()),
             "{width}", String.valueOf(preview.width()),
+            "{height}", String.valueOf(preview.height()),
             "{depth}", String.valueOf(preview.depth())
         ));
         return true;
@@ -298,16 +303,21 @@ public final class ClaimActionService {
     }
 
     private ExpansionPreview buildExpansionPreview(Player player, Claim claim, ClaimDirection direction, int amount) {
+        World world = claimService.isLocalClaim(claim) ? Bukkit.getWorld(claim.world()) : null;
+        int worldMinY = world == null ? -64 : world.getMinHeight();
+        int worldMaxY = world == null ? 319 : world.getMaxHeight() - 1;
         ClaimGroup group = plugin.groups().resolve(player);
         int east = claim.east();
         int south = claim.south();
         int west = claim.west();
         int north = claim.north();
+        int minY = claim.minY();
+        int maxY = claim.maxY();
 
         int currentDistance = claim.distance(direction);
-        int expandAmount = group.clampExpandAmount(currentDistance, amount);
+        int expandAmount = clampExpandAmount(group, claim, direction, amount, worldMinY, worldMaxY);
         if (expandAmount <= 0) {
-            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.depth(), east, south, west, north, true, false);
+            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, claim.fullHeight(), true, false);
         }
 
         int targetDistance = currentDistance + expandAmount;
@@ -316,20 +326,35 @@ public final class ClaimActionService {
             case SOUTH -> south = targetDistance;
             case WEST -> west = targetDistance;
             case NORTH -> north = targetDistance;
+            case UP -> maxY = Math.min(worldMaxY, maxY + expandAmount);
+            case DOWN -> minY = Math.max(worldMinY, minY - expandAmount);
         }
+        boolean fullHeight = minY <= worldMinY && maxY >= worldMaxY;
 
         int minX = claim.centerX() - west;
         int maxX = claim.centerX() + east;
         int minZ = claim.centerZ() - north;
         int maxZ = claim.centerZ() + south;
-        if (claimService.overlaps(claim.world(), minX, maxX, claim.minY(), claim.maxY(), minZ, maxZ, claim.id(), claim.fullHeight())) {
-            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.depth(), east, south, west, north, false, true);
+        if (claimService.overlaps(claim.world(), minX, maxX, minY, maxY, minZ, maxZ, claim.id(), fullHeight)) {
+            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, fullHeight, false, true);
         }
 
         long oldArea = claim.area();
         long newArea = (long) (east + west + 1) * (south + north + 1);
-        double cost = (newArea - oldArea) * group.expandPricePerBlock();
-        return new ExpansionPreview(true, cost, targetDistance, expandAmount, east + west + 1, south + north + 1, east, south, west, north, false, false);
+        int oldHeight = claim.height();
+        int newHeight = maxY - minY + 1;
+        long costBlocks = direction.vertical() ? oldArea * Math.max(0, newHeight - oldHeight) : newArea - oldArea;
+        double cost = costBlocks * group.expandPricePerBlock();
+        return new ExpansionPreview(true, cost, targetDistance, expandAmount, east + west + 1, newHeight, south + north + 1, east, south, west, north, minY, maxY, fullHeight, false, false);
+    }
+
+    private int clampExpandAmount(ClaimGroup group, Claim claim, ClaimDirection direction, int amount, int worldMinY, int worldMaxY) {
+        int positiveAmount = Math.max(0, amount);
+        if (!direction.vertical()) {
+            return group.clampExpandAmount(claim.distance(direction), positiveAmount);
+        }
+        int remaining = direction == ClaimDirection.UP ? worldMaxY - claim.maxY() : claim.minY() - worldMinY;
+        return Math.min(positiveAmount, Math.max(0, remaining));
     }
 
     private String displayName(OfflinePlayer player) {
@@ -374,11 +399,15 @@ public final class ClaimActionService {
         int targetDistance,
         int expandAmount,
         int width,
+        int height,
         int depth,
         int east,
         int south,
         int west,
         int north,
+        int minY,
+        int maxY,
+        boolean fullHeight,
         boolean hitMax,
         boolean overlap
     ) {

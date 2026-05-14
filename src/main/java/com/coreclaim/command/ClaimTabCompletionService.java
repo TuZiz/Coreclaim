@@ -2,7 +2,6 @@ package com.coreclaim.command;
 
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
-import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.util.AdminAccess;
 import java.util.ArrayList;
@@ -58,7 +57,16 @@ final class ClaimTabCompletionService {
             options.add("south");
             options.add("west");
             options.add("north");
+            options.add("up");
+            options.add("down");
             return support.filter(options, args[1]);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("expand")) {
+            options.add("1");
+            options.add("5");
+            options.add("10");
+            options.add("50");
+            return support.filter(options, args[2]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("givecore")) {
             options.addAll(support.onlinePlayerNames());
@@ -72,6 +80,7 @@ final class ClaimTabCompletionService {
             return support.filter(options, args[1]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("admin") && hasAnyAdminPermission(sender)) {
+            options.add("help");
             options.add("create");
             options.add("info");
             options.add("playerclaims");
@@ -131,10 +140,7 @@ final class ClaimTabCompletionService {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("tp")) {
             if (sender instanceof Player player) {
-                options.addAll(support.claimNames(claimService.allClaims().stream()
-                    .filter(claim -> hasAdminForcePermission(player)
-                        || claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT))
-                    .toList()));
+                options.addAll(support.claimNames(teleportCompletionClaims(player)));
             }
             return support.filterByJoinedInput(options, args, 1);
         }
@@ -223,10 +229,7 @@ final class ClaimTabCompletionService {
                             || claimService.canAccess(claim, player.getUniqueId()))
                         .toList()));
                 } else if (args[0].equalsIgnoreCase("tp")) {
-                    options.addAll(support.claimNames(claimService.allClaims().stream()
-                        .filter(claim -> hasAdminForcePermission(player)
-                            || claimService.hasPermission(claim, player.getUniqueId(), ClaimPermission.TELEPORT))
-                        .toList()));
+                    options.addAll(support.claimNames(teleportCompletionClaims(player)));
                 } else if (args[0].equalsIgnoreCase("edit") && hasAdminClaimManagePermission(sender)) {
                     options.addAll(support.claimNames(claimService.allClaims()));
                 } else if (args[0].equalsIgnoreCase("remove")) {
@@ -292,5 +295,11 @@ final class ClaimTabCompletionService {
 
     private boolean hasAdminClaimManagePermission(CommandSender sender) {
         return AdminAccess.hasClaimManageAccess(sender);
+    }
+
+    private List<Claim> teleportCompletionClaims(Player player) {
+        return claimService.visibleClaimsOf(player.getUniqueId(), true).stream()
+            .map(ClaimService.ClaimListEntry::claim)
+            .toList();
     }
 }

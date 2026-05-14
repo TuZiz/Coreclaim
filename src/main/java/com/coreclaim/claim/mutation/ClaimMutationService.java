@@ -65,6 +65,10 @@ public final class ClaimMutationService {
         propertyMutations.updateBounds(claim, east, south, west, north, actorId);
     }
 
+    public void updateHeightBounds(Claim claim, int minY, int maxY, boolean fullHeight, UUID actorId) {
+        propertyMutations.updateHeightBounds(claim, minY, maxY, fullHeight, actorId);
+    }
+
     public void updateCoreVisibility(Claim claim, boolean coreVisible, UUID actorId) {
         propertyMutations.updateCoreVisibility(claim, coreVisible, actorId);
     }

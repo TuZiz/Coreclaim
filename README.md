@@ -68,6 +68,8 @@ CoreClaim 是一个面向 `Spigot / Paper / Folia 1.20+` 的 Java 17 领地插�
 
 | 命令 | 说明 |
 | --- | --- |
+| `/claim admin` | 查看包含管理员命令的多行帮助 |
+| `/claim admin help` | 查看包含管理员命令的多行帮助 |
 | `/claim admin create system <领地名>` | 按当前选区创建系统领地 |
 | `/claim admin info <领地名|#claimId>` | 查看完整领地详情 |
 | `/claim admin playerclaims <玩家>` | 查看玩家名下全部领地 |

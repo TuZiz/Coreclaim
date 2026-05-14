@@ -15,9 +15,9 @@ public final class Claim {
     private final int centerX;
     private final int centerY;
     private final int centerZ;
-    private final int minY;
-    private final int maxY;
-    private final boolean fullHeight;
+    private int minY;
+    private int maxY;
+    private boolean fullHeight;
     private final long createdAt;
     private final ClaimMembers members = new ClaimMembers();
     private final ClaimFlagStates flags = new ClaimFlagStates();
@@ -175,8 +175,14 @@ public final class Claim {
         return maxY;
     }
 
-    public boolean fullHeight() {
+    public synchronized boolean fullHeight() {
         return fullHeight;
+    }
+
+    public synchronized void setHeightBounds(int minY, int maxY, boolean fullHeight) {
+        this.minY = Math.min(minY, maxY);
+        this.maxY = Math.max(minY, maxY);
+        this.fullHeight = fullHeight;
     }
 
     public int height() {
@@ -408,6 +414,12 @@ public final class Claim {
     }
 
     public synchronized int distance(ClaimDirection direction) {
+        if (direction == ClaimDirection.UP) {
+            return maxY - centerY;
+        }
+        if (direction == ClaimDirection.DOWN) {
+            return centerY - minY;
+        }
         return bounds.distance(direction);
     }
 

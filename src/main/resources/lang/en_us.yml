@@ -65,7 +65,7 @@ claim-create-failed: '&#FF6B6B&l! &#CBD5E1Claim creation failed and this action 
 
 # Expansion and core actions
 claim-expand-cooldown: '&#FF6B6B&l! &#CBD5E1Expansion is on cooldown. Please wait &#F8FAFC{seconds}s&#CBD5E1.'
-claim-expand-success: '&#55FFAAExpand &#475569| &#CBD5E1Extended &#F8FAFC{amount} &#CBD5E1blocks toward &#F8FAFC{direction}&#CBD5E1. Cost: &#F8FAFC{cost}&#CBD5E1, new size: &#F8FAFC{width}x{depth}&#CBD5E1.'
+claim-expand-success: '&#55FFAAExpand &#475569| &#CBD5E1Extended &#F8FAFC{amount} &#CBD5E1blocks toward &#F8FAFC{direction}&#CBD5E1. Cost: &#F8FAFC{cost}&#CBD5E1, new size: &#F8FAFC{width}x{height}x{depth}&#CBD5E1.'
 claim-core-hidden: '&#55FFAAHidden &#475569| &#CBD5E1Removed the core model for &#F8FAFC{name}&#CBD5E1. The claim area is still protected.'
 claim-core-already-hidden: '&#FFD166&l! &#CBD5E1This claim core was already hidden.'
 claim-core-rewarded: '&#55FFAAReward &#475569| &#CBD5E1You reached &#F8FAFC{minutes} &#CBD5E1minutes online and received 1 starter core!'
@@ -97,7 +97,7 @@ leave-claim: '&#FF6B6B&l« &#CBD5E1Leaving claim: &#CBD5E1{name}'
 database-ready: '&#55FFAAData &#475569| &#CBD5E1Initialized successfully: &#F8FAFC{file}'
 
 # Help and arguments
-expand-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim expand <east|south|west|north>'
+expand-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim expand <east|south|west|north|up|down> [amount]'
 teleport-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim tp <claim name>'
 show-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim show <claim name> &#475569(leave blank to show your current claim)'
 remove-usage: '&#FF6B6BUsage &#475569| &#CBD5E1/claim remove <claim name>'

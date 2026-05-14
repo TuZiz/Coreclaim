@@ -27,7 +27,8 @@ items:
       - ' &#CBD5E1当前该方向: &#FFD166{current}'
       - ' &#CBD5E1目标该方向: &#FFD166{target}'
       - ''
-      - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{depth}'
+      - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{height}x{depth}'
+      - ' &#CBD5E1高度范围: &#F8FAFC{min_y} ~ {max_y}'
       - ' &#CBD5E1预计花费: &#F59E0B{price}'
       - ' &#CBD5E1状态: {status}'
       - ''
@@ -53,7 +54,9 @@ items:
     char: 'B'
     material: ARROW
     custom-model-data: 1324
-    name: '&#FFD166&l返回修改格数'
+    name: '&#FFD166&l返回扩展面板'
+    lore:
+      - ' &#CBD5E1回到六方向扩展面板'
     sound: UI_BUTTON_CLICK
 
   cancel:

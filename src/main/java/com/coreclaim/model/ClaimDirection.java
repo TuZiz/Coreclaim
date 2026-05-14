@@ -6,7 +6,9 @@ public enum ClaimDirection {
     NORTH("north", "北"),
     SOUTH("south", "南"),
     WEST("west", "西"),
-    EAST("east", "东");
+    EAST("east", "东"),
+    UP("up", "上"),
+    DOWN("down", "下");
 
     private final String key;
     private final String displayName;
@@ -24,6 +26,10 @@ public enum ClaimDirection {
         return displayName;
     }
 
+    public boolean vertical() {
+        return this == UP || this == DOWN;
+    }
+
     public static ClaimDirection fromInput(String input) {
         if (input == null || input.isBlank()) {
             return null;
@@ -33,6 +39,8 @@ public enum ClaimDirection {
             case "south", "s", "南" -> SOUTH;
             case "west", "w", "西" -> WEST;
             case "east", "e", "东" -> EAST;
+            case "up", "u", "上" -> UP;
+            case "down", "d", "下" -> DOWN;
             default -> null;
         };
     }

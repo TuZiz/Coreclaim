@@ -18,7 +18,6 @@ final class PluginResourceManager {
         "gui/trust-online-add.yml",
         "gui/claim-permissions.yml",
         "gui/selection-create.yml",
-        "gui/claim-expand-amount.yml",
         "gui/claim-expand-confirm.yml",
         "gui/core.yml"
     );
@@ -111,7 +110,6 @@ final class PluginResourceManager {
         menuResources.put("trust-online-add", new ResourceConfig(plugin, "gui/trust-online-add.yml"));
         menuResources.put("claim-permissions", new ResourceConfig(plugin, "gui/claim-permissions.yml"));
         menuResources.put("selection-create", new ResourceConfig(plugin, "gui/selection-create.yml"));
-        menuResources.put("claim-expand-amount", new ResourceConfig(plugin, "gui/claim-expand-amount.yml"));
         menuResources.put("claim-expand-confirm", new ResourceConfig(plugin, "gui/claim-expand-confirm.yml"));
         menuResources.put("core", new ResourceConfig(plugin, "gui/core.yml"));
     }

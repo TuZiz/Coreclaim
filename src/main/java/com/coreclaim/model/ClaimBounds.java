@@ -83,6 +83,9 @@ final class ClaimBounds {
         if (direction == ClaimDirection.WEST) {
             return west;
         }
+        if (direction == ClaimDirection.NORTH) {
+            return north;
+        }
         return north;
     }
 }

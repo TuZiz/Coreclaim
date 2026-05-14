@@ -144,10 +144,14 @@ implements TabExecutor {
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(this.plugin.message("admin-usage"));
+            this.sendModernHelpPublic(sender);
             return true;
         }
         return switch (action = args[1].toLowerCase(Locale.ROOT)) {
+            case "help", "?" -> {
+                this.sendModernHelpPublic(sender);
+                yield true;
+            }
             case "create" -> this.handleAdminCreate(sender, args);
             case "info" -> this.handleAdminInfo(sender, args);
             case "playerclaims" -> this.handleAdminPlayerClaims(sender, args);
@@ -162,7 +166,7 @@ implements TabExecutor {
             case "cleanup" -> this.handleAdminCleanup(sender, args);
             case "setserver" -> this.handleAdminSetServer(sender, args);
             default -> {
-                sender.sendMessage(this.plugin.message("admin-usage"));
+                this.sendModernHelpPublic(sender);
                 yield true;
             }
         };

@@ -10,7 +10,6 @@ import com.coreclaim.gui.controller.PermissionMenuController;
 import com.coreclaim.gui.controller.SelectionCreateMenuController;
 import com.coreclaim.gui.controller.TrustMenuController;
 import com.coreclaim.gui.holder.BaseHolder;
-import com.coreclaim.gui.holder.ClaimExpandAmountHolder;
 import com.coreclaim.gui.holder.ClaimExpandConfirmHolder;
 import com.coreclaim.gui.holder.ClaimListHolder;
 import com.coreclaim.gui.holder.ClaimManageHolder;
@@ -40,6 +39,7 @@ import java.util.UUID;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -113,10 +113,6 @@ public final class MenuService {
         claimManageMenuController.open(player, claim);
     }
 
-    public void openClaimExpandAmountMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
-        claimExpansionMenuController.openAmount(player, claim, direction, amount);
-    }
-
     public void openClaimExpandConfirmMenu(Player player, Claim claim, ClaimDirection direction, int amount) {
         claimExpansionMenuController.openConfirm(player, claim, direction, amount);
     }
@@ -161,9 +157,7 @@ public final class MenuService {
         if (holder instanceof ClaimListHolder claimListHolder) {
             handleClaimListMenu(player, claimListHolder, slot, event.isRightClick());
         } else if (holder instanceof ClaimManageHolder claimManageHolder) {
-            handleClaimManageMenu(player, claimManageHolder, slot);
-        } else if (holder instanceof ClaimExpandAmountHolder claimExpandAmountHolder) {
-            handleClaimExpandAmountMenu(player, claimExpandAmountHolder, slot);
+            handleClaimManageMenu(player, claimManageHolder, slot, event.getClick());
         } else if (holder instanceof ClaimExpandConfirmHolder claimExpandConfirmHolder) {
             handleClaimExpandConfirmMenu(player, claimExpandConfirmHolder, slot);
         } else if (holder instanceof CoreMenuHolder coreMenuHolder) {
@@ -185,12 +179,8 @@ public final class MenuService {
         claimListMenuController.handle(player, holder, slot, rightClick);
     }
 
-    private void handleClaimManageMenu(Player player, ClaimManageHolder holder, int slot) {
-        claimManageMenuController.handle(player, holder, slot);
-    }
-
-    private void handleClaimExpandAmountMenu(Player player, ClaimExpandAmountHolder holder, int slot) {
-        claimExpansionMenuController.handleAmount(player, holder, slot);
+    private void handleClaimManageMenu(Player player, ClaimManageHolder holder, int slot, ClickType clickType) {
+        claimManageMenuController.handle(player, holder, slot, clickType);
     }
 
     private void handleClaimExpandConfirmMenu(Player player, ClaimExpandConfirmHolder holder, int slot) {

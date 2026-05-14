@@ -196,6 +196,8 @@ final class ClaimSelectionPreviewBuilder {
             case SOUTH -> "\u5357";
             case WEST -> "\u897f";
             case NORTH -> "\u5317";
+            case UP -> "\u4e0a";
+            case DOWN -> "\u4e0b";
         };
     }
 

@@ -45,8 +45,8 @@ final class ClaimPropertyMutations {
             return;
         }
         ClaimFlagState nextState = state == null ? ClaimFlagState.UNSET : state;
-        claim.setFlagState(flag, nextState);
         synchronized (context.runtime.mutationLock()) {
+            claim.setFlagState(flag, nextState);
             if (nextState == ClaimFlagState.UNSET) {
                 context.persistenceRepository.deleteFlagState(claim.id(), flag);
             } else {
@@ -258,8 +258,12 @@ final class ClaimPropertyMutations {
         Integer ignoredId,
         boolean fullHeight
     ) {
-        context.runtime.spatialLockService().lockArea(claim.world(), minX, maxX, minZ, maxZ);
+        int lockGap = Math.max(0, context.runtime.plugin().settings().minimumGap());
+        context.runtime.spatialLockService().lockArea(claim.world(), minX - lockGap, maxX + lockGap, minZ - lockGap, maxZ + lockGap);
         if (context.runtime.spatialLockService().hasOverlappingClaim(claim.world(), minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight)) {
+            throw new IllegalArgumentException("claim-overlap");
+        }
+        if (lockGap > 0 && context.runtime.spatialLockService().hasClaimWithinGap(claim.world(), minX, maxX, minY, maxY, minZ, maxZ, lockGap, ignoredId, fullHeight)) {
             throw new IllegalArgumentException("claim-overlap");
         }
     }

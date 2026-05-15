@@ -14,6 +14,7 @@ import com.coreclaim.claim.auth.ClaimAuthorizationService.AuthorizationDecision;
 import com.coreclaim.claim.auth.ClaimAuthorizationService;
 import com.coreclaim.claim.defaults.ClaimDefaultsService;
 import com.coreclaim.claim.mutation.ClaimMutationService;
+import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.claim.persistence.ClaimPersistenceRepository;
 import com.coreclaim.claim.query.ClaimLookupService;
 import com.coreclaim.storage.DatabaseManager;
@@ -272,7 +273,11 @@ public final class ClaimService {
     }
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
-        return mutationService.createClaim(owner, ownerName, name, center, initialDistance);
+        return createClaim(owner, ownerName, name, center, initialDistance, null);
+    }
+
+    public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance, ClaimCreationOptions options) {
+        return mutationService.createClaim(owner, ownerName, name, center, initialDistance, options);
     }
 
     public Claim createClaimFromBounds(UUID owner, String ownerName, String name, Location coreLocation, int minY, int maxY, int east, int south, int west, int north) {
@@ -292,7 +297,24 @@ public final class ClaimService {
         int north,
         boolean systemManaged
     ) {
-        return mutationService.createClaimFromBounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged);
+        return createClaimFromBounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged, null);
+    }
+
+    public Claim createClaimFromBounds(
+        UUID owner,
+        String ownerName,
+        String name,
+        Location coreLocation,
+        int minY,
+        int maxY,
+        int east,
+        int south,
+        int west,
+        int north,
+        boolean systemManaged,
+        ClaimCreationOptions options
+    ) {
+        return mutationService.createClaimFromBounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged, options);
     }
 
     public void updateBounds(Claim claim, int east, int south, int west, int north) {

@@ -140,17 +140,18 @@ public final class CrossServerTeleportService {
             pendingTeleport.targetYaw(),
             pendingTeleport.targetPitch()
         );
-        player.teleport(destination);
-
+        plugin.platformScheduler().teleportPlayer(player, destination);
         Claim claim = claimService.findClaimByIdFresh(pendingTeleport.claimId())
             .orElseGet(() -> claimService.findClaim(destination).orElse(null));
-        if (claim != null) {
-            claimVisualService.showClaim(player, claim);
-        }
-        player.sendMessage(message(
-            "claim-teleported",
-            "{name}", pendingTeleport.claimName()
-        ));
+        plugin.platformScheduler().runPlayerLater(player, () -> {
+            if (claim != null) {
+                claimVisualService.showClaim(player, claim);
+            }
+            player.sendMessage(message(
+                "claim-teleported",
+                "{name}", pendingTeleport.claimName()
+            ));
+        }, 1L);
     }
 
     private void validateConfiguration() {

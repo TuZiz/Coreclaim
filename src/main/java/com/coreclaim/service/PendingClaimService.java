@@ -2,6 +2,7 @@ package com.coreclaim.service;
 
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -106,11 +107,6 @@ public final class PendingClaimService {
         }
         ClaimGroup group = validation.group();
         double createCost = pending.starterCore() ? 0D : claimArea(group.initialDistance()) * group.coreCreatePricePerBlock();
-        if (!coreLocation.getBlock().getType().isAir()) {
-            refundCore(pending);
-            player.sendMessage(plugin.message("claim-core-blocked"));
-            return null;
-        }
         if (createCost > 0D) {
             if (!economyHook.available()) {
                 refundCore(pending);
@@ -129,10 +125,40 @@ public final class PendingClaimService {
             }
         }
         boolean firstOrdinaryClaim = validation.claimCount() == 0;
-        Claim claim = null;
-        placeCoreBlock(coreLocation);
         try {
-            claim = claimService.createClaim(player.getUniqueId(), player.getName(), name, coreLocation, group.initialDistance());
+            plugin.platformScheduler().runLocationTask(coreLocation, () -> completeClaimOnRegion(player, pending, name, coreLocation, group, createCost, firstOrdinaryClaim));
+        } catch (RuntimeException exception) {
+            rollbackFailedClaimCreation(null, coreLocation, pending, player, createCost);
+            plugin.getLogger().log(Level.WARNING, "Failed to schedule pending claim creation for " + player.getName(), exception);
+            player.sendMessage(plugin.message("claim-create-failed"));
+        }
+        return null;
+    }
+
+    private void completeClaimOnRegion(
+        Player player,
+        PendingClaim pending,
+        String name,
+        Location coreLocation,
+        ClaimGroup group,
+        double createCost,
+        boolean firstOrdinaryClaim
+    ) {
+        Claim claim = null;
+        try {
+            claim = claimService.createClaim(
+                player.getUniqueId(),
+                player.getName(),
+                name,
+                coreLocation,
+                group.initialDistance(),
+                ClaimCreationOptions.coreClaim(
+                    group.maxClaims(),
+                    group.maxDistance(),
+                    plugin.settings().minimumGap(),
+                    plugin.settings().minimumCoreSpacing()
+                )
+            );
             hologramService.spawnClaimHologram(claim);
             claimVisualService.showClaim(player, claim);
             if (pending.starterCore()) {
@@ -156,7 +182,6 @@ public final class PendingClaimService {
                     "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
                 ));
             }
-            return claim;
         } catch (RuntimeException exception) {
             rollbackFailedClaimCreation(claim, coreLocation, pending, player, createCost);
             if (exception instanceof IllegalArgumentException illegalArgumentException
@@ -165,11 +190,19 @@ public final class PendingClaimService {
             } else if (exception instanceof IllegalArgumentException illegalArgumentException
                 && "claim-overlap".equals(illegalArgumentException.getMessage())) {
                 player.sendMessage(plugin.message("claim-overlap"));
+            } else if (exception instanceof IllegalArgumentException illegalArgumentException
+                && "claim-core-blocked".equals(illegalArgumentException.getMessage())) {
+                player.sendMessage(plugin.message("claim-core-blocked"));
+            } else if (exception instanceof IllegalArgumentException illegalArgumentException
+                && "claim-core-too-close".equals(illegalArgumentException.getMessage())) {
+                player.sendMessage(plugin.message("claim-core-too-close"));
+            } else if (exception instanceof IllegalArgumentException illegalArgumentException
+                && "claim-no-slot".equals(illegalArgumentException.getMessage())) {
+                player.sendMessage(plugin.message("claim-no-slot"));
             } else {
                 plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
                 player.sendMessage(plugin.message("claim-create-failed"));
             }
-            return null;
         }
     }
 
@@ -194,13 +227,6 @@ public final class PendingClaimService {
                 coreLocation.getBlock().setType(Material.AIR, false);
             }
         });
-    }
-
-    private void placeCoreBlock(Location coreLocation) {
-        if (coreLocation == null || coreLocation.getWorld() == null) {
-            return;
-        }
-        plugin.platformScheduler().runLocationTask(coreLocation, () -> coreLocation.getBlock().setType(plugin.settings().coreMaterial(), false));
     }
 
     public void cancelPendingClaim(Player player, boolean notify) {
@@ -300,10 +326,10 @@ public final class PendingClaimService {
                 claimCoreFactory.giveClaimCore(player, 1);
             }
         } else if (location.getWorld() != null) {
-            location.getWorld().dropItemNaturally(
+            plugin.platformScheduler().runLocationTask(location, () -> location.getWorld().dropItemNaturally(
                 location.clone().add(0.5D, 0.5D, 0.5D),
                 pending.starterCore() ? claimCoreFactory.createStarterCore(1) : claimCoreFactory.createClaimCore(1)
-            );
+            ));
         }
     }
 

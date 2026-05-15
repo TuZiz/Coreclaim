@@ -214,11 +214,13 @@ public final class ClaimActionService {
             return;
         }
         Location coreLocation = new Location(world, claim.centerX(), claim.centerY(), claim.centerZ());
-        if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
-            return;
-        }
-        hologramService.removeClaimHologram(claim.id());
-        claimService.updateCoreVisibility(claim, false);
+        plugin.platformScheduler().runLocationTask(coreLocation, () -> {
+            if (coreLocation.getBlock().getType() == plugin.settings().coreMaterial()) {
+                return;
+            }
+            hologramService.removeClaimHologram(claim.id());
+            claimService.updateCoreVisibility(claim, false);
+        });
     }
 
     public boolean trustCurrentClaim(Player player, OfflinePlayer target) {
@@ -302,9 +304,12 @@ public final class ClaimActionService {
         }
         ClaimService.TeleportTarget target = claimService.teleportTarget(claim, player.getLocation().getYaw(), player.getLocation().getPitch());
         Location destination = new Location(world, target.x(), target.y(), target.z(), target.yaw(), target.pitch());
-        player.teleport(destination);
-        claimVisualService.showClaim(player, claim);
-        player.sendMessage(plugin.message("claim-teleported", "{name}", claim.name()));
+        Claim claimToShow = claim;
+        plugin.platformScheduler().teleportPlayer(player, destination);
+        plugin.platformScheduler().runPlayerLater(player, () -> {
+            claimVisualService.showClaim(player, claimToShow);
+            player.sendMessage(plugin.message("claim-teleported", "{name}", claimToShow.name()));
+        }, 1L);
         return true;
     }
 

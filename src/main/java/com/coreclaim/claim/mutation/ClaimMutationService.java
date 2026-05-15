@@ -41,8 +41,8 @@ public final class ClaimMutationService {
         propertyMutations.updateFlagState(claim, flag, state, actorId);
     }
 
-    public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
-        return creationMutations.createClaim(owner, ownerName, name, center, initialDistance);
+    public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance, ClaimCreationOptions options) {
+        return creationMutations.createClaim(owner, ownerName, name, center, initialDistance, options);
     }
 
     public Claim createClaimFromBounds(
@@ -56,9 +56,10 @@ public final class ClaimMutationService {
         int south,
         int west,
         int north,
-        boolean systemManaged
+        boolean systemManaged,
+        ClaimCreationOptions options
     ) {
-        return creationMutations.createClaimFromBounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged);
+        return creationMutations.createClaimFromBounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged, options);
     }
 
     public void updateBounds(Claim claim, int east, int south, int west, int north, UUID actorId) {

@@ -5,11 +5,14 @@ import com.coreclaim.service.HologramService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.economy.EconomyHook;
+import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.model.Claim;
 import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 import org.bukkit.entity.Player;
 
 final class ClaimSelectionCreator {
@@ -59,6 +62,38 @@ final class ClaimSelectionCreator {
         }
 
         boolean firstOrdinaryClaim = claimService.countClaims(player.getUniqueId()) == 0;
+        ClaimGroup group = plugin.groups().resolve(player);
+        try {
+            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createClaimOnRegion(player, name, preview, group, firstOrdinaryClaim));
+        } catch (RuntimeException exception) {
+            refundCost(player, preview.cost());
+            sendCreationFailure(player, exception, name);
+            return false;
+        }
+        return true;
+    }
+
+    boolean createSystemClaim(Player player, String rawName) {
+        ClaimSelectionService.SelectionPreview preview = previewBuilder.preview(player, true);
+        if (!validatePreview(player, preview)) {
+            return false;
+        }
+        String name = validateName(player, rawName);
+        if (name == null) {
+            return false;
+        }
+
+        ClaimGroup group = plugin.groups().resolve(player);
+        try {
+            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createSystemClaimOnRegion(player, name, preview, group));
+        } catch (RuntimeException exception) {
+            sendCreationFailure(player, exception, name);
+            return false;
+        }
+        return true;
+    }
+
+    private void createClaimOnRegion(Player player, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group, boolean firstOrdinaryClaim) {
         Claim claim;
         try {
             claim = claimService.createClaimFromBounds(
@@ -71,16 +106,14 @@ final class ClaimSelectionCreator {
                 preview.east(),
                 preview.south(),
                 preview.west(),
-                preview.north()
+                preview.north(),
+                false,
+                selectionOptions(group, false)
             );
-        } catch (IllegalArgumentException exception) {
+        } catch (RuntimeException exception) {
             refundCost(player, preview.cost());
-            if ("claim-overlap".equals(exception.getMessage())) {
-                player.sendMessage(plugin.message("claim-overlap"));
-            } else {
-                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
-            }
-            return false;
+            sendCreationFailure(player, exception, name);
+            return;
         }
         finishCreatedClaim(player, claim, preview);
         onlineRewardService.markOrdinaryClaimCreated(player);
@@ -96,19 +129,9 @@ final class ClaimSelectionCreator {
         if (firstOrdinaryClaim) {
             player.sendMessage(plugin.message("second-claim-selection-tip"));
         }
-        return true;
     }
 
-    boolean createSystemClaim(Player player, String rawName) {
-        ClaimSelectionService.SelectionPreview preview = previewBuilder.preview(player, true);
-        if (!validatePreview(player, preview)) {
-            return false;
-        }
-        String name = validateName(player, rawName);
-        if (name == null) {
-            return false;
-        }
-
+    private void createSystemClaimOnRegion(Player player, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
         Claim claim;
         try {
             claim = claimService.createClaimFromBounds(
@@ -122,15 +145,12 @@ final class ClaimSelectionCreator {
                 preview.south(),
                 preview.west(),
                 preview.north(),
-                true
+                true,
+                selectionOptions(group, true)
             );
-        } catch (IllegalArgumentException exception) {
-            if ("claim-overlap".equals(exception.getMessage())) {
-                player.sendMessage(plugin.message("claim-overlap"));
-            } else {
-                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
-            }
-            return false;
+        } catch (RuntimeException exception) {
+            sendCreationFailure(player, exception, name);
+            return;
         }
         finishCreatedClaim(player, claim, preview);
         player.sendMessage(plugin.message(
@@ -140,7 +160,6 @@ final class ClaimSelectionCreator {
             "{height}", String.valueOf(claim.height()),
             "{depth}", String.valueOf(claim.depth())
         ));
-        return true;
     }
 
     private boolean validatePreview(Player player, ClaimSelectionService.SelectionPreview preview) {
@@ -198,9 +217,49 @@ final class ClaimSelectionCreator {
     }
 
     private void finishCreatedClaim(Player player, Claim claim, ClaimSelectionService.SelectionPreview preview) {
-        plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> preview.coreLocation().getBlock().setType(plugin.settings().coreMaterial(), false));
         hologramService.spawnClaimHologram(claim);
         claimVisualService.showClaim(player, claim);
         sessions.remove(player.getUniqueId());
+    }
+
+    private ClaimCreationOptions selectionOptions(ClaimGroup group, boolean systemManaged) {
+        return ClaimCreationOptions.selectionClaim(
+            group.maxClaims(),
+            group.maxDistance(),
+            plugin.settings().minimumGap(),
+            plugin.settings().selectionMinimumGap(),
+            plugin.settings().minimumCoreSpacing(),
+            systemManaged
+        );
+    }
+
+    private void sendCreationFailure(Player player, RuntimeException exception, String name) {
+        String reason = rootReason(exception);
+        switch (reason) {
+            case "claim-overlap" -> player.sendMessage(plugin.message("claim-overlap"));
+            case "selection-claim-too-close" -> player.sendMessage(plugin.message("selection-claim-too-close", "{gap}", String.valueOf(plugin.settings().selectionMinimumGap())));
+            case "claim-core-too-close" -> player.sendMessage(plugin.message("claim-core-too-close"));
+            case "selection-core-blocked", "claim-core-blocked" -> player.sendMessage(plugin.message("selection-core-blocked"));
+            case "claim-no-slot" -> player.sendMessage(plugin.message("claim-no-slot"));
+            case "claim-world-only" -> player.sendMessage(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorldsDisplay()));
+            case "selection-too-large" -> player.sendMessage(plugin.message("selection-too-large", "{max}", String.valueOf(plugin.groups().resolve(player).maxDistance() * 2 + 1)));
+            case "claim-name-empty" -> player.sendMessage(plugin.message("claim-name-empty"));
+            case "claim-name-exists" -> player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            default -> {
+                plugin.getLogger().log(Level.WARNING, "Failed to create selection claim for " + player.getName(), exception);
+                player.sendMessage(plugin.message("claim-create-failed"));
+            }
+        }
+    }
+
+    private String rootReason(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof IllegalArgumentException && current.getMessage() != null) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        return "";
     }
 }

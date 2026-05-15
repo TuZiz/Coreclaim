@@ -104,6 +104,66 @@ public final class ClaimSpatialLockService {
         );
     }
 
+    public boolean hasCoreWithinSpacing(String world, int centerX, int centerZ, int spacing, Integer ignoredId) {
+        int effectiveSpacing = Math.max(0, spacing);
+        if (effectiveSpacing <= 0) {
+            return false;
+        }
+        String ignoredFilter = ignoredId == null ? "" : " AND id <> ?";
+        return database.query(
+            """
+            SELECT id
+            FROM claims
+            WHERE world = ?
+              AND ABS(center_x - ?) < ?
+              AND ABS(center_z - ?) < ?
+              %s
+            LIMIT 1
+            """.formatted(ignoredFilter),
+            statement -> {
+                int index = 1;
+                statement.setString(index++, world);
+                statement.setInt(index++, centerX);
+                statement.setInt(index++, effectiveSpacing);
+                statement.setInt(index++, centerZ);
+                statement.setInt(index++, effectiveSpacing);
+                if (ignoredId != null) {
+                    statement.setInt(index, ignoredId);
+                }
+            },
+            resultSet -> resultSet.next()
+        );
+    }
+
+    public boolean hasClaimWithinGap(
+        String world,
+        int minX,
+        int maxX,
+        int minY,
+        int maxY,
+        int minZ,
+        int maxZ,
+        int gap,
+        Integer ignoredId,
+        boolean fullHeight
+    ) {
+        int effectiveGap = Math.max(0, gap);
+        if (effectiveGap <= 0) {
+            return false;
+        }
+        return hasOverlappingClaim(
+            world,
+            minX - effectiveGap,
+            maxX + effectiveGap,
+            minY,
+            maxY,
+            minZ - effectiveGap,
+            maxZ + effectiveGap,
+            ignoredId,
+            fullHeight
+        );
+    }
+
     public static List<String> lockKeys(String world, int minX, int maxX, int minZ, int maxZ) {
         String safeWorld = world == null ? "" : world;
         int fromChunkX = Math.floorDiv(Math.min(minX, maxX), CHUNK_SIZE);

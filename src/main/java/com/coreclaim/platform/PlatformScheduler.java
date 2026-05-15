@@ -141,6 +141,13 @@ public final class PlatformScheduler {
         }
     }
 
+    public void teleportPlayer(Player player, Location destination) {
+        if (player == null || destination == null || destination.getWorld() == null) {
+            return;
+        }
+        runPlayerTask(player, () -> teleportPlayerNow(player, destination.clone()));
+    }
+
     public TaskHandle runPlayerLater(Player player, Runnable runnable, long delayTicks) {
         if (!folia) {
             return runBukkitLater(runnable, delayTicks);
@@ -219,6 +226,16 @@ public final class PlatformScheduler {
     private TaskHandle runBukkitLater(Runnable runnable, long delayTicks) {
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delayTicks);
         return task::cancel;
+    }
+
+    private void teleportPlayerNow(Player player, Location destination) {
+        try {
+            player.getClass().getMethod("teleportAsync", Location.class).invoke(player, destination);
+        } catch (NoSuchMethodException exception) {
+            player.teleport(destination);
+        } catch (ReflectiveOperationException exception) {
+            throw foliaSchedulerFailure("player teleport", exception);
+        }
     }
 
     static long positiveFoliaTicks(long ticks) {

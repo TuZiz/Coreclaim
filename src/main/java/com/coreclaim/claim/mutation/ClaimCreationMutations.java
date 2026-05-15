@@ -9,27 +9,31 @@ import org.bukkit.Location;
 final class ClaimCreationMutations {
 
     private final ClaimMutationContext context;
+    private final FinalClaimCreationValidator finalValidator;
 
     ClaimCreationMutations(ClaimMutationContext context) {
         this.context = context;
+        this.finalValidator = new FinalClaimCreationValidator(context);
     }
 
-    Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance) {
+    Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance, ClaimCreationOptions options) {
+        java.util.concurrent.atomic.AtomicBoolean corePlaced = new java.util.concurrent.atomic.AtomicBoolean(false);
         synchronized (context.runtime.mutationLock()) {
-            return context.runtime.databaseManager().transaction(() -> {
-                String sanitizedName = context.lookupService.validateAvailableClaimName(name, null);
+            try {
+                Claim claim = context.runtime.databaseManager().transaction(() -> {
+                String sanitizedName = finalValidator.sanitizeAvailableName(name);
                 String currentServerId = context.lookupService.currentServerId();
                 int minY = center.getWorld() == null ? -64 : center.getWorld().getMinHeight();
                 int maxY = center.getWorld() == null ? 319 : center.getWorld().getMaxHeight() - 1;
                 String world = center.getWorld().getName();
-                int minX = center.getBlockX() - initialDistance;
-                int maxX = center.getBlockX() + initialDistance;
-                int minZ = center.getBlockZ() - initialDistance;
-                int maxZ = center.getBlockZ() + initialDistance;
-                assertDatabaseAreaAvailable(world, minX, maxX, minY, maxY, minZ, maxZ, null, true, center);
+                ClaimCreationOptions effectiveOptions = options == null
+                    ? ClaimCreationOptions.coreClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0)
+                    : options;
+                finalValidator.validateAndLock(owner, center, minY, maxY, initialDistance, initialDistance, initialDistance, initialDistance, true, effectiveOptions);
+                corePlaced.set(finalValidator.placeCoreBlock(center, effectiveOptions));
                 long createdAt = Instant.now().getEpochSecond();
                 int generatedId = insertClaim(owner, ownerName, sanitizedName, center, minY, maxY, initialDistance, initialDistance, initialDistance, initialDistance, true, false, currentServerId, createdAt);
-                Claim claim = new Claim(
+                Claim createdClaim = new Claim(
                     generatedId,
                     owner,
                     ownerName,
@@ -71,9 +75,17 @@ final class ClaimCreationMutations {
                     null,
                     0L
                 );
+                context.defaultsService.applyClaimDefaults(createdClaim);
+                return createdClaim;
+            });
                 registerNewClaim(claim);
                 return claim;
-            });
+            } catch (RuntimeException exception) {
+                if (corePlaced.get()) {
+                    finalValidator.clearPlacedCoreBlock(center);
+                }
+                throw exception;
+            }
         }
     }
 
@@ -88,21 +100,24 @@ final class ClaimCreationMutations {
         int south,
         int west,
         int north,
-        boolean systemManaged
+        boolean systemManaged,
+        ClaimCreationOptions options
     ) {
+        java.util.concurrent.atomic.AtomicBoolean corePlaced = new java.util.concurrent.atomic.AtomicBoolean(false);
         synchronized (context.runtime.mutationLock()) {
-            return context.runtime.databaseManager().transaction(() -> {
-                String sanitizedName = context.lookupService.validateAvailableClaimName(name, null);
+            try {
+                Claim claim = context.runtime.databaseManager().transaction(() -> {
+                String sanitizedName = finalValidator.sanitizeAvailableName(name);
                 String currentServerId = context.lookupService.currentServerId();
                 String world = coreLocation.getWorld().getName();
-                int minX = coreLocation.getBlockX() - west;
-                int maxX = coreLocation.getBlockX() + east;
-                int minZ = coreLocation.getBlockZ() - north;
-                int maxZ = coreLocation.getBlockZ() + south;
-                assertDatabaseAreaAvailable(world, minX, maxX, minY, maxY, minZ, maxZ, null, false, coreLocation);
+                ClaimCreationOptions effectiveOptions = options == null
+                    ? ClaimCreationOptions.selectionClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0, 0, systemManaged)
+                    : options;
+                finalValidator.validateAndLock(owner, coreLocation, minY, maxY, east, south, west, north, false, effectiveOptions);
+                corePlaced.set(finalValidator.placeCoreBlock(coreLocation, effectiveOptions));
                 long createdAt = Instant.now().getEpochSecond();
                 int generatedId = insertClaim(owner, ownerName, sanitizedName, coreLocation, minY, maxY, east, south, west, north, false, systemManaged, currentServerId, createdAt);
-                Claim claim = new Claim(
+                Claim createdClaim = new Claim(
                     generatedId,
                     owner,
                     ownerName,
@@ -144,9 +159,17 @@ final class ClaimCreationMutations {
                     null,
                     0L
                 );
+                context.defaultsService.applyClaimDefaults(createdClaim);
+                return createdClaim;
+            });
                 registerNewClaim(claim);
                 return claim;
-            });
+            } catch (RuntimeException exception) {
+                if (corePlaced.get()) {
+                    finalValidator.clearPlacedCoreBlock(coreLocation);
+                }
+                throw exception;
+            }
         }
     }
 
@@ -215,29 +238,7 @@ final class ClaimCreationMutations {
         );
     }
 
-    private void assertDatabaseAreaAvailable(
-        String world,
-        int minX,
-        int maxX,
-        int minY,
-        int maxY,
-        int minZ,
-        int maxZ,
-        Integer ignoredId,
-        boolean fullHeight,
-        Location coreLocation
-    ) {
-        context.runtime.spatialLockService().lockArea(world, minX, maxX, minZ, maxZ);
-        if (context.runtime.spatialLockService().hasOverlappingClaim(world, minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight)) {
-            throw new IllegalArgumentException("claim-overlap");
-        }
-        if (coreLocation != null && context.runtime.spatialLockService().hasCoreAt(world, coreLocation.getBlockX(), coreLocation.getBlockY(), coreLocation.getBlockZ(), ignoredId)) {
-            throw new IllegalArgumentException("claim-overlap");
-        }
-    }
-
     private void registerNewClaim(Claim claim) {
-        context.defaultsService.applyClaimDefaults(claim);
         context.runtime.claims().put(claim.id(), claim);
         context.lookupService.rebuildClaimChunkIndex();
         context.publishClaimSync(ClaimSyncEventType.CLAIM_CREATED, claim.id());

@@ -13,6 +13,7 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import org.bukkit.configuration.file.FileConfiguration;
 
 public final class DatabaseManager {
 
@@ -256,11 +257,7 @@ public final class DatabaseManager {
         String host = plugin.getConfig().getString("database.mysql.host", "localhost");
         int port = plugin.getConfig().getInt("database.mysql.port", 3306);
         String database = plugin.getConfig().getString("database.mysql.database", "coreclaim");
-        String sslMode = plugin.getConfig().getString("database.mysql.ssl-mode", "");
-        if (sslMode == null || sslMode.isBlank()) {
-            sslMode = plugin.getConfig().getBoolean("database.mysql.use-ssl", false) ? "REQUIRED" : "VERIFY_IDENTITY";
-        }
-        sslMode = sslMode.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        String sslMode = mysqlSslMode(plugin.getConfig());
         boolean allowPublicKeyRetrieval = plugin.getConfig().getBoolean("database.mysql.allow-public-key-retrieval", false);
         return "jdbc:mysql://" + host + ":" + port + "/" + database
             + "?sslMode=" + sslMode
@@ -268,6 +265,14 @@ public final class DatabaseManager {
             + "&useUnicode=true"
             + "&characterEncoding=utf8"
             + "&serverTimezone=UTC";
+    }
+
+    static String mysqlSslMode(FileConfiguration config) {
+        String sslMode = config.getString("database.mysql.ssl-mode", "");
+        if (sslMode == null || sslMode.isBlank()) {
+            sslMode = config.getBoolean("database.mysql.use-ssl", false) ? "REQUIRED" : "DISABLED";
+        }
+        return sslMode.trim().toUpperCase(Locale.ROOT).replace('-', '_');
     }
 
     private DatabaseType resolveDatabaseType(String rawType) {

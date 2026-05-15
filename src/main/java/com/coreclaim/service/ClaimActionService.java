@@ -9,7 +9,6 @@ import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.util.AdminAccess;
 import java.text.DecimalFormat;
-import java.time.Instant;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -94,12 +93,6 @@ public final class ClaimActionService {
             player.sendMessage(plugin.message("trust-no-permission"));
             return false;
         }
-        long cooldownLeft = cooldownRemainingSeconds(claim);
-        if (cooldownLeft > 0) {
-            player.sendMessage(plugin.message("claim-expand-cooldown", "{seconds}", String.valueOf(cooldownLeft)));
-            return false;
-        }
-
         ExpansionPreview preview = buildExpansionPreview(player, claim, direction, amount);
         if (!preview.allowed()) {
             if (preview.hitMax()) {
@@ -127,10 +120,23 @@ public final class ClaimActionService {
             }
         }
 
-        if (direction.vertical()) {
-            claimService.updateHeightBounds(claim, preview.minY(), preview.maxY(), preview.fullHeight(), player.getUniqueId());
-        } else {
-            claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north(), player.getUniqueId());
+        try {
+            if (direction.vertical()) {
+                claimService.updateHeightBounds(claim, preview.minY(), preview.maxY(), preview.fullHeight(), player.getUniqueId());
+            } else {
+                claimService.updateBounds(claim, preview.east(), preview.south(), preview.west(), preview.north(), player.getUniqueId());
+            }
+        } catch (RuntimeException exception) {
+            if (preview.cost() > 0D && economyHook.available()) {
+                economyHook.deposit(player, preview.cost());
+            }
+            if (isClaimOverlapFailure(exception)) {
+                player.sendMessage(plugin.message("claim-overlap"));
+            } else {
+                plugin.getLogger().warning("Failed to expand claim " + claim.id() + ": " + exception.getMessage());
+                player.sendMessage(plugin.message("claim-create-failed"));
+            }
+            return false;
         }
         player.sendMessage(plugin.message(
             "claim-expand-success",
@@ -395,8 +401,15 @@ public final class ClaimActionService {
         return MONEY.format(value);
     }
 
-    public long cooldownRemainingSeconds(Claim claim) {
-        return 0L;
+    private boolean isClaimOverlapFailure(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof IllegalArgumentException && "claim-overlap".equals(current.getMessage())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     public record ExpansionPreview(

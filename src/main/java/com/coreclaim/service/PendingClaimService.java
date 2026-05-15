@@ -162,6 +162,9 @@ public final class PendingClaimService {
             if (exception instanceof IllegalArgumentException illegalArgumentException
                 && "claim-name-exists".equals(illegalArgumentException.getMessage())) {
                 player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            } else if (exception instanceof IllegalArgumentException illegalArgumentException
+                && "claim-overlap".equals(illegalArgumentException.getMessage())) {
+                player.sendMessage(plugin.message("claim-overlap"));
             } else {
                 plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
                 player.sendMessage(plugin.message("claim-create-failed"));

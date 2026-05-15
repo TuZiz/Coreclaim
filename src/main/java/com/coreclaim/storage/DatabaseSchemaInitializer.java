@@ -55,6 +55,7 @@ final class DatabaseSchemaInitializer {
                 owner_uuid %s NOT NULL,
                 owner_name %s NOT NULL,
                 name %s NOT NULL DEFAULT '',
+                name_key %s NOT NULL DEFAULT '',
                 core_visible %s NOT NULL DEFAULT 1,
                 world %s NOT NULL,
                 server_id %s NOT NULL DEFAULT '',
@@ -94,7 +95,7 @@ final class DatabaseSchemaInitializer {
                 created_at %s NOT NULL
             )%s
             """.formatted(
-                autoIncrementPrimaryKey(), uuidType(), shortTextType(), shortTextType(), booleanType(), worldType(), shortTextType(),
+                autoIncrementPrimaryKey(), uuidType(), shortTextType(), shortTextType(), shortTextType(), booleanType(), worldType(), shortTextType(),
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
@@ -104,6 +105,7 @@ final class DatabaseSchemaInitializer {
             }
         );
         ensureColumn("claims", "name", shortTextType() + " NOT NULL DEFAULT ''");
+        ensureColumn("claims", "name_key", shortTextType() + " NOT NULL DEFAULT ''");
         ensureColumn("claims", "core_visible", booleanType() + " NOT NULL DEFAULT 1");
         ensureColumn("claims", "server_id", shortTextType() + " NOT NULL DEFAULT ''");
         ensureColumn("claims", "min_y", integerType() + " NOT NULL DEFAULT -64");
@@ -147,6 +149,26 @@ final class DatabaseSchemaInitializer {
                 enter_message = CASE WHEN enter_message IS NULL THEN '' ELSE enter_message END,
                 leave_message = CASE WHEN leave_message IS NULL THEN '' ELSE leave_message END
             """,
+            statement -> {
+            }
+        );
+        update(
+            "UPDATE claims SET name_key = LOWER(TRIM(name)) WHERE name_key IS NULL OR TRIM(name_key) = ''",
+            statement -> {
+            }
+        );
+        repairBlankClaimNameKeys();
+        repairDuplicateClaimNameKeys();
+        ensureIndex("claims", "idx_claims_name_key_unique", true, "name_key");
+        ensureIndex("claims", "idx_claims_core_unique", true, "world", "center_x", "center_y", "center_z");
+        ensureIndex("claims", "idx_claims_spatial", false, "world", "center_x", "center_z");
+        update(
+            """
+            CREATE TABLE IF NOT EXISTS claim_spatial_lock_keys (
+                lock_key %s PRIMARY KEY,
+                touched_at %s NOT NULL DEFAULT 0
+            )%s
+            """.formatted(shortTextType(), longType(), tableOptions()),
             statement -> {
             }
         );
@@ -331,12 +353,89 @@ final class DatabaseSchemaInitializer {
         setMeta(LEGACY_PUBLIC_PERMISSIONS_REPAIRED_KEY, "true");
     }
 
+    private void repairDuplicateClaimNameKeys() {
+        java.util.List<String> duplicateKeys = database.query(
+            """
+            SELECT name_key
+            FROM claims
+            WHERE TRIM(name_key) <> ''
+            GROUP BY name_key
+            HAVING COUNT(*) > 1
+            """,
+            statement -> {
+            },
+            resultSet -> {
+                java.util.List<String> keys = new java.util.ArrayList<>();
+                while (resultSet.next()) {
+                    keys.add(resultSet.getString("name_key"));
+                }
+                return keys;
+            }
+        );
+        for (String duplicateKey : duplicateKeys) {
+            java.util.List<Integer> ids = database.query(
+                "SELECT id FROM claims WHERE name_key = ? ORDER BY id",
+                statement -> statement.setString(1, duplicateKey),
+                resultSet -> {
+                    java.util.List<Integer> rows = new java.util.ArrayList<>();
+                    while (resultSet.next()) {
+                        rows.add(resultSet.getInt("id"));
+                    }
+                    return rows;
+                }
+            );
+            for (int index = 1; index < ids.size(); index++) {
+                int id = ids.get(index);
+                database.update(
+                    database.isMySql()
+                        ? "UPDATE claims SET name = CONCAT(name, '-', ?), name_key = CONCAT(name_key, '-', ?) WHERE id = ?"
+                        : "UPDATE claims SET name = name || '-' || ?, name_key = name_key || '-' || ? WHERE id = ?",
+                    statement -> {
+                        statement.setInt(1, id);
+                        statement.setInt(2, id);
+                        statement.setInt(3, id);
+                    }
+                );
+            }
+        }
+    }
+
+    private void repairBlankClaimNameKeys() {
+        java.util.List<Integer> ids = database.query(
+            "SELECT id FROM claims WHERE name_key IS NULL OR TRIM(name_key) = '' ORDER BY id",
+            statement -> {
+            },
+            resultSet -> {
+                java.util.List<Integer> rows = new java.util.ArrayList<>();
+                while (resultSet.next()) {
+                    rows.add(resultSet.getInt("id"));
+                }
+                return rows;
+            }
+        );
+        for (int id : ids) {
+            String fallbackName = "claim-" + id;
+            database.update(
+                "UPDATE claims SET name = ?, name_key = ? WHERE id = ?",
+                statement -> {
+                    statement.setString(1, fallbackName);
+                    statement.setString(2, fallbackName);
+                    statement.setInt(3, id);
+                }
+            );
+        }
+    }
+
     private int update(String sql, DatabaseManager.StatementBinder binder) {
         return database.update(sql, binder);
     }
 
     private void ensureColumn(String table, String column, String definition) {
         database.ensureColumn(table, column, definition);
+    }
+
+    private void ensureIndex(String table, String indexName, boolean unique, String... columns) {
+        database.ensureIndex(table, indexName, unique, columns);
     }
 
     private void setMeta(String key, String value) {

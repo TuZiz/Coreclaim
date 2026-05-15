@@ -6,6 +6,7 @@ import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.claim.ClaimRuntime;
+import com.coreclaim.claim.query.ClaimNameNormalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -205,51 +206,52 @@ public final class ClaimPersistenceRepository {
                     statement.setString(2, claim.owner().toString());
                     statement.setString(3, claim.ownerName());
                     statement.setString(4, claim.name());
-                    statement.setInt(5, claim.coreVisible() ? 1 : 0);
-                    statement.setString(6, claim.world());
-                    statement.setString(7, displayServerIdProvider.apply(claim));
-                    statement.setInt(8, claim.centerX());
-                    statement.setInt(9, claim.centerY());
-                    statement.setInt(10, claim.centerZ());
-                    statement.setInt(11, claim.minY());
-                    statement.setInt(12, claim.maxY());
-                    statement.setInt(13, claim.fullHeight() ? 1 : 0);
-                    statement.setInt(14, claim.displayRadius());
-                    statement.setInt(15, claim.east());
-                    statement.setInt(16, claim.south());
-                    statement.setInt(17, claim.west());
-                    statement.setInt(18, claim.north());
-                    statement.setString(19, claim.enterMessage());
-                    statement.setString(20, claim.leaveMessage());
-                    statement.setInt(21, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
-                    statement.setInt(22, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
-                    statement.setInt(23, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                    statement.setString(5, ClaimNameNormalizer.normalize(claim.name()));
+                    statement.setInt(6, claim.coreVisible() ? 1 : 0);
+                    statement.setString(7, claim.world());
+                    statement.setString(8, displayServerIdProvider.apply(claim));
+                    statement.setInt(9, claim.centerX());
+                    statement.setInt(10, claim.centerY());
+                    statement.setInt(11, claim.centerZ());
+                    statement.setInt(12, claim.minY());
+                    statement.setInt(13, claim.maxY());
+                    statement.setInt(14, claim.fullHeight() ? 1 : 0);
+                    statement.setInt(15, claim.displayRadius());
+                    statement.setInt(16, claim.east());
+                    statement.setInt(17, claim.south());
+                    statement.setInt(18, claim.west());
+                    statement.setInt(19, claim.north());
+                    statement.setString(20, claim.enterMessage());
+                    statement.setString(21, claim.leaveMessage());
+                    statement.setInt(22, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
+                    statement.setInt(23, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                     statement.setInt(24, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                    statement.setInt(25, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
-                    statement.setInt(26, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
-                    statement.setInt(27, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
-                    statement.setInt(28, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
-                    statement.setInt(29, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
-                    statement.setInt(30, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
-                    statement.setInt(31, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
-                    statement.setInt(32, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
-                    statement.setInt(33, claim.systemManaged() ? 1 : 0);
-                    statement.setInt(34, claim.denyAll() ? 1 : 0);
+                    statement.setInt(25, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                    statement.setInt(26, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
+                    statement.setInt(27, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
+                    statement.setInt(28, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
+                    statement.setInt(29, claim.permission(ClaimPermission.REDSTONE) ? 1 : 0);
+                    statement.setInt(30, claim.permission(ClaimPermission.EXPLOSION) ? 1 : 0);
+                    statement.setInt(31, claim.permission(ClaimPermission.BUCKET) ? 1 : 0);
+                    statement.setInt(32, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
+                    statement.setInt(33, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
+                    statement.setInt(34, claim.systemManaged() ? 1 : 0);
+                    statement.setInt(35, claim.denyAll() ? 1 : 0);
                     if (claim.hasTeleportPoint()) {
-                        statement.setDouble(35, claim.teleportX());
-                        statement.setDouble(36, claim.teleportY());
-                        statement.setDouble(37, claim.teleportZ());
-                        statement.setDouble(38, claim.teleportYaw());
-                        statement.setDouble(39, claim.teleportPitch());
+                        statement.setDouble(36, claim.teleportX());
+                        statement.setDouble(37, claim.teleportY());
+                        statement.setDouble(38, claim.teleportZ());
+                        statement.setDouble(39, claim.teleportYaw());
+                        statement.setDouble(40, claim.teleportPitch());
                     } else {
-                        statement.setNull(35, java.sql.Types.DOUBLE);
                         statement.setNull(36, java.sql.Types.DOUBLE);
                         statement.setNull(37, java.sql.Types.DOUBLE);
                         statement.setNull(38, java.sql.Types.DOUBLE);
                         statement.setNull(39, java.sql.Types.DOUBLE);
+                        statement.setNull(40, java.sql.Types.DOUBLE);
                     }
-                    statement.setLong(40, claim.lastExpandedAt());
-                    statement.setLong(41, claim.createdAt());
+                    statement.setLong(41, claim.lastExpandedAt());
+                    statement.setLong(42, claim.createdAt());
                 }
             );
             for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {
@@ -289,10 +291,11 @@ public final class ClaimPersistenceRepository {
 
     public void updateClaimName(int claimId, String name) {
         runtime.databaseManager().update(
-            "UPDATE claims SET name = ? WHERE id = ?",
+            "UPDATE claims SET name = ?, name_key = ? WHERE id = ?",
             statement -> {
                 statement.setString(1, name);
-                statement.setInt(2, claimId);
+                statement.setString(2, ClaimNameNormalizer.normalize(name));
+                statement.setInt(3, claimId);
             }
         );
     }

@@ -75,7 +75,11 @@ final class ClaimSelectionCreator {
             );
         } catch (IllegalArgumentException exception) {
             refundCost(player, preview.cost());
-            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            if ("claim-overlap".equals(exception.getMessage())) {
+                player.sendMessage(plugin.message("claim-overlap"));
+            } else {
+                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            }
             return false;
         }
         finishCreatedClaim(player, claim, preview);
@@ -121,7 +125,11 @@ final class ClaimSelectionCreator {
                 true
             );
         } catch (IllegalArgumentException exception) {
-            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            if ("claim-overlap".equals(exception.getMessage())) {
+                player.sendMessage(plugin.message("claim-overlap"));
+            } else {
+                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            }
             return false;
         }
         finishCreatedClaim(player, claim, preview);

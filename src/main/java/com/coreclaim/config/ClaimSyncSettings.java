@@ -8,6 +8,7 @@ public record ClaimSyncSettings(
     String redisPassword,
     int redisDatabase,
     String redisChannel,
+    String redisMessageSecret,
     int reconnectSeconds
 ) {
     public boolean usesRedis() {
@@ -16,5 +17,9 @@ public record ClaimSyncSettings(
 
     public boolean hasRedisPassword() {
         return redisPassword != null && !redisPassword.isBlank();
+    }
+
+    public boolean hasRedisMessageSecret() {
+        return redisMessageSecret != null && !redisMessageSecret.isBlank();
     }
 }

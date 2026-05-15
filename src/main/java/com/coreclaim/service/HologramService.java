@@ -33,6 +33,7 @@ public final class HologramService {
 
     public void refreshAll(ClaimService claimService) {
         clearAllLoadedHolograms();
+        removeTaggedHologramsInLoadedWorlds();
         claimCoreBlocks.clear();
         for (Claim claim : claimService.allClaims()) {
             if (claim.coreVisible() && claimService.isLocalClaim(claim)) {
@@ -156,9 +157,33 @@ public final class HologramService {
     }
 
     public void shutdown() {
-        cancelScheduledSpawns();
-        claimHolograms.clear();
-        pendingHolograms.clear();
+        clearAllLoadedHolograms();
+        removeTaggedHologramsInLoadedWorlds();
+        claimCoreBlocks.clear();
+    }
+
+    public void cleanupLoadedTaggedHolograms() {
+        removeTaggedHologramsInLoadedWorlds();
+    }
+
+    private void removeTaggedHologramsInLoadedWorlds() {
+        if (!plugin.isEnabled()) {
+            return;
+        }
+        for (World world : Bukkit.getWorlds()) {
+            for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
+                if (armorStand.getScoreboardTags().contains(TAG) || armorStand.getScoreboardTags().contains(PENDING_TAG)) {
+                    Location location = armorStand.getLocation();
+                    UUID entityId = armorStand.getUniqueId();
+                    plugin.platformScheduler().runLocationTask(location, () -> {
+                        Entity entity = Bukkit.getEntity(entityId);
+                        if (entity != null) {
+                            entity.remove();
+                        }
+                    });
+                }
+            }
+        }
     }
 
     private void cancelScheduledSpawns() {

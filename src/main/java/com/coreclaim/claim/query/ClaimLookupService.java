@@ -260,7 +260,7 @@ public final class ClaimLookupService {
             return findClaimsByName(rawName);
         }
         List<Integer> freshIds = runtime.databaseManager().query(
-            "SELECT id FROM claims WHERE LOWER(name) = ? ORDER BY id",
+            "SELECT id FROM claims WHERE name_key = ? ORDER BY id",
             statement -> statement.setString(1, normalizedName),
             resultSet -> {
                 List<Integer> ids = new ArrayList<>();
@@ -304,8 +304,8 @@ public final class ClaimLookupService {
         if (runtime.databaseManager() != null && runtime.databaseManager().isMySql()) {
             return runtime.databaseManager().query(
                 excludedClaimId == null
-                    ? "SELECT id FROM claims WHERE LOWER(name) = ? LIMIT 1"
-                    : "SELECT id FROM claims WHERE LOWER(name) = ? AND id <> ? LIMIT 1",
+                    ? "SELECT id FROM claims WHERE name_key = ? LIMIT 1"
+                    : "SELECT id FROM claims WHERE name_key = ? AND id <> ? LIMIT 1",
                 statement -> {
                     statement.setString(1, normalizedName);
                     if (excludedClaimId != null) {

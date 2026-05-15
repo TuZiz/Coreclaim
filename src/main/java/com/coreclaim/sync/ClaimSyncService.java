@@ -5,7 +5,6 @@ import com.coreclaim.service.ClaimService;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.ClaimSyncSettings;
 import com.coreclaim.storage.DatabaseManager;
-import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,8 +16,6 @@ import redis.clients.jedis.JedisPubSub;
 
 public final class ClaimSyncService implements ClaimSyncPublisher {
 
-    private static final String PROTOCOL_VERSION = "v1";
-
     private final CoreClaimPlugin plugin;
     private final DatabaseManager databaseManager;
     private final ClaimService claimService;
@@ -28,6 +25,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
     private volatile ExecutorService publishExecutor;
     private volatile Thread subscriberThread;
     private volatile JedisPubSub subscriber;
+    private volatile ClaimSyncMessageCodec messageCodec;
 
     public ClaimSyncService(
         CoreClaimPlugin plugin,
@@ -57,9 +55,14 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
             plugin.getLogger().warning("claim-sync.transport must be redis. Claim cache sync is disabled.");
             return;
         }
+        if (!settings.hasRedisMessageSecret()) {
+            plugin.getLogger().warning("claim-sync.redis.message-secret is required when Redis claim sync is enabled. Claim cache sync is disabled.");
+            return;
+        }
         if (!running.compareAndSet(false, true)) {
             return;
         }
+        messageCodec = new ClaimSyncMessageCodec(settings.redisMessageSecret(), originInstanceId);
         publishExecutor = Executors.newSingleThreadExecutor(daemonThreadFactory("CoreClaim-Redis-Publisher"));
         startSubscriberThread();
     }
@@ -94,6 +97,7 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         subscriber = null;
         subscriberThread = null;
         publishExecutor = null;
+        messageCodec = null;
     }
 
     @Override
@@ -105,7 +109,11 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         if (executor == null || executor.isShutdown()) {
             return;
         }
-        executor.execute(() -> publishPayload(encode(eventType, claimId)));
+        ClaimSyncMessageCodec codec = messageCodec;
+        if (codec == null) {
+            return;
+        }
+        executor.execute(() -> publishPayload(codec.encode(eventType, claimId)));
     }
 
     @Override
@@ -148,7 +156,11 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
     }
 
     private void handleIncomingMessage(String message) {
-        ClaimSyncMessage syncMessage = decode(message);
+        ClaimSyncMessageCodec codec = messageCodec;
+        if (codec == null) {
+            return;
+        }
+        ClaimSyncMessageCodec.ClaimSyncMessage syncMessage = codec.decode(message);
         if (syncMessage == null || originInstanceId.equals(syncMessage.originInstanceId())) {
             return;
         }
@@ -193,33 +205,6 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         return jedis;
     }
 
-    private String encode(ClaimSyncEventType eventType, int claimId) {
-        return PROTOCOL_VERSION
-            + "|" + eventType.wireName()
-            + "|" + claimId
-            + "|" + originInstanceId
-            + "|" + Instant.now().toEpochMilli();
-    }
-
-    private ClaimSyncMessage decode(String payload) {
-        if (payload == null || payload.isBlank()) {
-            return null;
-        }
-        String[] parts = payload.split("\\|", -1);
-        if (parts.length != 5 || !PROTOCOL_VERSION.equals(parts[0])) {
-            return null;
-        }
-        ClaimSyncEventType eventType = ClaimSyncEventType.fromWireName(parts[1]);
-        if (eventType == null) {
-            return null;
-        }
-        try {
-            return new ClaimSyncMessage(eventType, Integer.parseInt(parts[2]), parts[3]);
-        } catch (NumberFormatException exception) {
-            return null;
-        }
-    }
-
     private void sleepReconnectDelay(int seconds) {
         try {
             Thread.sleep(Math.max(1, seconds) * 1000L);
@@ -243,8 +228,5 @@ public final class ClaimSyncService implements ClaimSyncPublisher {
         }
         String message = cause.getMessage();
         return message == null || message.isBlank() ? cause.getClass().getSimpleName() : cause.getClass().getSimpleName() + ": " + message;
-    }
-
-    private record ClaimSyncMessage(ClaimSyncEventType eventType, int claimId, String originInstanceId) {
     }
 }

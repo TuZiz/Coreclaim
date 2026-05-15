@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.4.1'
 }
 
 group = 'com.coreclaim'
@@ -62,11 +63,27 @@ processResources {
 }
 
 jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+    archiveClassifier = 'plain'
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+shadowJar {
+    archiveClassifier = ''
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    mergeServiceFiles()
+    relocate 'redis.clients', 'com.coreclaim.libs.redis.clients'
+    relocate 'com.mysql', 'com.coreclaim.libs.com.mysql'
+    relocate 'org.sqlite', 'com.coreclaim.libs.org.sqlite'
+    relocate 'org.json', 'com.coreclaim.libs.org.json'
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+assemble {
+    dependsOn shadowJar
+}
+
+tasks.named('jar') {
+    finalizedBy shadowJar
 }
 
 publishing {

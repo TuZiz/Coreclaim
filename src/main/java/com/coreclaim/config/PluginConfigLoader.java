@@ -88,6 +88,7 @@ final class PluginConfigLoader {
             config.getString("claim-sync.redis.password", ""),
             Math.max(0, config.getInt("claim-sync.redis.database", 0)),
             sanitizeServerId(config.getString("claim-sync.redis.channel", "coreclaim:claim-sync"), "coreclaim:claim-sync"),
+            config.getString("claim-sync.redis.message-secret", ""),
             Math.max(1, config.getInt("claim-sync.redis.reconnect-seconds", 5))
         );
     }

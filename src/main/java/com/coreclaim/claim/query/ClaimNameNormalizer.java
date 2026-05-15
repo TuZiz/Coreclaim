@@ -2,12 +2,12 @@ package com.coreclaim.claim.query;
 
 import java.util.Locale;
 
-final class ClaimNameNormalizer {
+public final class ClaimNameNormalizer {
 
     private ClaimNameNormalizer() {
     }
 
-    static String normalize(String rawName) {
+    public static String normalize(String rawName) {
         String sanitizedName = sanitize(rawName);
         if (sanitizedName == null) {
             return null;
@@ -15,7 +15,7 @@ final class ClaimNameNormalizer {
         return sanitizedName.toLowerCase(Locale.ROOT);
     }
 
-    static String sanitize(String rawName) {
+    public static String sanitize(String rawName) {
         if (rawName == null) {
             return null;
         }

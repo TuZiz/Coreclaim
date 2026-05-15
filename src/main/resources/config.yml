@@ -37,9 +37,6 @@ transfer:
 # 是否显示进入/离开领地提示
 show-enter-leave-messages: true
 
-# 领地扩建冷却，单位秒
-expand-cooldown-seconds: 0
-
 # 创建第二块领地时是否提醒玩家确认位置
 warn-on-second-claim: true
 
@@ -83,6 +80,10 @@ database:
     database: coreclaim
     username: root
     password: ""
+    # MySQL TLS 模式。生产环境建议 VERIFY_IDENTITY；本地测试库可显式改为 DISABLED。
+    ssl-mode: VERIFY_IDENTITY
+    allow-public-key-retrieval: false
+    # 旧版兼容字段；未配置 ssl-mode 时才读取
     use-ssl: false
     pool-size: 5
   migration:
@@ -110,6 +111,8 @@ claim-sync:
     password: ""
     database: 0
     channel: "coreclaim:claim-sync"
+    # 多服同步签名密钥；claim-sync.enabled=true 时必须填写强随机值
+    message-secret: ""
     # Redis 断线后的重连间隔，单位秒
     reconnect-seconds: 5
 

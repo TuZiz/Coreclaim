@@ -6,6 +6,7 @@ import com.coreclaim.cleanup.ClaimCleanupService;
 import com.coreclaim.sync.ClaimSyncPublisher;
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.storage.DatabaseManager;
+import com.coreclaim.storage.ClaimSpatialLockService;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ public final class ClaimRuntime {
 
     private final CoreClaimPlugin plugin;
     private final DatabaseManager databaseManager;
+    private final ClaimSpatialLockService spatialLockService;
     private final ProfileService profileService;
     private final Map<Integer, Claim> claims;
     private final Object mutationLock;
@@ -29,6 +31,7 @@ public final class ClaimRuntime {
     ) {
         this.plugin = plugin;
         this.databaseManager = databaseManager;
+        this.spatialLockService = new ClaimSpatialLockService(databaseManager);
         this.profileService = profileService;
         this.claims = claims;
         this.mutationLock = mutationLock;
@@ -40,6 +43,10 @@ public final class ClaimRuntime {
 
     public DatabaseManager databaseManager() {
         return databaseManager;
+    }
+
+    public ClaimSpatialLockService spatialLockService() {
+        return spatialLockService;
     }
 
     public ProfileService profileService() {

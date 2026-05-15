@@ -6,7 +6,6 @@ import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.sync.ClaimSyncEventType;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.Location;
@@ -60,20 +59,26 @@ final class ClaimPropertyMutations {
 
     void updateBounds(Claim claim, int east, int south, int west, int north, UUID actorId) {
         synchronized (context.runtime.mutationLock()) {
-            claim.setBounds(east, south, west, north);
-            claim.setLastExpandedAt(Instant.now().getEpochSecond());
-            context.runtime.databaseManager().update(
-                "UPDATE claims SET radius = ?, east = ?, south = ?, west = ?, north = ?, last_expanded_at = ? WHERE id = ?",
-                statement -> {
-                    statement.setInt(1, claim.displayRadius());
-                    statement.setInt(2, east);
-                    statement.setInt(3, south);
-                    statement.setInt(4, west);
-                    statement.setInt(5, north);
-                    statement.setLong(6, claim.lastExpandedAt());
-                    statement.setInt(7, claim.id());
-                }
-            );
+            context.runtime.databaseManager().transaction(() -> {
+                int minX = claim.centerX() - west;
+                int maxX = claim.centerX() + east;
+                int minZ = claim.centerZ() - north;
+                int maxZ = claim.centerZ() + south;
+                assertDatabaseAreaAvailable(claim, minX, maxX, claim.minY(), claim.maxY(), minZ, maxZ, claim.id(), claim.fullHeight());
+                claim.setBounds(east, south, west, north);
+                context.runtime.databaseManager().update(
+                    "UPDATE claims SET radius = ?, east = ?, south = ?, west = ?, north = ? WHERE id = ?",
+                    statement -> {
+                        statement.setInt(1, claim.displayRadius());
+                        statement.setInt(2, east);
+                        statement.setInt(3, south);
+                        statement.setInt(4, west);
+                        statement.setInt(5, north);
+                        statement.setInt(6, claim.id());
+                    }
+                );
+                return null;
+            });
             context.lookupService.rebuildClaimChunkIndex();
             context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
@@ -82,18 +87,20 @@ final class ClaimPropertyMutations {
 
     void updateHeightBounds(Claim claim, int minY, int maxY, boolean fullHeight, UUID actorId) {
         synchronized (context.runtime.mutationLock()) {
-            claim.setHeightBounds(minY, maxY, fullHeight);
-            claim.setLastExpandedAt(Instant.now().getEpochSecond());
-            context.runtime.databaseManager().update(
-                "UPDATE claims SET min_y = ?, max_y = ?, full_height = ?, last_expanded_at = ? WHERE id = ?",
-                statement -> {
-                    statement.setInt(1, claim.minY());
-                    statement.setInt(2, claim.maxY());
-                    statement.setInt(3, claim.fullHeight() ? 1 : 0);
-                    statement.setLong(4, claim.lastExpandedAt());
-                    statement.setInt(5, claim.id());
-                }
-            );
+            context.runtime.databaseManager().transaction(() -> {
+                assertDatabaseAreaAvailable(claim, claim.minX(), claim.maxX(), minY, maxY, claim.minZ(), claim.maxZ(), claim.id(), fullHeight);
+                claim.setHeightBounds(minY, maxY, fullHeight);
+                context.runtime.databaseManager().update(
+                    "UPDATE claims SET min_y = ?, max_y = ?, full_height = ? WHERE id = ?",
+                    statement -> {
+                        statement.setInt(1, claim.minY());
+                        statement.setInt(2, claim.maxY());
+                        statement.setInt(3, claim.fullHeight() ? 1 : 0);
+                        statement.setInt(4, claim.id());
+                    }
+                );
+                return null;
+            });
             context.lookupService.rebuildClaimChunkIndex();
             context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
         }
@@ -110,10 +117,11 @@ final class ClaimPropertyMutations {
             String sanitizedName = context.lookupService.validateAvailableClaimName(name, claim.id());
             claim.setName(sanitizedName);
             context.runtime.databaseManager().update(
-                "UPDATE claims SET name = ? WHERE id = ?",
+                "UPDATE claims SET name = ?, name_key = ? WHERE id = ?",
                 statement -> {
                     statement.setString(1, sanitizedName);
-                    statement.setInt(2, claim.id());
+                    statement.setString(2, com.coreclaim.claim.query.ClaimNameNormalizer.normalize(sanitizedName));
+                    statement.setInt(3, claim.id());
                 }
             );
             context.publishClaimSync(ClaimSyncEventType.CLAIM_UPDATED, claim.id());
@@ -237,5 +245,22 @@ final class ClaimPropertyMutations {
             case TELEPORT -> "allow_teleport";
             case FLIGHT -> "allow_flight";
         };
+    }
+
+    private void assertDatabaseAreaAvailable(
+        Claim claim,
+        int minX,
+        int maxX,
+        int minY,
+        int maxY,
+        int minZ,
+        int maxZ,
+        Integer ignoredId,
+        boolean fullHeight
+    ) {
+        context.runtime.spatialLockService().lockArea(claim.world(), minX, maxX, minZ, maxZ);
+        if (context.runtime.spatialLockService().hasOverlappingClaim(claim.world(), minX, maxX, minY, maxY, minZ, maxZ, ignoredId, fullHeight)) {
+            throw new IllegalArgumentException("claim-overlap");
+        }
     }
 }

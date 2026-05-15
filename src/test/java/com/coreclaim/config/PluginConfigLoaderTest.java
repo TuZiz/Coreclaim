@@ -95,4 +95,16 @@ class PluginConfigLoaderTest {
         assertEquals(8, config.minimumCoreSpacing());
         assertEquals(3, config.selectionMinimumGap());
     }
+
+    @Test
+    void redisMessageSecretLoadsFromClaimSyncSettings() {
+        YamlConfiguration rawConfig = new YamlConfiguration();
+        rawConfig.set("claim-sync.enabled", true);
+        rawConfig.set("claim-sync.redis.message-secret", "secret-value");
+
+        PluginConfig config = new PluginConfig(rawConfig, new YamlConfiguration());
+
+        assertTrue(config.claimSync().hasRedisMessageSecret());
+        assertEquals("secret-value", config.claimSync().redisMessageSecret());
+    }
 }

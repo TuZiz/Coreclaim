@@ -64,7 +64,6 @@ claim-core-blocked: '&#FF6B6B&l! &#CBD5E1命名期间目标位置被占用，核
 claim-create-failed: '&#FF6B6B&l! &#CBD5E1领地创建失败，已回滚本次操作，请稍后再试。'
 
 # 扩建与核心操作
-claim-expand-cooldown: '&#FF6B6B&l! &#CBD5E1扩建冷却中... 请等待 &#F8FAFC{seconds}s&#CBD5E1。'
 claim-expand-success: '&#55FFAA扩建 &#475569| &#CBD5E1向 &#F8FAFC{direction} &#CBD5E1延伸 &#F8FAFC{amount} &#CBD5E1格。花费: &#F8FAFC{cost}&#CBD5E1，现大小: &#F8FAFC{width}x{height}x{depth}&#CBD5E1。'
 claim-core-hidden: '&#55FFAA隐藏 &#475569| &#CBD5E1已移除 &#F8FAFC{name} &#CBD5E1的核心模型，领地范围依然有效。'
 claim-core-already-hidden: '&#FFD166&l! &#CBD5E1该领地核心此前已被移除。'

@@ -50,7 +50,6 @@ public final class PluginConfig {
     private final Material coreMaterial;
     private final String centerCoreHologramText;
     private final double centerCoreHologramHeight;
-    private final int expandCooldownSeconds;
     private final boolean warnOnSecondClaim;
     private final int coreUseMinActivity;
     private final long flightExitGraceTicks;
@@ -130,7 +129,6 @@ public final class PluginConfig {
                 config.getString("core-tool.material", "AMETHYST_CLUSTER"))));
         this.centerCoreHologramText = config.getString("center-core.hologram-text", "&6%claim_name%");
         this.centerCoreHologramHeight = config.getDouble("center-core.hologram-height", 1.8D);
-        this.expandCooldownSeconds = Math.max(0, config.getInt("expand-cooldown-seconds", 0));
         this.warnOnSecondClaim = config.getBoolean("warn-on-second-claim", false);
         this.coreUseMinActivity = Math.max(0, config.getInt("core-use-min-activity", 0));
         this.flightExitGraceTicks = Math.max(0L, config.getLong("flight.exit-grace-ticks", 20L));
@@ -287,10 +285,6 @@ public final class PluginConfig {
 
     public double centerCoreHologramHeight() {
         return centerCoreHologramHeight;
-    }
-
-    public int expandCooldownSeconds() {
-        return expandCooldownSeconds;
     }
 
     public boolean warnOnSecondClaim() {

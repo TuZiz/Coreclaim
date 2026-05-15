@@ -82,15 +82,16 @@ public final class UpsertSqlFactory {
         if (mysql) {
             return """
                 INSERT INTO claims (
-                    id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
+                    id, owner_uuid, owner_name, name, name_key, core_visible, world, server_id, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                     allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone,
                     allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     owner_uuid = VALUES(owner_uuid),
                     owner_name = VALUES(owner_name),
                     name = VALUES(name),
+                    name_key = VALUES(name_key),
                     core_visible = VALUES(core_visible),
                     world = VALUES(world),
                     server_id = VALUES(server_id),
@@ -132,14 +133,15 @@ public final class UpsertSqlFactory {
         }
         return """
             INSERT INTO claims (
-                id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
+                id, owner_uuid, owner_name, name, name_key, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                 allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 owner_uuid = excluded.owner_uuid,
                 owner_name = excluded.owner_name,
                 name = excluded.name,
+                name_key = excluded.name_key,
                 core_visible = excluded.core_visible,
                 world = excluded.world,
                 server_id = excluded.server_id,

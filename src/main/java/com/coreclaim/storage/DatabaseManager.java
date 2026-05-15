@@ -10,11 +10,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public final class DatabaseManager {
 
-    static final int SCHEMA_VERSION = 9;
+    static final int SCHEMA_VERSION = 10;
     static final String SCHEMA_VERSION_KEY = "schema_version";
     private final CoreClaimPlugin plugin;
     private final DatabaseType databaseType;
@@ -104,6 +106,28 @@ public final class DatabaseManager {
         return databaseExecutor.transaction(callback);
     }
 
+    public void ensureIndex(String table, String indexName, boolean unique, String... columns) {
+        synchronized (lock) {
+            ensureConnection();
+            try {
+                if (indexExists(table, indexName)) {
+                    return;
+                }
+                String columnList = Arrays.stream(columns)
+                    .map(column -> "`" + column + "`")
+                    .collect(Collectors.joining(", "));
+                String uniquePrefix = unique ? "UNIQUE " : "";
+                update(
+                    "CREATE " + uniquePrefix + "INDEX " + indexName + " ON " + table + " (" + columnList + ")",
+                    statement -> {
+                    }
+                );
+            } catch (SQLException exception) {
+                throw new IllegalStateException("Failed to inspect database index " + table + "." + indexName, exception);
+            }
+        }
+    }
+
     private void connect() {
         synchronized (lock) {
             ensureDataFolder();
@@ -189,6 +213,19 @@ public final class DatabaseManager {
         return false;
     }
 
+    private boolean indexExists(String table, String indexName) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
+        String catalog = databaseType == DatabaseType.MYSQL ? connection.getCatalog() : null;
+        try (ResultSet resultSet = metaData.getIndexInfo(catalog, null, table, false, false)) {
+            while (resultSet.next()) {
+                if (indexName.equalsIgnoreCase(resultSet.getString("INDEX_NAME"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void ensureConnection() {
         try {
             if (connection == null || connection.isClosed()) {
@@ -219,10 +256,15 @@ public final class DatabaseManager {
         String host = plugin.getConfig().getString("database.mysql.host", "localhost");
         int port = plugin.getConfig().getInt("database.mysql.port", 3306);
         String database = plugin.getConfig().getString("database.mysql.database", "coreclaim");
-        boolean useSsl = plugin.getConfig().getBoolean("database.mysql.use-ssl", false);
+        String sslMode = plugin.getConfig().getString("database.mysql.ssl-mode", "");
+        if (sslMode == null || sslMode.isBlank()) {
+            sslMode = plugin.getConfig().getBoolean("database.mysql.use-ssl", false) ? "REQUIRED" : "VERIFY_IDENTITY";
+        }
+        sslMode = sslMode.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        boolean allowPublicKeyRetrieval = plugin.getConfig().getBoolean("database.mysql.allow-public-key-retrieval", false);
         return "jdbc:mysql://" + host + ":" + port + "/" + database
-            + "?useSSL=" + useSsl
-            + "&allowPublicKeyRetrieval=true"
+            + "?sslMode=" + sslMode
+            + "&allowPublicKeyRetrieval=" + allowPublicKeyRetrieval
             + "&useUnicode=true"
             + "&characterEncoding=utf8"
             + "&serverTimezone=UTC";

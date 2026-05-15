@@ -21,6 +21,7 @@ class ClaimCreationPipelineSourceTest {
         assertTrue(regionMethod.contains("pendingCoreReservationService.reserve"));
         assertTrue(regionMethod.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(source.contains("databaseAsyncExecutor.supply(() -> claimService.createClaim(request))"));
+        assertTrue(source.contains("pendingCoreReservationService.validateStillReservedAndCorePresent(reservation)"));
         assertTrue(source.contains("pendingCoreReservationService.commit(reservation, result.claim())"));
     }
 
@@ -35,6 +36,7 @@ class ClaimCreationPipelineSourceTest {
         assertTrue(regionMethod.contains("pendingCoreReservationService.reserve"));
         assertTrue(regionMethod.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(source.contains("databaseAsyncExecutor.supply(() -> claimService.createClaim(request))"));
+        assertTrue(source.contains("pendingCoreReservationService.validateStillReservedAndCorePresent(reservation)"));
         assertTrue(source.contains("pendingCoreReservationService.commit(reservation, result.claim())"));
     }
 
@@ -47,6 +49,23 @@ class ClaimCreationPipelineSourceTest {
         assertTrue(selection.contains("refundCost(player, preview.cost())"));
         assertTrue(pending.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(pending.contains("refundCreationPayment(player, createCost)"));
+        assertTrue(pending.contains("refundCore(pending)"));
+    }
+
+    @Test
+    void compensationSchedulingFailureStillCleansAndRefunds() throws IOException {
+        String selection = read("src/main/java/com/coreclaim/selection/ClaimSelectionCreator.java");
+        String pending = read("src/main/java/com/coreclaim/service/PendingClaimService.java");
+
+        assertTrue(selection.contains("handleCompensationSchedulingFailure"));
+        assertTrue(selection.contains("Manual database repair may be required"));
+        assertTrue(selection.contains("claimService.reloadClaims()"));
+        assertTrue(selection.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
+        assertTrue(selection.contains("refundCost(player, preview.cost())"));
+        assertTrue(pending.contains("handleCompensationSchedulingFailure"));
+        assertTrue(pending.contains("Manual database repair may be required"));
+        assertTrue(pending.contains("claimService.reloadClaims()"));
+        assertTrue(pending.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(pending.contains("refundCore(pending)"));
     }
 

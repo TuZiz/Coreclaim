@@ -4,6 +4,7 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.model.Claim;
+import com.coreclaim.claim.reservation.CoreBlockPresenceChecker.Presence;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -14,10 +15,32 @@ public final class PendingCoreReservationService {
     private final CoreClaimPlugin plugin;
     private final ClaimCoreRegionService coreRegionService;
     private final PendingCoreReservationRegistry registry = new PendingCoreReservationRegistry();
+    private final CoreBlockPresenceChecker coreBlockPresenceChecker;
 
     public PendingCoreReservationService(CoreClaimPlugin plugin, ClaimCoreRegionService coreRegionService) {
+        this(plugin, coreRegionService, reservation -> {
+            if (plugin == null) {
+                return Presence.WORLD_UNLOADED;
+            }
+            org.bukkit.World world = plugin.getServer().getWorld(reservation.world());
+            if (world == null) {
+                return Presence.WORLD_UNLOADED;
+            }
+            Location location = new Location(world, reservation.x(), reservation.y(), reservation.z());
+            return location.getBlock().getType() == plugin.settings().coreMaterial()
+                ? Presence.PRESENT
+                : Presence.MISSING_OR_REPLACED;
+        });
+    }
+
+    PendingCoreReservationService(
+        CoreClaimPlugin plugin,
+        ClaimCoreRegionService coreRegionService,
+        CoreBlockPresenceChecker coreBlockPresenceChecker
+    ) {
         this.plugin = plugin;
         this.coreRegionService = coreRegionService;
+        this.coreBlockPresenceChecker = coreBlockPresenceChecker;
     }
 
     public PendingCoreReservation reserve(UUID ownerId, Location location, ClaimCreationMode mode, ClaimCreationOptions options) {
@@ -56,6 +79,18 @@ public final class PendingCoreReservationService {
 
     public boolean validateStillReserved(PendingCoreReservation reservation) {
         return registry.validateStillReserved(reservation);
+    }
+
+    public boolean validateStillReservedAndCorePresent(PendingCoreReservation reservation) {
+        if (!registry.validateStillReserved(reservation)) {
+            return false;
+        }
+        Presence presence = coreBlockPresenceChecker.check(reservation);
+        if (presence == Presence.PRESENT) {
+            return true;
+        }
+        markInvalid(reservation, presence == Presence.WORLD_UNLOADED ? "world-unloaded" : "core-missing-or-replaced");
+        return false;
     }
 
     public void markInvalid(PendingCoreReservation reservation, String reason) {
@@ -100,5 +135,9 @@ public final class PendingCoreReservationService {
             return null;
         }
         return new Location(world, reservation.x(), reservation.y(), reservation.z());
+    }
+
+    void register(PendingCoreReservation reservation) {
+        registry.put(reservation);
     }
 }

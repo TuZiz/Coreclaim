@@ -207,7 +207,7 @@ public final class PendingClaimService {
             }
             try {
                 plugin.platformScheduler().runLocationTask(coreLocation, () -> {
-                    if (pendingCoreReservationService.validateStillReserved(reservation)) {
+                    if (pendingCoreReservationService.validateStillReservedAndCorePresent(reservation)) {
                         pendingCoreReservationService.commit(reservation, result.claim());
                         finishPendingClaimAfterReservationCommit(player, pending, request, result, createCost);
                         return;
@@ -249,7 +249,8 @@ public final class PendingClaimService {
         boolean refundCore,
         String reason
     ) {
-        databaseAsyncExecutor.run(() -> claimService.removeCommittedClaimRecord(claim)).whenComplete((ignored, throwable) -> {
+        try {
+            databaseAsyncExecutor.run(() -> claimService.removeCommittedClaimRecord(claim)).whenComplete((ignored, throwable) -> {
             if (throwable != null) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to compensate committed pending claim " + claim.id() + " after " + reason, throwable);
                 try {
@@ -270,6 +271,40 @@ public final class PendingClaimService {
                 }
                 sendPendingCreationFailure(player, new IllegalStateException("pending-core-invalid"), claim.name());
             });
+        });
+        } catch (RuntimeException exception) {
+            handleCompensationSchedulingFailure(claim, reservation, player, pending, createCost, refundCore, reason, exception);
+        }
+    }
+
+    private void handleCompensationSchedulingFailure(
+        Claim claim,
+        PendingCoreReservation reservation,
+        Player player,
+        PendingClaim pending,
+        double createCost,
+        boolean shouldRefundCore,
+        String reason,
+        RuntimeException exception
+    ) {
+        plugin.getLogger().log(Level.SEVERE, "Failed to schedule committed claim compensation for " + claim.id()
+            + " after " + reason + ". Manual database repair may be required.", exception);
+        try {
+            claimService.reloadClaims();
+        } catch (RuntimeException reloadException) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to reload claims after compensation scheduling failure for " + claim.id(), reloadException);
+        }
+        try {
+            plugin.platformScheduler().runLocationTask(pending.coreLocation(), () -> pendingCoreReservationService.releaseAndClear(reservation));
+        } catch (RuntimeException cleanupException) {
+            plugin.getLogger().log(Level.WARNING, "Failed to schedule reservation cleanup after compensation scheduling failure: " + claim.id(), cleanupException);
+        }
+        plugin.platformScheduler().runPlayerTask(player, () -> {
+            refundCreationPayment(player, createCost);
+            if (shouldRefundCore) {
+                refundCore(pending);
+            }
+            sendPendingCreationFailure(player, new IllegalStateException("pending-core-invalid"), claim.name());
         });
     }
 

@@ -1,5 +1,5 @@
 layout-version: 5
-title: '&#475569[&#C084FC成员&#475569] &#C084FC&l成员管理 - {name}'
+title: '&#A855F7&l[&#C084FC&l成员&#A855F7&l] &#FAF5FF成员管理 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFIFFFF'
@@ -20,18 +20,19 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1401
-    name: '&#FFD166&l成员概览'
+    name: '&#A855F7&l★ &#C084FC&l成员管理概览'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#C084FC✦ &#E2E8F0基础信息'
+      - '   &#94A3B8当前领地: &#38BDF8{name}'
+      - '   &#94A3B8成员数量: &#FBBF24{trusted_count}'
       - ''
-      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
-      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
-      - ''
-      - ' &#CBD5E1左侧成员头像可直接移除授权'
-      - ' &#CBD5E1底部按钮可快速添加在线玩家'
-      - ' &#CBD5E1也可以继续使用命令:'
-      - ' &#F8FAFC/claim add <玩家>'
-      - ''
-      - ' &#CBD5E1成员默认拥有全部权限'
+      - ' &#C084FC✦ &#E2E8F0操作提示'
+      - '   &#94A3B81. 点击成员头像可直接移除授权。'
+      - '   &#94A3B82. 底部按钮可快速添加在线玩家。'
+      - '   &#94A3B83. 成员默认拥有该领地的全部权限。'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8快捷命令: &#F8FAFC/claim add <玩家>'
 
   trusted-entry:
     chars:
@@ -39,26 +40,26 @@ items:
       - 'E'
     material: PLAYER_HEAD
     custom-model-data: 1402
-    name: '&#55FFAA&l成员: &#F8FAFC{player}'
+    name: '&#38BDF8&l👤 &#7DD3FC&l{player}'
     lore:
-      - ''
-      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
-      - ' &#CBD5E1默认权限: &#55FFAA全部开放'
-      - ''
-      - ' &#FF6B6B点击移除该成员'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8所属领地: &#38BDF8{name}'
+      - ' &#94A3B8默认权限: &#10B981全部开放'
+      - '&#1E293B&m                                '
+      - ' &#EF4444[点击] &#F87171移除该成员的授权'
     sound: BLOCK_NOTE_BLOCK_BASS
 
   add-online:
     char: 'A'
     material: LIME_DYE
     custom-model-data: 1408
-    name: '&#55FFAA&l添加在线玩家'
+    name: '&#10B981&l✚ &#34D399&l添加在线玩家'
     lore:
-      - ''
-      - ' &#CBD5E1打开在线玩家列表'
-      - ' &#CBD5E1点击头像后立即授权到当前领地'
-      - ''
-      - ' &#FFD166点击打开'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8打开服务器在线玩家列表，'
+      - ' &#94A3B8点击头像即可快速将其授权到当前领地。'
+      - '&#1E293B&m                                '
+      - ' &#10B981[点击] &#F8FAFC打开在线列表'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -66,40 +67,40 @@ items:
     char: 'E'
     material: PAPER
     custom-model-data: 1403
-    name: '&#CBD5E1当前还没有成员'
+    name: '&#94A3B8当前领地还没有任何成员'
     lore:
-      - ''
-      - ' &#CBD5E1使用命令添加成员:'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8你可以使用命令添加:'
       - ' &#F8FAFC/claim add <玩家>'
       - ''
-      - ' &#CBD5E1也可以点击底部按钮添加在线玩家'
+      - ' &#94A3B8或点击底部按钮快速添加在线玩家。'
 
   prev-page:
     char: 'L'
     material: ARROW
     custom-model-data: 1405
-    name: '&#55FFAA&l上一页'
+    name: '&#38BDF8&l◀ &#7DD3FC&l上一页'
     lore:
-      - ''
-      - ' &#CBD5E1查看上一页成员'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8查看上一页成员名单'
     sound: UI_BUTTON_CLICK
 
   back:
     char: 'X'
     material: BARRIER
     custom-model-data: 1406
-    name: '&#FF6B6B&l返回核心菜单'
+    name: '&#FB7185&l➦ &#F43F5E&l返回核心菜单'
     lore:
-      - ''
-      - ' &#CBD5E1回到当前领地核心菜单'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8回到当前领地的管理主页'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: 'N'
     material: ARROW
     custom-model-data: 1407
-    name: '&#55FFAA&l下一页'
+    name: '&#38BDF8&l▶ &#7DD3FC&l下一页'
     lore:
-      - ''
-      - ' &#CBD5E1查看下一页成员'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8查看下一页成员名单'
     sound: UI_BUTTON_CLICK

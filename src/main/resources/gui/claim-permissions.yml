@@ -1,5 +1,5 @@
 layout-version: 13
-title: '&#475569[&#A855F7权限&#475569] &#A855F7&l权限管理 - {name}'
+title: '&#A855F7&l[&#C084FC&l权限&#A855F7&l] &#FAF5FF权限管理 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFIFFFF'
@@ -20,210 +20,227 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1601
-    name: '&#FFD166&l权限管理概览'
+    name: '&#A855F7&l★ &#C084FC&l权限管理概览'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#C084FC✦ &#E2E8F0基础信息'
+      - '   &#94A3B8当前领地: &#38BDF8{name}'
+      - '   &#94A3B8成员数量: &#FBBF24{trusted_count}'
+      - '   &#94A3B8已自定义权限: &#FBBF24{custom_count}'
       - ''
-      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
-      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
-      - ' &#CBD5E1已自定义权限: &#FFD166{custom_count}'
-      - ''
-      - ' &#CBD5E1交互权限包含容器、门、床和普通右键'
-      - ' &#CBD5E1生物交互控制攻击、喂养、繁殖、骑乘和牵引生物'
-      - ' &#CBD5E1动物生成和怪物生成控制领地内自然/刷怪类生成'
-      - ' &#CBD5E1红石权限包含按钮、拉杆和压力板'
-      - ' &#CBD5E1液体流入独立于桶权限'
+      - ' &#C084FC✦ &#E2E8F0权限说明'
+      - '   &#94A3B8交互权限: &#E2E8F0包含容器、门、床和普通右键'
+      - '   &#94A3B8生物交互: &#E2E8F0控制攻击、喂养、繁殖、骑乘等'
+      - '   &#94A3B8生成权限: &#E2E8F0控制领地内自然/刷怪类生成'
+      - '   &#94A3B8红石权限: &#E2E8F0包含按钮、拉杆和压力板'
+      - '   &#94A3B8液体权限: &#E2E8F0液体流入独立于手动桶权限'
+      - '&#1E293B&m                                '
 
   perm-place:
     char: 'P'
     material: GRASS_BLOCK
     custom-model-data: 1602
-    name: '&#55FFAA&l放置权限'
+    name: '&#10B981&l✦ &#34D399&l放置权限'
     lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - '&#1E293B&m                                '
+      - ' &#34D399✦ &#E2E8F0权限状态: {state}'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-break:
     char: 'B'
     material: NETHERITE_PICKAXE
     custom-model-data: 1603
-    name: '&#FF6B6B&l破坏权限'
+    name: '&#EF4444&l✦ &#F87171&l破坏权限'
     lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - '&#1E293B&m                                '
+      - ' &#F87171✦ &#E2E8F0权限状态: {state}'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-interact:
     char: 'H'
     material: OAK_DOOR
     custom-model-data: 1604
-    name: '&#4CC9F0&l交互权限'
+    name: '&#0EA5E9&l✦ &#38BDF8&l交互权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制容器、门、活板门、栅栏门、床和普通右键'
-      - ' &#CBD5E1禁止后陌生人无法使用你的容器或门禁'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制容器、门、活板门、栅栏门、'
+      - ' &#94A3B8床和普通的右键点击交互。'
+      - ' &#FCA5A5禁止后陌生人无法使用你的容器或门禁。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-redstone:
     char: 'R'
     material: REDSTONE_TORCH
     custom-model-data: 1609
-    name: '&#FF6B6B&l红石权限'
+    name: '&#EF4444&l✦ &#F87171&l红石权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#F87171✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制按钮、拉杆、压力板和红石类交互'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制按钮、拉杆、压力板等'
+      - ' &#94A3B8红石触发类交互。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-explosion:
     char: 'E'
     material: TNT
     custom-model-data: 1610
-    name: '&#F59E0B&l爆炸权限'
+    name: '&#F59E0B&l✦ &#FBBF24&l爆炸权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制 TNT、爆炸投掷物和危险维度的床/重生锚'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制 TNT、爆炸投掷物以及'
+      - ' &#94A3B8危险维度的床/重生锚爆炸。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-bucket:
     char: 'K'
     material: WATER_BUCKET
     custom-model-data: 1605
-    name: '&#60A5FA&l桶权限'
+    name: '&#3B82F6&l✦ &#60A5FA&l桶权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#60A5FA✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1只控制玩家手动倒出或取走液体'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8只控制玩家手动倒出或取走液体。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-teleport:
     char: 'T'
     material: ENDER_PEARL
     custom-model-data: 1606
-    name: '&#C084FC&l传送权限'
+    name: '&#9333EA&l✦ &#C084FC&l传送权限'
     lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - '&#1E293B&m                                '
+      - ' &#C084FC✦ &#E2E8F0权限状态: {state}'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-flight:
     char: 'Y'
     material: FEATHER
     custom-model-data: 1613
-    name: '&#4CC9F0&l飞行权限'
+    name: '&#0EA5E9&l✦ &#38BDF8&l飞行权限'
     lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0权限状态: {state}'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-mob-interact:
     char: 'C'
     material: ZOMBIE_HEAD
     custom-model-data: 1614
-    name: '&#A7F3D0&l生物交互权限'
+    name: '&#34D399&l✦ &#6EE7B7&l生物交互权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#6EE7B7✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制动物、怪物和村民等生物的攻击与右键互动'
-      - ' &#CBD5E1包括喂养、繁殖、骑乘、牵引、钓竿拉拽和药水影响'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制动物、怪物和村民等生物的攻击与互动。'
+      - ' &#94A3B8包括喂养、繁殖、骑乘、牵引、钓竿拉拽'
+      - ' &#94A3B8和药水影响。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-animal-spawn:
     char: 'A'
     material: WHEAT
     custom-model-data: 1615
-    name: '&#86EFAC&l动物生成权限'
+    name: '&#22C55E&l✦ &#4ADE80&l动物生成权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#4ADE80✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制牛、羊、鸡、狐狸、鱼类和蝙蝠等被动生物生成'
-      - ' &#CBD5E1包含自然生成、繁殖、刷怪笼和刷怪蛋'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制牛、羊、鸡、狐狸、鱼类和蝙蝠等'
+      - ' &#94A3B8被动生物生成 (含自然生成/繁殖/刷怪蛋)。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-monster-spawn:
     char: 'Z'
     material: SPAWNER
     custom-model-data: 1616
-    name: '&#F87171&l怪物生成权限'
+    name: '&#EF4444&l✦ &#F87171&l怪物生成权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#F87171✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1控制僵尸、骷髅、苦力怕、史莱姆和其他敌对生物生成'
-      - ' &#CBD5E1包含自然生成、刷怪笼、刷怪蛋、巡逻和袭击'
-      - ''
-      - ' &#FFD166点击切换默认权限'
+      - ' &#94A3B8控制僵尸、骷髅、苦力怕、史莱姆等'
+      - ' &#94A3B8敌对生物生成 (含自然生成/刷怪/巡逻袭击)。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[点击] &#F8FAFC切换默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-liquid-flow:
     char: '9'
     material: WATER_BUCKET
     custom-model-data: 1625
-    name: '&#60A5FA&l液体流入权限'
+    name: '&#3B82F6&l✦ &#60A5FA&l液体流入权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#60A5FA✦ &#E2E8F0权限状态: {state}'
       - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ' &#CBD5E1允许后水和岩浆可以从外部流入领地'
-      - ' &#CBD5E1不影响玩家手动使用桶'
-      - ''
-      - ' &#FFD166左键切换权限状态'
-      - ' &#FFD166右键恢复默认权限'
+      - ' &#94A3B8允许后，水和岩浆可以从外部流入领地。'
+      - ' &#94A3B8该权限不影响玩家手动使用桶。'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[左键] &#F8FAFC切换权限状态'
+      - ' &#A855F7[右键] &#F8FAFC恢复默认权限'
     sound: UI_BUTTON_CLICK
 
   perm-time-cycle:
     char: 'M'
     material: CLOCK
     custom-model-data: 1624
-    name: '&#FFD166&l领地时间'
+    name: '&#F59E0B&l✦ &#FBBF24&l领地时间'
     lore:
-      - ''
-      - ' &#CBD5E1权限当前状态: {state}'
-      - ''
-      - ' &#FFD166左键切换 跟随世界/白天/夜晚'
-      - ' &#FFD166右键恢复跟随世界时间'
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0权限状态: {state}'
+      - '&#1E293B&m                                '
+      - ' &#A855F7[左键] &#F8FAFC切换 跟随世界/白天/夜晚'
+      - ' &#A855F7[右键] &#F8FAFC恢复跟随世界时间'
     sound: UI_BUTTON_CLICK
 
   disable-all:
     char: 'D'
     material: REDSTONE_BLOCK
     custom-model-data: 1611
-    name: '&#FF6B6B&l一键禁止危险权限'
+    name: '&#EF4444&l⚠ &#F87171&l一键禁止危险权限'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FCA5A5此操作将批量禁用以下权限：'
+      - ' &#94A3B8放置、破坏、交互、生物交互、动物生成、'
+      - ' &#94A3B8怪物生成、红石、爆炸、桶及外部液体流入。'
       - ''
-      - ' &#CBD5E1会禁止放置、破坏、交互、生物交互、动物生成、怪物生成、红石、爆炸、桶'
-      - ' &#CBD5E1并禁止外部液体流入领地'
-      - ' &#CBD5E1不会修改传送、飞行和领地时间'
-      - ''
-      - ' &#FFD166点击执行'
+      - ' &#10B981※ 不会修改传送、飞行和领地时间'
+      - '&#1E293B&m                                '
+      - ' &#EF4444[点击] &#F8FAFC执行覆盖'
     sound: UI_BUTTON_CLICK
 
   back:
     char: 'X'
     material: BARRIER
     custom-model-data: 1612
-    name: '&#FF6B6B&l返回'
+    name: '&#FB7185&l➦ &#F43F5E&l返回核心菜单'
     lore:
-      - ''
-      - ' &#FFD166点击回到核心菜单'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8点击返回上一级管理界面'
     sound: UI_BUTTON_CLICK

@@ -63,8 +63,8 @@ public final class ClaimExpansionMenuSupport {
             "{direction}", directionLabel(direction),
             "{amount}", String.valueOf(amount),
             "{max}", maxAmount < 0 ? "无限" : String.valueOf(maxAmount),
-            "{current}", String.valueOf(claim.distance(direction)),
-            "{target}", String.valueOf(preview.targetDistance()),
+            "{current}", String.valueOf(currentBoundary(claim, direction)),
+            "{target}", String.valueOf(targetBoundary(preview, direction)),
             "{price}", preview.costText(),
             "{width}", String.valueOf(preview.width()),
             "{height}", String.valueOf(preview.height()),
@@ -107,6 +107,22 @@ public final class ClaimExpansionMenuSupport {
             return "&#FF6B6B余额不足";
         }
         return "&#55FFAA可以扩建";
+    }
+
+    static int currentBoundary(Claim claim, ClaimDirection direction) {
+        return switch (direction) {
+            case UP -> claim.maxY();
+            case DOWN -> claim.minY();
+            case NORTH, SOUTH, WEST, EAST -> claim.distance(direction);
+        };
+    }
+
+    static int targetBoundary(ClaimActionService.ExpansionPreview preview, ClaimDirection direction) {
+        return switch (direction) {
+            case UP -> preview.maxY();
+            case DOWN -> preview.minY();
+            case NORTH, SOUTH, WEST, EAST -> preview.targetDistance();
+        };
     }
 
     private int worldMinY(Player player, Claim claim) {

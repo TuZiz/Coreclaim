@@ -18,6 +18,7 @@ import java.util.function.Predicate;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permissible;
 
@@ -158,6 +159,7 @@ implements TabExecutor {
             case "diagnose" -> this.handleAdminDiagnose(sender, args);
             case "add" -> this.handleAdminAdd(sender, args);
             case "remove" -> this.handleAdminRemove(sender, args);
+            case "transfer" -> this.handleAdminTransfer(sender, args);
             case "permission" -> this.handleAdminPermission(sender, args);
             case "flag" -> this.handleAdminFlag(sender, args);
             case "deny" -> this.handleAdminDeny(sender, args);
@@ -210,6 +212,25 @@ implements TabExecutor {
 
     private boolean handleAdminRemove(CommandSender sender, String[] args) {
         return this.adminClaimCommands.handleRemove(sender, args);
+    }
+
+    private boolean handleAdminTransfer(CommandSender sender, String[] args) {
+        if (!this.hasAdminClaimManagePermission(sender)) {
+            sender.sendMessage(this.plugin.message("no-permission"));
+            return true;
+        }
+        if (args.length < 4) {
+            sender.sendMessage(this.plugin.message("admin-transfer-usage"));
+            return true;
+        }
+        String claimName = this.resolver.joinArgs(args, 2, args.length - 1);
+        Claim claim = this.resolver.resolveAdminClaimSelector(sender, claimName);
+        if (claim == null) {
+            return true;
+        }
+        OfflinePlayer target = this.resolver.resolveKnownPlayer(args[args.length - 1]);
+        this.claimTransferService.forceTransfer(sender, claim, target);
+        return true;
     }
 
     private boolean handleAdminUnadd(CommandSender sender, String[] args) {

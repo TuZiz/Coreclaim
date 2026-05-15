@@ -1,5 +1,5 @@
 layout-version: 2
-title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l领地列表'
+title: '&#F59E0B&l[&#FBBF24&l领地&#F59E0B&l] &#FEF3C7领地列表'
 
 Shape:
   - 'FFFFRFFFF'
@@ -20,19 +20,23 @@ items:
     char: 'E'
     material: GRASS_BLOCK
     custom-model-data: 1201
-    name: '&#55FFAA&l{name}'
+    name: '&#10B981&l✦ &#34D399&l{name}'
     lore:
-      - ' &#CBD5E1关系: {relation}'
-      - ' &#CBD5E1主人: &#4CC9F0{owner}'
-      - ' &#CBD5E1区服: &#F8FAFC{server}'
-      - ' &#CBD5E1世界: &#F8FAFC{world}'
-      - ' &#CBD5E1核心坐标: &#F8FAFC{x}, {z}'
-      - ' &#CBD5E1大小: &#FFD166{width}x{depth}'
-      - ' &#CBD5E1面积: &#FFD166{area}'
-      - ' &#CBD5E1成员数量: &#FFD166{trusted}'
+      - '&#1E293B&m                                '
+      - ' &#10B981✦ &#E2E8F0所属信息'
+      - '   &#94A3B8关系: &#F8FAFC{relation}'
+      - '   &#94A3B8主人: &#38BDF8{owner}'
+      - '   &#94A3B8区服: &#F8FAFC{server}'
+      - '   &#94A3B8世界: &#F8FAFC{world}'
       - ''
-      - ' {left_action}'
-      - ' &#CBD5E1右键直接传送'
+      - ' &#10B981✦ &#E2E8F0规格数据'
+      - '   &#94A3B8核心坐标: &#F8FAFC{x}, {z}'
+      - '   &#94A3B8当前大小: &#FBBF24{width}x{depth}'
+      - '   &#94A3B8当前面积: &#FBBF24{area}'
+      - '   &#94A3B8成员数量: &#FBBF24{trusted}'
+      - '&#1E293B&m                                '
+      - ' &#38BDF8[左键] &#F8FAFC{left_action}'
+      - ' &#38BDF8[右键] &#F8FAFC直接传送到该领地'
     sound: BLOCK_NOTE_BLOCK_HARP
     glow: true
 
@@ -40,34 +44,34 @@ items:
     char: 'R'
     material: CLOCK
     custom-model-data: 1202
-    name: '&#FFD166&l刷新列表'
+    name: '&#F59E0B&l⟳ &#FBBF24&l刷新列表'
     lore:
-      - ''
-      - ' &#CBD5E1当前可见总数: &#FFD166{total}'
-      - ''
-      - ' &#FFD166点击立即刷新'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8当前可见领地总数: &#FBBF24{total}'
+      - '&#1E293B&m                                '
+      - ' &#F59E0B[点击] &#F8FAFC立即刷新数据'
     sound: UI_BUTTON_CLICK
 
   prev-page:
     char: 'L'
     material: ARROW
     custom-model-data: 1203
-    name: '&#55FFAA&l上一页'
+    name: '&#38BDF8&l◀ &#7DD3FC&l上一页'
     sound: UI_BUTTON_CLICK
 
   back:
     char: 'B'
     material: BARRIER
     custom-model-data: 1204
-    name: '&#FF6B6B&l关闭菜单'
+    name: '&#EF4444&l✖ &#F87171&l关闭菜单'
     lore:
-      - ''
-      - ' &#FFD166点击关闭当前界面'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8点击关闭当前界面'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: 'N'
     material: ARROW
     custom-model-data: 1205
-    name: '&#55FFAA&l下一页'
+    name: '&#38BDF8&l▶ &#7DD3FC&l下一页'
     sound: UI_BUTTON_CLICK

@@ -5,7 +5,6 @@ import com.coreclaim.gui.holder.ClaimManageHolder;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.service.ClaimActionService;
-import com.coreclaim.util.AdminAccess;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -25,12 +24,12 @@ public final class ClaimManageMenuController {
         holder.inventory = inventory;
         menu.fill(inventory, "claim-manage", "filler");
 
-        ClaimActionService.ExpansionPreview north = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.NORTH);
-        ClaimActionService.ExpansionPreview south = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.SOUTH);
-        ClaimActionService.ExpansionPreview west = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.WEST);
-        ClaimActionService.ExpansionPreview east = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.EAST);
-        ClaimActionService.ExpansionPreview up = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.UP);
-        ClaimActionService.ExpansionPreview down = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.DOWN);
+        ClaimActionService.ExpansionPreview north = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.NORTH, 1);
+        ClaimActionService.ExpansionPreview south = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.SOUTH, 1);
+        ClaimActionService.ExpansionPreview west = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.WEST, 1);
+        ClaimActionService.ExpansionPreview east = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.EAST, 1);
+        ClaimActionService.ExpansionPreview up = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.UP, 1);
+        ClaimActionService.ExpansionPreview down = menu.claimActionService().previewExpansion(player, claim, ClaimDirection.DOWN, 1);
 
         inventory.setItem(menu.slot("claim-manage", "info"), menu.configuredItem("claim-manage", "info",
             "{name}", claim.name(),
@@ -51,7 +50,6 @@ public final class ClaimManageMenuController {
         setDirectionItem(inventory, player, claim, "expand-east", ClaimDirection.EAST, east);
         setDirectionItem(inventory, player, claim, "expand-up", ClaimDirection.UP, up);
         setDirectionItem(inventory, player, claim, "expand-down", ClaimDirection.DOWN, down);
-        inventory.setItem(menu.slot("claim-manage", "delete"), menu.configuredItem("claim-manage", "delete"));
         inventory.setItem(menu.slot("claim-manage", "back"), menu.configuredItem("claim-manage", "back"));
         player.openInventory(inventory);
     }
@@ -96,18 +94,6 @@ public final class ClaimManageMenuController {
         }
         if (slot == menu.slot("claim-manage", "expand-down")) {
             openDirectionConfirm(player, claim, ClaimDirection.DOWN, clickType, "expand-down");
-            return;
-        }
-        if (slot == menu.slot("claim-manage", "delete")) {
-            menu.playConfiguredSound(player, "claim-manage", "delete");
-            boolean adminMode = !claim.owner().equals(player.getUniqueId()) && AdminAccess.hasClaimManageAccess(player);
-            boolean requested = adminMode
-                ? menu.removalConfirmationService().requestAdminRemoval(player, claim)
-                : menu.removalConfirmationService().requestOwnerRemoval(player, claim);
-            if (requested) {
-                player.closeInventory();
-            }
-            return;
         }
     }
 
@@ -132,8 +118,8 @@ public final class ClaimManageMenuController {
             return 50;
         }
         if (clickType != null && clickType.isRightClick()) {
-            return 1;
+            return 10;
         }
-        return menu.plugin().settings().directionExpandAmount();
+        return 1;
     }
 }

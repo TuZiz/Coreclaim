@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -129,7 +130,7 @@ public final class ClaimTransferService {
         return true;
     }
 
-    public boolean forceTransfer(CommandSender sender, Claim claim, Player target) {
+    public boolean forceTransfer(CommandSender sender, Claim claim, OfflinePlayer target) {
         if (claim == null) {
             sender.sendMessage(plugin.message("claim-not-found"));
             return false;
@@ -138,20 +139,17 @@ public final class ClaimTransferService {
             sender.sendMessage(plugin.message("system-claim-transfer-denied"));
             return false;
         }
-        if (target == null || !target.isOnline()) {
-            sender.sendMessage(plugin.message("target-must-online"));
+        if (target == null) {
+            sender.sendMessage(plugin.message("trust-no-target"));
             return false;
         }
         if (claim.owner().equals(target.getUniqueId())) {
             sender.sendMessage(plugin.message("transfer-self"));
             return false;
         }
-        if (!hasClaimSlot(target)) {
-            sender.sendMessage(plugin.message("transfer-target-no-slot"));
-            return false;
-        }
         String oldOwner = claim.ownerName();
-        if (!claimService.transferClaim(claim, target.getUniqueId(), target.getName())) {
+        String targetName = target.getName() == null ? target.getUniqueId().toString() : target.getName();
+        if (!claimService.transferClaim(claim, target.getUniqueId(), targetName)) {
             sender.sendMessage(plugin.message("transfer-failed"));
             return false;
         }
@@ -159,10 +157,12 @@ public final class ClaimTransferService {
             "admin-transfer-success",
             "{name}", claim.name(),
             "{old_owner}", oldOwner,
-            "{player}", target.getName()
+            "{player}", targetName
         ));
-        String targetMessage = plugin.message("transfer-admin-received", "{name}", claim.name());
-        plugin.platformScheduler().runPlayerTask(target, () -> target.sendMessage(targetMessage));
+        if (target instanceof Player onlineTarget && onlineTarget.isOnline()) {
+            String targetMessage = plugin.message("transfer-admin-received", "{name}", claim.name());
+            plugin.platformScheduler().runPlayerTask(onlineTarget, () -> onlineTarget.sendMessage(targetMessage));
+        }
         return true;
     }
 

@@ -1,5 +1,5 @@
 layout-version: 6
-title: '&#55FFAA&l领地核心 &#475569| &#F8FAFC管理面板'
+title: '&#10B981&l[&#34D399&l核心&#10B981&l] &#F8FAFC管理面板 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFFFFFF'
@@ -20,98 +20,101 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1501
-    name: '&#55FFAA&l领地详情'
+    name: '&#10B981&l★ &#34D399&l领地核心详情'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0基础概览'
+      - '   &#94A3B8领地名称: &#F8FAFC{name}'
+      - '   &#94A3B8领地数量: &#F8FAFC{claims}&#475569/&#94A3B8{max_claims}'
+      - '   &#94A3B8中心坐标: &#F8FAFC({center_x}, {center_z})'
       - ''
-      - ' &#4CC9F0■ &#CBD5E1领地名称: &#F8FAFC{name}'
-      - ' &#4CC9F0■ &#CBD5E1领地数量: &#F8FAFC{claims}&#475569/&#CBD5E1{max_claims}'
-      - ' &#4CC9F0■ &#CBD5E1中心坐标: &#F8FAFC({center_x}, {center_z})'
+      - ' &#FBBF24✦ &#E2E8F0规模状态'
+      - '   &#94A3B8当前规模: &#FBBF24{width}x{depth}'
+      - '   &#94A3B8当前面积: &#FBBF24{area}'
+      - '   &#94A3B8当前活跃: &#F8FAFC{activity}'
+      - '   &#94A3B8成员数量: &#FBBF24{trusted_count}'
       - ''
-      - ' &#FFD166■ &#CBD5E1当前规模: &#F8FAFC{width}x{depth}'
-      - ' &#FFD166■ &#CBD5E1当前面积: &#F8FAFC{area}'
-      - ' &#FFD166■ &#CBD5E1当前活跃: &#F8FAFC{activity}'
-      - ' &#FFD166■ &#CBD5E1成员数量: &#F8FAFC{trusted_count}'
-      - ''
-      - ' &#55FFAA■ &#CBD5E1进入提示: &#F8FAFC{enter_state}'
-      - ' &#55FFAA■ &#CBD5E1离开提示: &#F8FAFC{leave_state}'
+      - ' &#10B981✦ &#E2E8F0通知设定'
+      - '   &#94A3B8进入提示: &#F8FAFC{enter_state}'
+      - '   &#94A3B8离开提示: &#F8FAFC{leave_state}'
+      - '&#1E293B&m                                '
 
   expand:
     char: 'E'
     material: NETHERITE_PICKAXE
     custom-model-data: 1502
-    name: '&#4CC9F0&l扩建领地'
+    name: '&#0EA5E9&l✦ &#38BDF8&l扩建领地边界'
     lore:
-      - ''
-      - ' &#CBD5E1打开东南西北四个方向的扩建页'
-      - ' &#CBD5E1可以直接查看价格与目标范围'
-      - ''
-      - ' &#4CC9F0&l» &#F8FAFC点击打开面板'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8打开东南西北四个方向的扩建页，'
+      - ' &#94A3B8直观查看拓展价格与目标范围。'
+      - '&#1E293B&m                                '
+      - ' &#0EA5E9[点击] &#F8FAFC打开扩建面板'
     sound: ENTITY_EXPERIENCE_ORB_PICKUP
 
   claim-list:
     char: 'L'
     material: FILLED_MAP
     custom-model-data: 1503
-    name: '&#FFD166&l我的领地'
+    name: '&#F59E0B&l✦ &#FBBF24&l我的领地列表'
     lore:
-      - ''
-      - ' &#CBD5E1当前拥有总数: &#F8FAFC{total}'
-      - ''
-      - ' &#FFD166&l» &#F8FAFC点击查看全部领地'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8当前拥有领地总数: &#FBBF24{total}'
+      - '&#1E293B&m                                '
+      - ' &#F59E0B[点击] &#F8FAFC查看所有领地'
     sound: ITEM_BOOK_PAGE_TURN
 
   trust:
     char: 'T'
     material: NAME_TAG
     custom-model-data: 1504
-    name: '&#4CC9F0&l成员管理'
+    name: '&#0EA5E9&l✦ &#38BDF8&l核心成员管理'
     lore:
-      - ''
-      - ' &#CBD5E1当前领地: &#F8FAFC{name}'
-      - ' &#CBD5E1成员数量: &#F8FAFC{trusted_count}'
-      - ' &#CBD5E1命令添加: &#F8FAFC/claim add <玩家>'
-      - ''
-      - ' &#4CC9F0&l» &#F8FAFC点击查看成员列表'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8当前领地: &#F8FAFC{name}'
+      - ' &#94A3B8成员数量: &#F8FAFC{trusted_count}'
+      - ' &#94A3B8快捷命令: &#F8FAFC/claim add <玩家>'
+      - '&#1E293B&m                                '
+      - ' &#0EA5E9[点击] &#F8FAFC查看并管理成员'
     sound: BLOCK_NOTE_BLOCK_PLING
 
   permissions:
     char: 'P'
     material: COMPARATOR
     custom-model-data: 1505
-    name: '&#FFD166&l权限管理'
+    name: '&#F59E0B&l✦ &#FBBF24&l领地权限配置'
     lore:
-      - ''
-      - ' &#CBD5E1统一设置领地权限'
-      - ' &#CBD5E1交互权限已合并容器、门和床'
-      - ''
-      - ' &#FFD166&l» &#F8FAFC点击打开面板'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8统一设置领地的各项基础权限，'
+      - ' &#94A3B8(交互权限已合并容器、门和床)。'
+      - '&#1E293B&m                                '
+      - ' &#F59E0B[点击] &#F8FAFC打开权限面板'
     sound: UI_BUTTON_CLICK
 
   rename:
     char: 'R'
     material: ANVIL
     custom-model-data: 1506
-    name: '&#55FFAA&l修改领地名称'
+    name: '&#10B981&l✦ &#34D399&l修改领地名称'
     lore:
-      - ''
-      - ' &#CBD5E1当前名称: &#F8FAFC{name}'
-      - ' &#CBD5E1点击后在聊天栏输入新名称'
-      - ' &#475569(名称长度最多 16 个字符)'
-      - ''
-      - ' &#55FFAA&l» &#F8FAFC点击开始重命名'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8当前名称: &#F8FAFC{name}'
+      - ' &#94A3B8(名称长度最多限制为 16 个字符)'
+      - '&#1E293B&m                                '
+      - ' &#10B981[点击] &#F8FAFC在聊天栏输入新名称'
     sound: BLOCK_ANVIL_USE
 
   teleport:
     char: 'Q'
     material: ENDER_PEARL
     custom-model-data: 1510
-    name: '&#4CC9F0&l传送到领地'
+    name: '&#9333EA&l✦ &#C084FC&l传送到领地'
     lore:
-      - ''
-      - ' &#CBD5E1优先传送到当前领地的传送点'
-      - ' &#CBD5E1未设置时会回到核心位置'
-      - ''
-      - ' &#4CC9F0&l» &#F8FAFC点击传送回家'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8优先传送到当前领地的传送点，'
+      - ' &#94A3B8未设置时会自动回到核心位置。'
+      - '&#1E293B&m                                '
+      - ' &#C084FC[点击] &#F8FAFC立即传送回家'
     sound: ENTITY_ENDERMAN_TELEPORT
     glow: true
 
@@ -119,41 +122,38 @@ items:
     char: 'N'
     material: BELL
     custom-model-data: 1508
-    name: '&#FFD166&l通知设置'
+    name: '&#F59E0B&l✦ &#FBBF24&l进出通知设置'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0进入提示状态: &#F8FAFC{enter_state}'
+      - '   &#94A3B8当前内容: &#F8FAFC{enter_current}'
       - ''
-      - ' &#CBD5E1当前领地: &#F8FAFC{name}'
-      - ' &#CBD5E1进入状态: &#F8FAFC{enter_state}'
-      - ' &#CBD5E1离开状态: &#F8FAFC{leave_state}'
-      - ''
-      - ' &#CBD5E1当前进入内容:'
-      - ' &#F8FAFC{enter_current}'
-      - ' &#CBD5E1当前离开内容:'
-      - ' &#F8FAFC{leave_current}'
-      - ''
-      - ' &#4CC9F0&l» &#F8FAFC左键 &#CBD5E1编辑进入提示'
-      - ' &#FFD166&l» &#F8FAFC右键 &#CBD5E1编辑离开提示'
+      - ' &#FBBF24✦ &#E2E8F0离开提示状态: &#F8FAFC{leave_state}'
+      - '   &#94A3B8当前内容: &#F8FAFC{leave_current}'
+      - '&#1E293B&m                                '
+      - ' &#38BDF8[左键] &#F8FAFC编辑进入提示'
+      - ' &#FBBF24[右键] &#F8FAFC编辑离开提示'
     sound: BLOCK_BELL_USE
 
   hide:
     char: 'H'
     material: BLAZE_POWDER
     custom-model-data: 1509
-    name: '&#FF6B6B&l隐藏核心显示'
+    name: '&#EF4444&l⚠ &#F87171&l隐藏核心显示'
     lore:
-      - ''
-      - ' &#CBD5E1隐藏核心方块与悬浮提示'
-      - ' &#FF6B6B&l! &#FF6B6B隐藏后无法再通过核心打开菜单'
-      - ''
-      - ' &#FF6B6B&l» &#F8FAFC点击确认隐藏'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8隐藏核心方块与悬浮全息提示。'
+      - ' &#FCA5A5警告: 隐藏后无法再通过右键核心打开菜单！'
+      - '&#1E293B&m                                '
+      - ' &#EF4444[点击] &#F8FAFC确认隐藏'
     sound: BLOCK_ANVIL_PLACE
 
   close:
     char: 'X'
     material: BARRIER
     custom-model-data: 1511
-    name: '&#FF6B6B&l关闭菜单'
+    name: '&#FB7185&l✖ &#F43F5E&l关闭面板'
     lore:
-      - ''
-      - ' &#FF6B6B&l» &#CBD5E1关闭当前管理面板'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8点击关闭当前管理界面'
     sound: UI_BUTTON_CLICK

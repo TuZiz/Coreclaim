@@ -1,5 +1,5 @@
 layout-version: 1
-title: '&#475569[&#F59E0B领地&#475569] &#F59E0B&l只读详情 - {name}'
+title: '&#F59E0B&l[&#FBBF24&l领地&#F59E0B&l] &#FEF3C7只读详情 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFFFFFF'
@@ -20,45 +20,47 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1601
-    name: '&#FFD166&l授权领地详情'
+    name: '&#F59E0B&l★ &#FBBF24&l授权领地详情'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0基础信息'
+      - '   &#94A3B8领地名称: &#38BDF8{name}'
+      - '   &#94A3B8领地主人: &#FBBF24{owner}'
+      - '   &#94A3B8所属区服: &#F8FAFC{server}'
+      - '   &#94A3B8所在世界: &#F8FAFC{world}'
       - ''
-      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
-      - ' &#CBD5E1领地主人: &#FFD166{owner}'
-      - ' &#CBD5E1所属区服: &#F8FAFC{server}'
-      - ' &#CBD5E1所在世界: &#F8FAFC{world}'
-      - ''
-      - ' &#CBD5E1核心坐标: &#F8FAFC({center_x}, {center_z})'
-      - ' &#CBD5E1领地大小: &#FFD166{width}x{depth}'
-      - ' &#CBD5E1领地面积: &#FFD166{area}'
-      - ' &#CBD5E1成员数量: &#FFD166{trusted_count}'
-      - ''
-      - ' &#CBD5E1当前界面为只读查看'
+      - ' &#FBBF24✦ &#E2E8F0规格数据'
+      - '   &#94A3B8核心坐标: &#F8FAFC({center_x}, {center_z})'
+      - '   &#94A3B8领地大小: &#FBBF24{width}x{depth}'
+      - '   &#94A3B8领地面积: &#FBBF24{area}'
+      - '   &#94A3B8成员数量: &#FBBF24{trusted_count}'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8当前界面仅为只读查看模式'
 
   details:
     char: 'D'
     material: PAPER
     custom-model-data: 1602
-    name: '&#4CC9F0&l查看详细'
+    name: '&#0EA5E9&l📄 &#38BDF8&l查看详细参数'
     lore:
-      - ''
-      - ' &#CBD5E1把这块领地的详细信息发到聊天栏'
-      - ' &#CBD5E1方便你对照坐标和主人信息'
-      - ''
-      - ' &#FFD166点击查看'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8将这块领地的详细信息发送到聊天栏，'
+      - ' &#94A3B8方便你对照坐标和主人信息。'
+      - '&#1E293B&m                                '
+      - ' &#38BDF8[点击] &#F8FAFC输出到聊天栏'
     sound: UI_BUTTON_CLICK
 
   teleport:
     char: 'T'
     material: ENDER_PEARL
     custom-model-data: 1603
-    name: '&#C084FC&l传送到领地'
+    name: '&#9333EA&l✦ &#C084FC&l传送到领地'
     lore:
-      - ''
-      - ' &#CBD5E1传送到这块已授权领地的传送点'
-      - ' &#CBD5E1没有传送点时会回到领地核心'
-      - ''
-      - ' &#FFD166点击传送'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8传送到这块已授权领地的传送点，'
+      - ' &#94A3B8没有传送点时会自动回到领地核心。'
+      - '&#1E293B&m                                '
+      - ' &#C084FC[点击] &#F8FAFC立即传送'
     sound: ENTITY_ENDERMAN_TELEPORT
     glow: true
 
@@ -66,18 +68,18 @@ items:
     char: 'B'
     material: ARROW
     custom-model-data: 1604
-    name: '&#55FFAA&l返回列表'
+    name: '&#10B981&l➦ &#34D399&l返回领地列表'
     lore:
-      - ''
-      - ' &#CBD5E1回到上一页领地列表'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8回到上一页领地列表'
     sound: UI_BUTTON_CLICK
 
   close:
     char: 'X'
     material: BARRIER
     custom-model-data: 1605
-    name: '&#FF6B6B&l关闭菜单'
+    name: '&#EF4444&l✖ &#F87171&l关闭菜单'
     lore:
-      - ''
-      - ' &#CBD5E1关闭当前只读详情界面'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8退出当前只读详情界面'
     sound: UI_BUTTON_CLICK

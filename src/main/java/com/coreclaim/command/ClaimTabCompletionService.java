@@ -1,6 +1,7 @@
 package com.coreclaim.command;
 
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimDirection;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.util.AdminAccess;
@@ -36,11 +37,13 @@ final class ClaimTabCompletionService {
             options.add("menu");
             options.add("set");
             options.add("create");
+            options.add("expand");
             options.add("tp");
             options.add("tpset");
             options.add("add");
             options.add("unadd");
             options.add("remove");
+            options.add("transfer");
             options.add("deny");
             options.add("undeny");
             if (hasAnyAdminPermission(sender)) {
@@ -53,15 +56,16 @@ final class ClaimTabCompletionService {
             return support.filter(options, args[0]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("expand")) {
-            options.add("east");
-            options.add("south");
-            options.add("west");
-            options.add("north");
-            options.add("up");
-            options.add("down");
+            options.add("1");
+            options.add("5");
+            options.add("10");
+            options.add("50");
             return support.filter(options, args[1]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("expand")) {
+            if (ClaimDirection.fromInput(args[1]) == null) {
+                return options;
+            }
             options.add("1");
             options.add("5");
             options.add("10");
@@ -87,6 +91,7 @@ final class ClaimTabCompletionService {
             options.add("diagnose");
             options.add("add");
             options.add("remove");
+            options.add("transfer");
             options.add("unadd");
             options.add("deny");
             options.add("undeny");

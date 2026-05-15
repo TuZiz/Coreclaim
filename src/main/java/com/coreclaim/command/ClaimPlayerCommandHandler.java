@@ -96,20 +96,28 @@ final class ClaimPlayerCommandHandler {
             sender.sendMessage(command.plugin().message("player-only"));
             return true;
         }
-        if (args.length < 2) {
-            player.sendMessage(command.plugin().message("expand-usage"));
-            return true;
-        }
-        ClaimDirection direction = ClaimDirection.fromInput(args[1]);
-        if (direction == null) {
-            player.sendMessage(command.plugin().message("expand-usage"));
-            return true;
-        }
-        if (args.length >= 3) {
-            int amount = command.resolver().parsePositiveInt(args[2], player);
-            if (amount < 0) {
-                return true;
+        ClaimDirection direction = facingDirection(player);
+        Integer amount = null;
+        if (args.length >= 2) {
+            ClaimDirection explicitDirection = ClaimDirection.fromInput(args[1]);
+            if (explicitDirection != null) {
+                direction = explicitDirection;
+                if (args.length >= 3) {
+                    int parsedAmount = command.resolver().parsePositiveInt(args[2], player);
+                    if (parsedAmount < 0) {
+                        return true;
+                    }
+                    amount = parsedAmount;
+                }
+            } else {
+                int parsedAmount = command.resolver().parsePositiveInt(args[1], player);
+                if (parsedAmount < 0) {
+                    return true;
+                }
+                amount = parsedAmount;
             }
+        }
+        if (amount != null) {
             Claim claim = command.claimActionService().findOwnedClaim(player);
             if (claim == null) {
                 player.sendMessage(command.plugin().message("claim-not-found"));
@@ -232,7 +240,14 @@ final class ClaimPlayerCommandHandler {
             return true;
         }
         if (args.length < 2) {
-            player.sendMessage(command.plugin().message("remove-usage"));
+            Claim currentClaim = command.claimService().findClaim(player.getLocation())
+                .filter(found -> found.owner().equals(player.getUniqueId()))
+                .orElse(null);
+            if (currentClaim == null) {
+                player.sendMessage(command.plugin().message("claim-not-found"));
+                return true;
+            }
+            command.removalConfirmationService().request(player, currentClaim);
             return true;
         }
         Claim claim = command.resolver().resolveOwnedClaimByName(player, command.resolver().joinArgs(args, 1));
@@ -305,5 +320,20 @@ final class ClaimPlayerCommandHandler {
         command.profileService().saveProfile(profile);
         player.sendMessage(command.plugin().message(enabled ? "show-auto-enabled" : "show-auto-disabled"));
         return true;
+    }
+
+    private ClaimDirection facingDirection(Player player) {
+        float yaw = player.getLocation().getYaw();
+        float normalized = (yaw % 360 + 360) % 360;
+        if (normalized >= 45 && normalized < 135) {
+            return ClaimDirection.WEST;
+        }
+        if (normalized >= 135 && normalized < 225) {
+            return ClaimDirection.NORTH;
+        }
+        if (normalized >= 225 && normalized < 315) {
+            return ClaimDirection.EAST;
+        }
+        return ClaimDirection.SOUTH;
     }
 }

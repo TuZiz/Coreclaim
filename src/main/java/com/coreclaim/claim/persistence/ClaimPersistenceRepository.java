@@ -287,6 +287,16 @@ public final class ClaimPersistenceRepository {
         );
     }
 
+    public void updateClaimName(int claimId, String name) {
+        runtime.databaseManager().update(
+            "UPDATE claims SET name = ? WHERE id = ?",
+            statement -> {
+                statement.setString(1, name);
+                statement.setInt(2, claimId);
+            }
+        );
+    }
+
     public void updatePermissionDefaults(Claim claim) {
         runtime.databaseManager().update(
             """

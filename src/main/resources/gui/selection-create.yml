@@ -1,5 +1,5 @@
 layout-version: 3
-title: '&#475569[&#F59E0B创建&#475569] &#F59E0B&l选区创建确认 - {name}'
+title: '&#F59E0B&l[&#FBBF24&l创建&#F59E0B&l] &#FEF3C7选区创建确认 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFFFFFF'
@@ -20,47 +20,52 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1710
-    name: '&#FFD166&l创建概览'
+    name: '&#F59E0B&l★ &#FBBF24&l创建参数概览'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0基础信息'
+      - '   &#94A3B8领地名称: &#38BDF8{name}'
+      - '   &#94A3B8创建世界: &#FBBF24{world}'
+      - '   &#94A3B8核心坐标: &#F8FAFC({center_x}, {center_y}, {center_z})'
       - ''
-      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
-      - ' &#CBD5E1创建世界: &#FFD166{world}'
-      - ' &#CBD5E1核心坐标: &#F8FAFC({center_x}, {center_y}, {center_z})'
+      - ' &#FBBF24✦ &#E2E8F0规格数据'
+      - '   &#94A3B8区域尺寸: &#FBBF24{width} &#94A3B8宽 &#475569x &#FBBF24{height} &#94A3B8高 &#475569x &#FBBF24{depth} &#94A3B8深'
+      - '   &#94A3B8占地面积: &#FBBF24{area}'
+      - '   &#94A3B8区域体积: &#FBBF24{volume}'
       - ''
-      - ' &#CBD5E1宽度: &#FFD166{width}'
-      - ' &#CBD5E1高度: &#FFD166{height}'
-      - ' &#CBD5E1深度: &#FFD166{depth}'
-      - ' &#CBD5E1占地面积: &#FFD166{area}'
-      - ' &#CBD5E1总体积: &#FFD166{volume}'
-      - ' &#CBD5E1预计花费: &#F59E0B{cost}'
-      - ''
-      - ' &#CBD5E1当前状态: {status}'
-      - ' &#CBD5E1普通金锄头可直接选区'
-      - ' &#CBD5E1确认前会再次校验范围与价格'
+      - ' &#FBBF24✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{cost}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8※ 普通金锄头可直接进行选区'
+      - ' &#94A3B8※ 确认前系统会再次校验范围与价格'
 
   refresh:
     char: 'R'
     material: CLOCK
     custom-model-data: 1715
-    name: '&#FFD166&l刷新预览'
+    name: '&#F59E0B&l⟳ &#FBBF24&l刷新预览数据'
     lore:
-      - ''
-      - ' &#CBD5E1重新读取当前选区信息'
-      - ' &#CBD5E1适合刚修改完选区后使用'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8重新读取当前选区信息，'
+      - ' &#94A3B8适合刚修改完选区后使用。'
+      - '&#1E293B&m                                '
+      - ' &#F59E0B[点击] &#F8FAFC立即刷新'
     sound: UI_BUTTON_CLICK
 
   confirm:
     char: 'C'
     material: EMERALD
     custom-model-data: 1717
-    name: '&#55FFAA&l确认创建'
+    name: '&#10B981&l✔ &#34D399&l确认创建领地'
     lore:
-      - ''
-      - ' &#CBD5E1领地名称: &#4CC9F0{name}'
-      - ' &#CBD5E1最终尺寸: &#FFD166{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{cost}'
-      - ''
-      - ' &#FFD166点击正式创建领地'
+      - '&#1E293B&m                                '
+      - ' &#34D399✦ &#E2E8F0操作复核'
+      - '   &#94A3B8领地名称: &#38BDF8{name}'
+      - '   &#94A3B8最终尺寸: &#FBBF24{width}x{height}x{depth}'
+      - '   &#94A3B8预计扣费: &#F59E0B{cost}'
+      - '&#1E293B&m                                '
+      - ' &#10B981[点击] &#F8FAFC正式建立领地'
     sound: ENTITY_PLAYER_LEVELUP
     glow: true
 
@@ -68,9 +73,9 @@ items:
     char: 'B'
     material: BARRIER
     custom-model-data: 1716
-    name: '&#FF6B6B&l取消创建'
+    name: '&#EF4444&l✖ &#F87171&l取消本次创建'
     lore:
-      - ''
-      - ' &#CBD5E1关闭本次创建确认页'
-      - ' &#CBD5E1并清空当前选区'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8关闭本次创建确认页，'
+      - ' &#94A3B8并清空当前的选区缓存。'
     sound: UI_BUTTON_CLICK

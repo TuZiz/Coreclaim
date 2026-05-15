@@ -1,13 +1,13 @@
 layout-version: 2
-title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4&l扩展面板 - {name}'
+title: '&#38BDF8&l[&#0EA5E9&l扩建&#38BDF8&l] &#E0F2FE扩展面板 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFFFFFF'
-  - 'FFFFUFFFF'
-  - 'FFFFNFFFF'
-  - 'FFWFIFEFF'
-  - 'FFFFSFFFF'
-  - 'FFFBDFRFF'
+  - 'FFFFNFUFF'
+  - 'FFFWIEFFF'
+  - 'FFFFSFDFF'
+  - 'FFFFFFFFF'
+  - 'FFFFBFFFF'
 
 items:
   filler:
@@ -20,36 +20,46 @@ items:
     char: 'I'
     material: COMPASS
     custom-model-data: 1301
-    name: '&#FFD166&l扩展面板'
+    name: '&#F59E0B&l★ &#FBBF24&l领地信息总览'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0基础信息'
+      - '   &#94A3B8领地名称: &#F8FAFC{name}'
+      - '   &#94A3B8所在世界: &#F8FAFC{world}'
+      - '   &#94A3B8核心坐标: &#F8FAFC{x}, {z}'
       - ''
-      - ' &#CBD5E1领地名称: &#F8FAFC{name}'
-      - ' &#CBD5E1所在世界: &#F8FAFC{world}'
-      - ' &#CBD5E1核心坐标: &#F8FAFC{x}, {z}'
-      - ' &#CBD5E1当前大小: &#FFD166{width}x{height}x{depth}'
-      - ' &#CBD5E1高度范围: &#F8FAFC{min_y} ~ {max_y}'
-      - ' &#CBD5E1当前面积: &#FFD166{area}'
-      - ''
-      - ' &#F8FAFC左键默认，右键 +1'
-      - ' &#F8FAFCShift 左键 +50，Shift 右键最大'
-      - ' &#55FFAA点击方向后进入确认页'
+      - ' &#FBBF24✦ &#E2E8F0规格数据'
+      - '   &#94A3B8当前大小: &#FBBF24{width}x{height}x{depth}'
+      - '   &#94A3B8高度范围: &#F8FAFC{min_y} ~ {max_y}'
+      - '   &#94A3B8当前面积: &#FBBF24{area}'
+      - '&#1E293B&m                                '
+      - ' &#FDE047全局快捷键:'
+      - '  &#FEF08A[左键] &#94A3B8+1 格  &#FEF08A[右键] &#94A3B8+10 格'
+      - '  &#FEF08A[下蹲+左键] &#94A3B8+50 格  &#FEF08A[下蹲+右键] &#94A3B8最大化'
+      - '  &#10B981※ 点击任意方向后进入确认页'
 
   expand-north:
     char: 'N'
     material: ARROW
     custom-model-data: 1302
-    name: '&#06B6D4&l向北扩展'
+    name: '&#0EA5E9&l▲ &#38BDF8&l向北扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前北侧: &#F8FAFC{current}'
+      - '   &#94A3B8预览边界: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前北侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1预览边界: &#FFD166{target}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -57,18 +67,24 @@ items:
     char: 'W'
     material: ARROW
     custom-model-data: 1303
-    name: '&#06B6D4&l向西扩展'
+    name: '&#0EA5E9&l◀ &#38BDF8&l向西扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前西侧: &#F8FAFC{current}'
+      - '   &#94A3B8预览边界: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前西侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1预览边界: &#FFD166{target}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -76,18 +92,24 @@ items:
     char: 'E'
     material: ARROW
     custom-model-data: 1304
-    name: '&#06B6D4&l向东扩展'
+    name: '&#0EA5E9&l▶ &#38BDF8&l向东扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前东侧: &#F8FAFC{current}'
+      - '   &#94A3B8预览边界: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前东侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1预览边界: &#FFD166{target}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -95,18 +117,24 @@ items:
     char: 'S'
     material: ARROW
     custom-model-data: 1305
-    name: '&#06B6D4&l向南扩展'
+    name: '&#0EA5E9&l▼ &#38BDF8&l向南扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前南侧: &#F8FAFC{current}'
+      - '   &#94A3B8预览边界: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前南侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1预览边界: &#FFD166{target}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -114,19 +142,25 @@ items:
     char: 'U'
     material: SCAFFOLDING
     custom-model-data: 1309
-    name: '&#06B6D4&l向上扩展'
+    name: '&#0EA5E9&l⇡ &#38BDF8&l向上扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前上侧: &#F8FAFC{current}'
+      - '   &#94A3B8目标上侧: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前上侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1目标上侧: &#FFD166{target}'
-      - ' &#CBD5E1预览高度: &#F8FAFC{min_y} ~ {max_y}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览高度: &#F8FAFC{min_y} ~ {max_y}'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -134,19 +168,25 @@ items:
     char: 'D'
     material: DEEPSLATE
     custom-model-data: 1310
-    name: '&#06B6D4&l向下扩展'
+    name: '&#0EA5E9&l⇣ &#38BDF8&l向下扩展'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#38BDF8✦ &#E2E8F0边界信息'
+      - '   &#94A3B8当前下侧: &#F8FAFC{current}'
+      - '   &#94A3B8目标下侧: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1当前下侧: &#FFD166{current}'
-      - ' &#CBD5E1默认扩展: &#55FFAA+{amount} &#CBD5E1格'
-      - ' &#CBD5E1目标下侧: &#FFD166{target}'
-      - ' &#CBD5E1预览高度: &#F8FAFC{min_y} ~ {max_y}'
-      - ' &#CBD5E1预览大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#38BDF8✦ &#E2E8F0扩展参数'
+      - '   &#94A3B8左键预览: &#10B981+{amount} &#94A3B8格'
+      - '   &#94A3B8预览高度: &#F8FAFC{min_y} ~ {max_y}'
+      - '   &#94A3B8预览大小: &#F8FAFC{width}x{height}x{depth}'
       - ''
-      - ' &#FFD166左键默认 / 右键 +1'
-      - ' &#FFD166Shift 左键 +50 / Shift 右键最大'
+      - ' &#38BDF8✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#7DD3FC操作指引:'
+      - '  &#E0F2FE[左键] &#94A3B8+1 格  &#E0F2FE[右键] &#94A3B8+10 格'
+      - '  &#E0F2FE[下蹲+左键] &#94A3B8+50 格  &#E0F2FE[下蹲+右键] &#94A3B8最大化'
     sound: UI_BUTTON_CLICK
     glow: true
 
@@ -154,16 +194,8 @@ items:
     char: 'B'
     material: BARRIER
     custom-model-data: 1307
-    name: '&#FF6B6B&l返回核心菜单'
-    sound: UI_BUTTON_CLICK
-
-  delete:
-    char: 'R'
-    material: LAVA_BUCKET
-    custom-model-data: 1308
-    name: '&#FF6B6B&l删除领地'
+    name: '&#FB7185&l➦ &#F43F5E&l返回核心菜单'
     lore:
-      - ''
-      - ' &#CBD5E1点击后需要在聊天栏输入确认'
-      - ' &#55FFAA确认删除 &#CBD5E1才会真正删除'
-    sound: BLOCK_ANVIL_PLACE
+      - '&#1E293B&m                                '
+      - ' &#94A3B8点击返回上一级管理界面'
+    sound: UI_BUTTON_CLICK

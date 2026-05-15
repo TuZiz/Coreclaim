@@ -1,5 +1,5 @@
 layout-version: 1
-title: '&#475569[&#06B6D4扩建&#475569] &#06B6D4确认扩建 - {direction}'
+title: '&#38BDF8&l[&#0EA5E9&l扩建&#38BDF8&l] &#E0F2FE确认扩建 &#475569▶ &#F8FAFC{direction}'
 
 Shape:
   - '#########'
@@ -18,35 +18,42 @@ items:
     char: 'I'
     material: COMPASS
     custom-model-data: 1322
-    name: '&#FFD166&l最终扩建确认'
+    name: '&#F59E0B&l★ &#FBBF24&l最终扩建确认'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#FBBF24✦ &#E2E8F0扩建概览'
+      - '   &#94A3B8所属领地: &#F8FAFC{name}'
+      - '   &#94A3B8扩展方向: &#F8FAFC{direction}'
+      - '   &#94A3B8增加格数: &#10B981+{amount}'
       - ''
-      - ' &#CBD5E1领地: &#F8FAFC{name}'
-      - ' &#CBD5E1方向: &#F8FAFC{direction}'
-      - ' &#CBD5E1扩建格数: &#55FFAA{amount}'
-      - ' &#CBD5E1当前该方向: &#FFD166{current}'
-      - ' &#CBD5E1目标该方向: &#FFD166{target}'
+      - ' &#FBBF24✦ &#E2E8F0边界变动'
+      - '   &#94A3B8当前该侧: &#F8FAFC{current}'
+      - '   &#94A3B8目标该侧: &#FBBF24{target}'
       - ''
-      - ' &#CBD5E1扩建后大小: &#F8FAFC{width}x{height}x{depth}'
-      - ' &#CBD5E1高度范围: &#F8FAFC{min_y} ~ {max_y}'
-      - ' &#CBD5E1预计花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
+      - ' &#FBBF24✦ &#E2E8F0预估规格'
+      - '   &#94A3B8扩建后大小: &#F8FAFC{width}x{height}x{depth}'
+      - '   &#94A3B8扩建后高度: &#F8FAFC{min_y} ~ {max_y}'
       - ''
-      - ' &#FF6B6B确认后才会扣费并修改领地边界'
+      - ' &#FBBF24✦ &#E2E8F0交易明细'
+      - '   &#94A3B8预计花费: &#F59E0B{price}'
+      - '   &#94A3B8当前状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#EF4444⚠ &#FCA5A5确认后才会扣费并应用边界更改'
 
   confirm:
     char: 'Q'
     material: EMERALD_BLOCK
     custom-model-data: 1323
-    name: '&#55FFAA&l确认扩建'
+    name: '&#10B981&l✔ &#34D399&l确认执行扩建'
     lore:
-      - ''
-      - ' &#CBD5E1方向: &#F8FAFC{direction}'
-      - ' &#CBD5E1格数: &#55FFAA{amount}'
-      - ' &#CBD5E1花费: &#F59E0B{price}'
-      - ' &#CBD5E1状态: {status}'
-      - ''
-      - ' &#FFD166点击执行扩建'
+      - '&#1E293B&m                                '
+      - ' &#34D399✦ &#E2E8F0操作复核'
+      - '   &#94A3B8方向: &#F8FAFC{direction}'
+      - '   &#94A3B8格数: &#10B981+{amount}'
+      - '   &#94A3B8花费: &#F59E0B{price}'
+      - '   &#94A3B8状态: &#F8FAFC{status}'
+      - '&#1E293B&m                                '
+      - ' &#10B981[点击] &#F8FAFC立即执行扩建'
     sound: ENTITY_PLAYER_LEVELUP
     glow: true
 
@@ -54,16 +61,20 @@ items:
     char: 'B'
     material: ARROW
     custom-model-data: 1324
-    name: '&#FFD166&l返回扩展面板'
+    name: '&#FBBF24&l➦ &#FCD34D&l返回扩展面板'
     lore:
-      - ' &#CBD5E1回到六方向扩展面板'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8点击返回六方向调整界面'
+      - ' &#94A3B8重新修改扩展参数'
     sound: UI_BUTTON_CLICK
 
   cancel:
     char: 'C'
     material: BARRIER
     custom-model-data: 1325
-    name: '&#FF6B6B&l取消扩建'
+    name: '&#EF4444&l✖ &#F87171&l取消本次扩建'
     lore:
-      - ' &#CBD5E1返回扩建方向选择'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8放弃当前所有进度'
+      - ' &#94A3B8并返回扩展面板首页'
     sound: UI_BUTTON_CLICK

@@ -81,4 +81,62 @@ class ClaimEnvironmentProtectionListenerTest {
         assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(ClaimFlagState.UNSET));
         assertFalse(ClaimEnvironmentProtectionListener.isLiquidFlowAllowed(null));
     }
+
+    @Test
+    void allowsNonPlayerTntIgnitionOnlyWhenExplosionDefaultIsAllowed() {
+        assertTrue(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(true), false, ClaimPermission.EXPLOSION, false));
+        assertFalse(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(false), false, ClaimPermission.EXPLOSION, false));
+        assertFalse(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(true), false, ClaimPermission.INTERACT, false));
+    }
+
+    @Test
+    void playerIgnitionUsesResolvedPermissionDecision() {
+        assertTrue(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(false), true, ClaimPermission.EXPLOSION, true));
+        assertFalse(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(true), true, ClaimPermission.EXPLOSION, false));
+    }
+
+    private static com.coreclaim.model.Claim claim(boolean allowExplosion) {
+        return new com.coreclaim.model.Claim(
+            1,
+            java.util.UUID.randomUUID(),
+            "owner",
+            "claim",
+            "server",
+            "world",
+            0,
+            64,
+            0,
+            0,
+            255,
+            true,
+            5,
+            5,
+            5,
+            5,
+            0L,
+            true,
+            "",
+            "",
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            allowExplosion,
+            false,
+            false,
+            false,
+            false,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0L
+        );
+    }
 }

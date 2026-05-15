@@ -1,21 +1,48 @@
+# 领地组配置
+# 说明:
+# - 玩家会匹配自己拥有权限的最高 priority 组。
+# - permission 为空表示所有玩家都会匹配，通常只给 default 使用。
+# - max-distance 设置为 0 表示不限制最大半径/边长上限。
+# - 价格按新增或创建的方块数量计算，具体是否扣费还取决于 Vault 经济是否启用。
+
+# 默认玩家组
 default:
+  # 显示名称，用于提示和信息展示。
   display-name: '&f默认'
+  # 优先级。数值越高越优先。
   priority: 0
+  # 进入该组需要的权限；空字符串表示无需权限。
   permission: ''
+  # 使用领地核心创建时的初始水平距离。
   initial-distance: 8
+  # 最大可扩展距离；0 表示不限制。
   max-distance: 0
+  # 玩家最多可拥有的普通领地数量。
   max-claims: 5
+  # 使用领地核心创建时，每个方块的价格。
   core-create-price-per-block: 0.0
+  # 使用金锄头选区创建时，每个方块的价格。
   selection-create-price-per-block: 0.16
+  # 扩建领地时，每个新增方块的价格。
   expand-price-per-block: 16.0
 
+# VIP 示例组
 vip:
+  # VIP 显示名称。
   display-name: '&6VIP'
+  # 比 default 高，所以有权限的玩家会优先使用 VIP 规则。
   priority: 100
+  # 拥有该权限的玩家会进入 VIP 组。
   permission: 'coreclaim.group.vip'
+  # VIP 使用核心创建时的初始水平距离。
   initial-distance: 12
+  # 0 表示不限制最大扩展距离。
   max-distance: 0
-  max-claims: 6
+  # VIP 可拥有的普通领地数量。
+  max-claims: 8
+  # VIP 核心创建价格。
   core-create-price-per-block: 0.0
+  # VIP 选区创建价格。
   selection-create-price-per-block: 0.12
+  # VIP 扩建价格。
   expand-price-per-block: 12.0

@@ -339,13 +339,19 @@ public final class ClaimActionService {
             return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, fullHeight, false, true);
         }
 
+        int oldHeight = claim.height();
         long oldArea = claim.area();
         long newArea = (long) (east + west + 1) * (south + north + 1);
-        int oldHeight = claim.height();
         int newHeight = maxY - minY + 1;
-        long costBlocks = direction.vertical() ? oldArea * Math.max(0, newHeight - oldHeight) : newArea - oldArea;
+        long costBlocks = expansionCostBlocks(oldArea, oldHeight, newArea, newHeight);
         double cost = costBlocks * group.expandPricePerBlock();
         return new ExpansionPreview(true, cost, targetDistance, expandAmount, east + west + 1, newHeight, south + north + 1, east, south, west, north, minY, maxY, fullHeight, false, false);
+    }
+
+    static long expansionCostBlocks(long oldArea, int oldHeight, long newArea, int newHeight) {
+        long oldVolume = Math.max(0L, oldArea) * Math.max(0, oldHeight);
+        long newVolume = Math.max(0L, newArea) * Math.max(0, newHeight);
+        return Math.max(0L, newVolume - oldVolume);
     }
 
     private int clampExpandAmount(ClaimGroup group, Claim claim, ClaimDirection direction, int amount, int worldMinY, int worldMaxY) {

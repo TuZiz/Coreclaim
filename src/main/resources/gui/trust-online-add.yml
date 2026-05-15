@@ -1,5 +1,5 @@
 layout-version: 3
-title: '&#475569[&#55FFAA授权&#475569] &#55FFAA&l添加在线玩家 - {name}'
+title: '&#10B981&l[&#34D399&l授权&#10B981&l] &#F0FDF4在线玩家授权 &#475569▶ &#F8FAFC{name}'
 
 Shape:
   - 'FFFFIFFFF'
@@ -20,18 +20,19 @@ items:
     char: 'I'
     material: BOOK
     custom-model-data: 1411
-    name: '&#FFD166&l在线玩家授权'
+    name: '&#10B981&l★ &#34D399&l在线玩家授权池'
     lore:
+      - '&#1E293B&m                                '
+      - ' &#34D399✦ &#E2E8F0基础信息'
+      - '   &#94A3B8当前领地: &#38BDF8{name}'
+      - '   &#94A3B8可授权人数: &#FBBF24{available_count}'
       - ''
-      - ' &#CBD5E1当前领地: &#4CC9F0{name}'
-      - ' &#CBD5E1可授权在线玩家: &#FFD166{available_count}'
-      - ''
-      - ' &#CBD5E1这里不会显示以下玩家:'
-      - ' &#F8FAFC- 你自己'
-      - ' &#F8FAFC- 已授权成员'
-      - ' &#F8FAFC- 禁足名单中的玩家'
-      - ''
-      - ' &#CBD5E1点击头像后立即授权'
+      - ' &#34D399✦ &#E2E8F0列表过滤规则'
+      - '   &#94A3B8此处已自动隐藏以下玩家：'
+      - '   &#475569- &#94A3B8你自己'
+      - '   &#475569- &#94A3B8已经是该领地的成员'
+      - '   &#475569- &#94A3B8处于禁足名单中的玩家'
+      - '&#1E293B&m                                '
 
   online-entry:
     chars:
@@ -39,51 +40,51 @@ items:
       - 'E'
     material: PLAYER_HEAD
     custom-model-data: 1412
-    name: '&#55FFAA&l授权玩家: &#F8FAFC{player}'
+    name: '&#10B981&l✚ &#34D399&l授权给: &#F8FAFC{player}'
     lore:
-      - ''
-      - ' &#CBD5E1将该在线玩家添加到: &#4CC9F0{name}'
-      - ' &#CBD5E1点击后会立即完成授权'
-      - ''
-      - ' &#FFD166点击授权'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8目标领地: &#38BDF8{name}'
+      - ' &#94A3B8点击后该玩家将立即获得全部权限。'
+      - '&#1E293B&m                                '
+      - ' &#10B981[点击] &#F8FAFC确认授予权限'
     sound: ENTITY_PLAYER_LEVELUP
 
   empty:
     char: 'E'
     material: PAPER
     custom-model-data: 1413
-    name: '&#CBD5E1当前没有可授权的在线玩家'
+    name: '&#94A3B8当前没有可授权的在线玩家'
     lore:
-      - ''
-      - ' &#CBD5E1可授权列表会自动过滤'
-      - ' &#CBD5E1自己、已授权成员和禁足玩家'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8所有在线玩家可能都已被授权，'
+      - ' &#94A3B8或者已经被加入了禁足名单。'
 
   prev-page:
     char: 'L'
     material: ARROW
     custom-model-data: 1414
-    name: '&#55FFAA&l上一页'
+    name: '&#38BDF8&l◀ &#7DD3FC&l上一页'
     lore:
-      - ''
-      - ' &#CBD5E1查看上一页在线玩家'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8查看上一页在线玩家'
     sound: UI_BUTTON_CLICK
 
   back:
     char: 'X'
     material: BARRIER
     custom-model-data: 1415
-    name: '&#FF6B6B&l返回成员菜单'
+    name: '&#FB7185&l➦ &#F43F5E&l返回成员管理'
     lore:
-      - ''
-      - ' &#CBD5E1回到当前领地成员列表'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8回到当前领地的成员列表'
     sound: UI_BUTTON_CLICK
 
   next-page:
     char: 'N'
     material: ARROW
     custom-model-data: 1416
-    name: '&#55FFAA&l下一页'
+    name: '&#38BDF8&l▶ &#7DD3FC&l下一页'
     lore:
-      - ''
-      - ' &#CBD5E1查看下一页在线玩家'
+      - '&#1E293B&m                                '
+      - ' &#94A3B8查看下一页在线玩家'
     sound: UI_BUTTON_CLICK

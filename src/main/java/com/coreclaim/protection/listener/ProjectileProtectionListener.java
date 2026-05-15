@@ -146,15 +146,31 @@ public final class ProjectileProtectionListener implements Listener {
     public void onExplode(EntityExplodeEvent event) {
         Player sourcePlayer = support.resolvePlayer(event.getEntity());
         boolean bypassing = sourcePlayer != null && support.isBypassing(sourcePlayer);
+        Claim sourceClaim = support.claimService().findClaim(event.getLocation()).orElse(null);
+        boolean authorizedOrigin = sourcePlayer == null
+            && support.explosionAuthorizationService().isAuthorized(event.getLocation());
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
-            Optional<Claim> claim = support.claimService().findClaim(iterator.next().getLocation());
-            if (claim.isEmpty()) {
-                continue;
-            }
-            if (!bypassing && (sourcePlayer == null || !support.claimService().hasPermission(claim.get(), sourcePlayer.getUniqueId(), ClaimPermission.EXPLOSION))) {
+            Claim targetClaim = support.claimService().findClaim(iterator.next().getLocation()).orElse(null);
+            boolean sourceHasPermission = sourcePlayer != null
+                && targetClaim != null
+                && support.claimService().hasPermission(targetClaim, sourcePlayer.getUniqueId(), ClaimPermission.EXPLOSION);
+            if (!canExplosionAffectClaim(sourceClaim, targetClaim, bypassing, sourceHasPermission, authorizedOrigin)) {
                 iterator.remove();
             }
         }
+    }
+
+    static boolean canExplosionAffectClaim(
+        Claim sourceClaim,
+        Claim targetClaim,
+        boolean bypassing,
+        boolean sourceHasPermission,
+        boolean authorizedOrigin
+    ) {
+        if (targetClaim == null || bypassing || sourceHasPermission) {
+            return true;
+        }
+        return authorizedOrigin && sourceClaim != null && sourceClaim.id() == targetClaim.id();
     }
 }

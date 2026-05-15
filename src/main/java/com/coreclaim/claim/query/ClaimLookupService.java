@@ -288,6 +288,7 @@ public final class ClaimLookupService {
         synchronized (runtime.mutationLock()) {
             persistenceRepository.backfillMissingServerIds(currentServerId());
             Map<Integer, Claim> loadedClaims = persistenceRepository.loadClaimsFromDatabase();
+            renameDuplicateLoadedClaims(loadedClaims);
             runtime.claims().clear();
             runtime.claims().putAll(loadedClaims);
             rebuildClaimChunkIndex();
@@ -300,7 +301,7 @@ public final class ClaimLookupService {
         if (normalizedName == null) {
             return false;
         }
-        if (runtime.databaseManager().isMySql()) {
+        if (runtime.databaseManager() != null && runtime.databaseManager().isMySql()) {
             return runtime.databaseManager().query(
                 excludedClaimId == null
                     ? "SELECT id FROM claims WHERE LOWER(name) = ? LIMIT 1"
@@ -335,6 +336,53 @@ public final class ClaimLookupService {
             throw new IllegalArgumentException("claim-name-exists");
         }
         return sanitizedName;
+    }
+
+    public String nextAvailableLegacyName(String rawName, Set<String> reservedNames) {
+        String sanitizedName = ClaimNameNormalizer.sanitize(rawName);
+        String normalizedName = ClaimNameNormalizer.normalize(sanitizedName);
+        if (normalizedName == null) {
+            throw new IllegalArgumentException("claim-name-empty");
+        }
+        Set<String> reserved = reservedNames == null ? Set.of() : reservedNames;
+        for (int suffix = 2; suffix < 10000; suffix++) {
+            String candidateName = sanitizedName + suffix;
+            String normalizedCandidate = ClaimNameNormalizer.normalize(candidateName);
+            if (!reserved.contains(normalizedCandidate) && !isClaimNameTaken(candidateName, null)) {
+                return candidateName;
+            }
+        }
+        throw new IllegalArgumentException("claim-name-exists");
+    }
+
+    private void renameDuplicateLoadedClaims(Map<Integer, Claim> loadedClaims) {
+        Map<String, List<Claim>> claimsByName = new HashMap<>();
+        for (Claim claim : loadedClaims.values()) {
+            String normalizedName = ClaimNameNormalizer.normalize(claim.name());
+            if (normalizedName == null) {
+                continue;
+            }
+            claimsByName.computeIfAbsent(normalizedName, ignored -> new ArrayList<>()).add(claim);
+        }
+        Set<String> reservedNames = new java.util.HashSet<>(claimsByName.keySet());
+        int renamed = 0;
+        for (List<Claim> duplicateClaims : claimsByName.values()) {
+            if (duplicateClaims.size() <= 1) {
+                continue;
+            }
+            duplicateClaims.sort(Comparator.comparingInt(Claim::id));
+            for (int index = 1; index < duplicateClaims.size(); index++) {
+                Claim duplicateClaim = duplicateClaims.get(index);
+                String newName = nextAvailableLegacyName(duplicateClaims.get(0).name(), reservedNames);
+                reservedNames.add(ClaimNameNormalizer.normalize(newName));
+                duplicateClaim.setName(newName);
+                persistenceRepository.updateClaimName(duplicateClaim.id(), newName);
+                renamed++;
+            }
+        }
+        if (renamed > 0 && runtime.plugin() != null) {
+            runtime.plugin().getLogger().info("Renamed " + renamed + " duplicate legacy claim names.");
+        }
     }
 
     public boolean overlaps(String world, int minX, int maxX, int minY, int maxY, int minZ, int maxZ, Integer ignoredId, boolean fullHeight) {

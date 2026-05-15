@@ -8,7 +8,6 @@ import com.coreclaim.service.ClaimActionService;
 import com.coreclaim.service.ClaimService;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import org.bukkit.Bukkit;
@@ -32,12 +31,7 @@ final class ClaimTabCompletionSupport {
     }
 
     List<String> knownPlayerNames() {
-        LinkedHashSet<String> names = new LinkedHashSet<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            names.add(online.getName());
-        }
-        names.addAll(profileService.knownPlayerNames());
-        return new ArrayList<>(names);
+        return onlinePlayerNames();
     }
 
     List<String> onlinePlayerNames() {

@@ -8,9 +8,11 @@ import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.cleanup.ClaimCleanupBaselineMode;
 import com.coreclaim.cleanup.ClaimCleanupService;
+import com.coreclaim.profile.PlayerProfile;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.util.AdminAccess;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -44,6 +46,7 @@ final class ClaimCommandFormatter {
         }
         sendDetail(sender, "claim-detail-name", "{name}", (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name());
         sendDetail(sender, "claim-detail-owner", "{owner}", claim.ownerName());
+        sendDetail(sender, "claim-detail-last-seen", "{player}", mostRecentParticipantName(claim), "{time}", mostRecentParticipantLastSeenText(claim), "{count}", String.valueOf(participantIds(claim).size()));
         sendDetail(sender, "claim-detail-world", "{world}", claim.world());
         sendDetail(sender, "claim-detail-core", "{x}", String.valueOf(claim.centerX()), "{y}", String.valueOf(claim.centerY()), "{z}", String.valueOf(claim.centerZ()));
         sendDetail(sender, "claim-detail-size", "{width}", String.valueOf(claim.width()), "{depth}", String.valueOf(claim.depth()), "{area}", String.valueOf(claim.area()));
@@ -204,6 +207,60 @@ final class ClaimCommandFormatter {
         return elapsedDays + "天前";
     }
 
+    private String mostRecentParticipantName(Claim claim) {
+        ParticipantLastSeen lastSeen = mostRecentParticipantLastSeen(claim);
+        return lastSeen == null ? "-" : lastSeen.name();
+    }
+
+    private String mostRecentParticipantLastSeenText(Claim claim) {
+        ParticipantLastSeen lastSeen = mostRecentParticipantLastSeen(claim);
+        if (lastSeen == null) {
+            return plugin.plainMessage("state-no-record");
+        }
+        return lastSeen.online() ? plugin.plainMessage("state-online") : lastSeenText(lastSeen.lastSeenAt());
+    }
+
+    private ParticipantLastSeen mostRecentParticipantLastSeen(Claim claim) {
+        ParticipantLastSeen best = null;
+        for (UUID playerId : participantIds(claim)) {
+            Player onlinePlayer = Bukkit.getPlayer(playerId);
+            boolean online = onlinePlayer != null && onlinePlayer.isOnline();
+            long lastSeenAt = online ? System.currentTimeMillis() : lastSeenAt(playerId);
+            ParticipantLastSeen current = new ParticipantLastSeen(displayName(playerId, onlinePlayer), lastSeenAt, online);
+            if (best == null || current.lastSeenAt() > best.lastSeenAt()) {
+                best = current;
+            }
+        }
+        return best;
+    }
+
+    private Set<UUID> participantIds(Claim claim) {
+        LinkedHashSet<UUID> participants = new LinkedHashSet<>();
+        participants.add(claim.owner());
+        participants.addAll(claim.trustedMembers());
+        return participants;
+    }
+
+    private long lastSeenAt(UUID playerId) {
+        PlayerProfile profile = plugin.profileService() == null ? null : plugin.profileService().findProfile(playerId);
+        if (profile != null && profile.lastSeenAt() > 0L) {
+            return profile.lastSeenAt();
+        }
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerId);
+        return Math.max(0L, offlinePlayer.getLastPlayed());
+    }
+
+    private String displayName(UUID playerId, Player onlinePlayer) {
+        if (onlinePlayer != null) {
+            return onlinePlayer.getName();
+        }
+        PlayerProfile profile = plugin.profileService() == null ? null : plugin.profileService().findProfile(playerId);
+        if (profile != null && profile.lastKnownName() != null && !profile.lastKnownName().isBlank()) {
+            return profile.lastKnownName();
+        }
+        return displayName(Bukkit.getOfflinePlayer(playerId));
+    }
+
     private String graceText(long deleteAfterAt) {
         if (deleteAfterAt <= 0L) {
             return "-";
@@ -242,5 +299,8 @@ final class ClaimCommandFormatter {
 
     private String displayName(OfflinePlayer player) {
         return player.getName() == null ? player.getUniqueId().toString() : player.getName();
+    }
+
+    private record ParticipantLastSeen(String name, long lastSeenAt, boolean online) {
     }
 }

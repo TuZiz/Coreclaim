@@ -97,7 +97,6 @@ public final class PendingClaimService {
             player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
             return null;
         }
-
         Location coreLocation = pending.coreLocation();
         ValidationResult validation = validateCreation(player, coreLocation, pending.starterCore());
         if (!validation.allowed()) {

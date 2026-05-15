@@ -169,8 +169,17 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         ClaimPermission permission = event.getBlock().getType() == org.bukkit.Material.TNT
             ? ClaimPermission.EXPLOSION
             : ClaimPermission.INTERACT;
-        if (player == null || !claimService.hasPermission(claim.get(), player.getUniqueId(), permission)) {
+        if (!canIgniteProtectedBlock(
+            claim.get(),
+            player != null,
+            permission,
+            player != null && claimService.hasPermission(claim.get(), player.getUniqueId(), permission)
+        )) {
             event.setCancelled(true);
+            return;
+        }
+        if (permission == ClaimPermission.EXPLOSION) {
+            explosionAuthorizationService.authorize(event.getBlock().getLocation());
         }
     }
 
@@ -359,6 +368,16 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
     static boolean isLiquidFlowAllowed(ClaimFlagState state) {
         ClaimFlagState resolvedState = state == null ? ClaimFlagState.UNSET : state;
         return resolvedState == ClaimFlagState.ALLOW;
+    }
+
+    static boolean canIgniteProtectedBlock(Claim claim, boolean playerPresent, ClaimPermission permission, boolean playerHasPermission) {
+        if (claim == null) {
+            return true;
+        }
+        if (playerPresent) {
+            return playerHasPermission;
+        }
+        return permission == ClaimPermission.EXPLOSION && claim.permission(ClaimPermission.EXPLOSION);
     }
 
     private int claimId(Optional<Claim> claim) {

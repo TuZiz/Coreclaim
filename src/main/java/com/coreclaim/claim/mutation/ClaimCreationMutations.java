@@ -3,6 +3,7 @@ package com.coreclaim.claim.mutation;
 import com.coreclaim.model.Claim;
 import com.coreclaim.sync.ClaimSyncEventType;
 import java.time.Instant;
+import java.util.logging.Level;
 import java.util.UUID;
 import org.bukkit.Location;
 
@@ -17,76 +18,10 @@ final class ClaimCreationMutations {
     }
 
     Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance, ClaimCreationOptions options) {
-        java.util.concurrent.atomic.AtomicBoolean corePlaced = new java.util.concurrent.atomic.AtomicBoolean(false);
-        synchronized (context.runtime.mutationLock()) {
-            try {
-                Claim claim = context.runtime.databaseManager().transaction(() -> {
-                String sanitizedName = finalValidator.sanitizeAvailableName(name);
-                String currentServerId = context.lookupService.currentServerId();
-                int minY = center.getWorld() == null ? -64 : center.getWorld().getMinHeight();
-                int maxY = center.getWorld() == null ? 319 : center.getWorld().getMaxHeight() - 1;
-                String world = center.getWorld().getName();
-                ClaimCreationOptions effectiveOptions = options == null
-                    ? ClaimCreationOptions.coreClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0)
-                    : options;
-                finalValidator.validateAndLock(owner, center, minY, maxY, initialDistance, initialDistance, initialDistance, initialDistance, true, effectiveOptions);
-                corePlaced.set(finalValidator.placeCoreBlock(center, effectiveOptions));
-                long createdAt = Instant.now().getEpochSecond();
-                int generatedId = insertClaim(owner, ownerName, sanitizedName, center, minY, maxY, initialDistance, initialDistance, initialDistance, initialDistance, true, false, currentServerId, createdAt);
-                Claim createdClaim = new Claim(
-                    generatedId,
-                    owner,
-                    ownerName,
-                    sanitizedName,
-                    currentServerId,
-                    world,
-                    center.getBlockX(),
-                    center.getBlockY(),
-                    center.getBlockZ(),
-                    minY,
-                    maxY,
-                    true,
-                    initialDistance,
-                    initialDistance,
-                    initialDistance,
-                    initialDistance,
-                    createdAt,
-                    true,
-                    "",
-                    "",
-                    false,
-                    false,
-                    true,
-                    true,
-                    false,
-                    false,
-                    false,
-                    true,
-                    true,
-                    false,
-                    false,
-                    true,
-                    false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0L
-                );
-                context.defaultsService.applyClaimDefaults(createdClaim);
-                return createdClaim;
-            });
-                registerNewClaim(claim);
-                return claim;
-            } catch (RuntimeException exception) {
-                if (corePlaced.get()) {
-                    finalValidator.clearPlacedCoreBlock(center);
-                }
-                throw exception;
-            }
-        }
+        ClaimCreationOptions effectiveOptions = options == null
+            ? ClaimCreationOptions.coreClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0)
+            : options;
+        return createClaim(ClaimCreationRequest.core(owner, ownerName, name, center, initialDistance, effectiveOptions)).claim();
     }
 
     Claim createClaimFromBounds(
@@ -103,93 +38,59 @@ final class ClaimCreationMutations {
         boolean systemManaged,
         ClaimCreationOptions options
     ) {
-        java.util.concurrent.atomic.AtomicBoolean corePlaced = new java.util.concurrent.atomic.AtomicBoolean(false);
+        ClaimCreationOptions effectiveOptions = options == null
+            ? ClaimCreationOptions.selectionClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0, 0, systemManaged)
+            : options;
+        return createClaim(ClaimCreationRequest.bounds(owner, ownerName, name, coreLocation, minY, maxY, east, south, west, north, systemManaged, effectiveOptions)).claim();
+    }
+
+    ClaimCreationResult createClaim(ClaimCreationRequest request) {
+        ClaimCreationOptions effectiveOptions = request.options() == null
+            ? ClaimCreationOptions.selectionClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0, 0, request.systemManaged())
+            : request.options();
+        ClaimCreationRequest effectiveRequest = new ClaimCreationRequest(
+            request.owner(),
+            request.ownerName(),
+            request.name(),
+            request.world(),
+            request.centerX(),
+            request.centerY(),
+            request.centerZ(),
+            request.worldMinY(),
+            request.worldMaxY(),
+            request.minY(),
+            request.maxY(),
+            request.east(),
+            request.south(),
+            request.west(),
+            request.north(),
+            request.fullHeight(),
+            request.systemManaged(),
+            effectiveOptions
+        );
         synchronized (context.runtime.mutationLock()) {
-            try {
-                Claim claim = context.runtime.databaseManager().transaction(() -> {
-                String sanitizedName = finalValidator.sanitizeAvailableName(name);
+            ClaimCreationResult result = context.runtime.databaseManager().transaction(() -> {
+                String sanitizedName = finalValidator.sanitizeAvailableName(effectiveRequest.name());
                 String currentServerId = context.lookupService.currentServerId();
-                String world = coreLocation.getWorld().getName();
-                ClaimCreationOptions effectiveOptions = options == null
-                    ? ClaimCreationOptions.selectionClaim(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0, 0, systemManaged)
-                    : options;
-                finalValidator.validateAndLock(owner, coreLocation, minY, maxY, east, south, west, north, false, effectiveOptions);
-                corePlaced.set(finalValidator.placeCoreBlock(coreLocation, effectiveOptions));
+                FinalClaimCreationValidator.ValidationResult validation = finalValidator.validateAndLock(effectiveRequest);
                 long createdAt = Instant.now().getEpochSecond();
-                int generatedId = insertClaim(owner, ownerName, sanitizedName, coreLocation, minY, maxY, east, south, west, north, false, systemManaged, currentServerId, createdAt);
-                Claim createdClaim = new Claim(
-                    generatedId,
-                    owner,
-                    ownerName,
-                    sanitizedName,
-                    currentServerId,
-                    world,
-                    coreLocation.getBlockX(),
-                    coreLocation.getBlockY(),
-                    coreLocation.getBlockZ(),
-                    minY,
-                    maxY,
-                    false,
-                    east,
-                    south,
-                    west,
-                    north,
-                    createdAt,
-                    true,
-                    "",
-                    "",
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    true,
-                    systemManaged,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0L
-                );
+                int generatedId = insertClaim(sanitizedName, effectiveRequest, currentServerId, createdAt);
+                Claim createdClaim = buildClaim(generatedId, sanitizedName, effectiveRequest, currentServerId, createdAt);
                 context.defaultsService.applyClaimDefaults(createdClaim);
-                return createdClaim;
+                return new ClaimCreationResult(createdClaim, validation.ownerClaimCount());
             });
-                registerNewClaim(claim);
-                return claim;
-            } catch (RuntimeException exception) {
-                if (corePlaced.get()) {
-                    finalValidator.clearPlacedCoreBlock(coreLocation);
-                }
-                throw exception;
-            }
+            registerCommittedClaim(result.claim());
+            return result;
         }
     }
 
     private int insertClaim(
-        UUID owner,
-        String ownerName,
         String sanitizedName,
-        Location coreLocation,
-        int minY,
-        int maxY,
-        int east,
-        int south,
-        int west,
-        int north,
-        boolean fullHeight,
-        boolean systemManaged,
+        ClaimCreationRequest request,
         String currentServerId,
         long createdAt
     ) {
-        int radius = fullHeight ? east : Math.max(Math.max(east, west), Math.max(south, north));
+        int radius = request.fullHeight() ? request.east() : Math.max(Math.max(request.east(), request.west()), Math.max(request.south(), request.north()));
         return (int) context.runtime.databaseManager().insertAndReturnKey(
             """
             INSERT INTO claims (
@@ -199,24 +100,24 @@ final class ClaimCreationMutations {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             statement -> {
-                statement.setString(1, owner.toString());
-                statement.setString(2, ownerName);
+                statement.setString(1, request.owner().toString());
+                statement.setString(2, request.ownerName());
                 statement.setString(3, sanitizedName);
                 statement.setString(4, com.coreclaim.claim.query.ClaimNameNormalizer.normalize(sanitizedName));
                 statement.setInt(5, 1);
-                statement.setString(6, coreLocation.getWorld().getName());
+                statement.setString(6, request.world());
                 statement.setString(7, currentServerId);
-                statement.setInt(8, coreLocation.getBlockX());
-                statement.setInt(9, coreLocation.getBlockY());
-                statement.setInt(10, coreLocation.getBlockZ());
-                statement.setInt(11, minY);
-                statement.setInt(12, maxY);
-                statement.setInt(13, fullHeight ? 1 : 0);
+                statement.setInt(8, request.centerX());
+                statement.setInt(9, request.centerY());
+                statement.setInt(10, request.centerZ());
+                statement.setInt(11, request.minY());
+                statement.setInt(12, request.maxY());
+                statement.setInt(13, request.fullHeight() ? 1 : 0);
                 statement.setInt(14, radius);
-                statement.setInt(15, east);
-                statement.setInt(16, south);
-                statement.setInt(17, west);
-                statement.setInt(18, north);
+                statement.setInt(15, request.east());
+                statement.setInt(16, request.south());
+                statement.setInt(17, request.west());
+                statement.setInt(18, request.north());
                 statement.setString(19, "");
                 statement.setString(20, "");
                 statement.setInt(21, 0);
@@ -231,17 +132,89 @@ final class ClaimCreationMutations {
                 statement.setInt(30, 0);
                 statement.setInt(31, 0);
                 statement.setInt(32, 1);
-                statement.setInt(33, systemManaged ? 1 : 0);
+                statement.setInt(33, request.systemManaged() ? 1 : 0);
                 statement.setLong(34, 0L);
                 statement.setLong(35, createdAt);
             }
         );
     }
 
-    private void registerNewClaim(Claim claim) {
-        context.runtime.claims().put(claim.id(), claim);
-        context.lookupService.rebuildClaimChunkIndex();
-        context.publishClaimSync(ClaimSyncEventType.CLAIM_CREATED, claim.id());
-        context.trackNewClaim(claim);
+    private Claim buildClaim(int generatedId, String sanitizedName, ClaimCreationRequest request, String currentServerId, long createdAt) {
+        return new Claim(
+            generatedId,
+            request.owner(),
+            request.ownerName(),
+            sanitizedName,
+            currentServerId,
+            request.world(),
+            request.centerX(),
+            request.centerY(),
+            request.centerZ(),
+            request.minY(),
+            request.maxY(),
+            request.fullHeight(),
+            request.east(),
+            request.south(),
+            request.west(),
+            request.north(),
+            createdAt,
+            true,
+            "",
+            "",
+            false,
+            false,
+            request.fullHeight(),
+            request.fullHeight(),
+            false,
+            false,
+            false,
+            request.fullHeight(),
+            request.fullHeight(),
+            false,
+            false,
+            true,
+            request.systemManaged(),
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0L
+        );
+    }
+
+    private void registerCommittedClaim(Claim claim) {
+        try {
+            context.runtime.claims().put(claim.id(), claim);
+            context.lookupService.rebuildClaimChunkIndex();
+        } catch (RuntimeException exception) {
+            context.runtime.plugin().getLogger().log(
+                Level.SEVERE,
+                "Claim " + claim.id() + " committed to database but failed to register in memory. Reloading claims.",
+                exception
+            );
+            try {
+                context.lookupService.reloadClaims();
+            } catch (RuntimeException reloadException) {
+                context.runtime.plugin().getLogger().log(
+                    Level.SEVERE,
+                    "Failed to reload claims after committed claim registration failure.",
+                    reloadException
+                );
+            }
+        }
+
+        try {
+            context.publishClaimSync(ClaimSyncEventType.CLAIM_CREATED, claim.id());
+        } catch (RuntimeException exception) {
+            context.runtime.plugin().getLogger().log(Level.WARNING, "Claim committed but sync publish failed: " + claim.id(), exception);
+        }
+
+        try {
+            context.trackNewClaim(claim);
+        } catch (RuntimeException exception) {
+            context.runtime.plugin().getLogger().log(Level.WARNING, "Claim committed but activity tracking failed: " + claim.id(), exception);
+        }
     }
 }

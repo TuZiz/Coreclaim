@@ -45,6 +45,10 @@ public final class ClaimMutationService {
         return creationMutations.createClaim(owner, ownerName, name, center, initialDistance, options);
     }
 
+    public ClaimCreationResult createClaim(ClaimCreationRequest request) {
+        return creationMutations.createClaim(request);
+    }
+
     public Claim createClaimFromBounds(
         UUID owner,
         String ownerName,

@@ -2,12 +2,16 @@ package com.coreclaim.service;
 
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
+import com.coreclaim.claim.mutation.ClaimCreationRequest;
+import com.coreclaim.claim.mutation.ClaimCreationResult;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
 import com.coreclaim.model.Claim;
 import com.coreclaim.profile.PlayerProfile;
+import com.coreclaim.storage.DatabaseAsyncExecutor;
 import java.util.logging.Level;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +31,8 @@ public final class PendingClaimService {
     private final ClaimVisualService claimVisualService;
     private final EconomyHook economyHook;
     private final OnlineRewardService onlineRewardService;
+    private final DatabaseAsyncExecutor databaseAsyncExecutor;
+    private final ClaimCoreRegionService claimCoreRegionService;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
     private final Map<UUID, com.coreclaim.platform.PlatformScheduler.TaskHandle> timeoutTasks = new ConcurrentHashMap<>();
 
@@ -38,7 +44,9 @@ public final class PendingClaimService {
         HologramService hologramService,
         ClaimVisualService claimVisualService,
         EconomyHook economyHook,
-        OnlineRewardService onlineRewardService
+        OnlineRewardService onlineRewardService,
+        DatabaseAsyncExecutor databaseAsyncExecutor,
+        ClaimCoreRegionService claimCoreRegionService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -48,6 +56,8 @@ public final class PendingClaimService {
         this.claimVisualService = claimVisualService;
         this.economyHook = economyHook;
         this.onlineRewardService = onlineRewardService;
+        this.databaseAsyncExecutor = databaseAsyncExecutor;
+        this.claimCoreRegionService = claimCoreRegionService;
     }
 
     public boolean beginClaimCreation(Player player, Location coreLocation, boolean starterCore) {
@@ -93,11 +103,6 @@ public final class PendingClaimService {
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
             return null;
         }
-        if (claimService.isClaimNameTaken(name)) {
-            refundCore(pending);
-            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
-            return null;
-        }
         Location coreLocation = pending.coreLocation();
         ValidationResult validation = validateCreation(player, coreLocation, pending.starterCore());
         if (!validation.allowed()) {
@@ -124,11 +129,12 @@ public final class PendingClaimService {
                 return null;
             }
         }
-        boolean firstOrdinaryClaim = validation.claimCount() == 0;
+        UUID ownerId = player.getUniqueId();
+        String ownerName = player.getName();
         try {
-            plugin.platformScheduler().runLocationTask(coreLocation, () -> completeClaimOnRegion(player, pending, name, coreLocation, group, createCost, firstOrdinaryClaim));
+            plugin.platformScheduler().runLocationTask(coreLocation, () -> completeClaimOnRegion(player, ownerId, ownerName, pending, name, coreLocation, group, createCost));
         } catch (RuntimeException exception) {
-            rollbackFailedClaimCreation(null, coreLocation, pending, player, createCost);
+            rollbackFailedClaimCreation(coreLocation, pending, player, createCost);
             plugin.getLogger().log(Level.WARNING, "Failed to schedule pending claim creation for " + player.getName(), exception);
             player.sendMessage(plugin.message("claim-create-failed"));
         }
@@ -137,85 +143,116 @@ public final class PendingClaimService {
 
     private void completeClaimOnRegion(
         Player player,
+        UUID ownerId,
+        String ownerName,
         PendingClaim pending,
         String name,
         Location coreLocation,
         ClaimGroup group,
-        double createCost,
-        boolean firstOrdinaryClaim
+        double createCost
     ) {
-        Claim claim = null;
         try {
-            claim = claimService.createClaim(
-                player.getUniqueId(),
-                player.getName(),
+            ClaimCreationOptions options = ClaimCreationOptions.coreClaim(
+                group.maxClaims(),
+                group.maxDistance(),
+                plugin.settings().minimumGap(),
+                plugin.settings().minimumCoreSpacing()
+            );
+            claimCoreRegionService.placeTemporaryCore(coreLocation, options);
+            ClaimCreationRequest request = ClaimCreationRequest.core(
+                ownerId,
+                ownerName,
                 name,
                 coreLocation,
                 group.initialDistance(),
-                ClaimCreationOptions.coreClaim(
-                    group.maxClaims(),
-                    group.maxDistance(),
-                    plugin.settings().minimumGap(),
-                    plugin.settings().minimumCoreSpacing()
-                )
+                options
             );
-            hologramService.spawnClaimHologram(claim);
-            claimVisualService.showClaim(player, claim);
-            if (pending.starterCore()) {
-                PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
-                if (!profile.starterCoreUsed()) {
-                    profile.setStarterCoreUsed(true);
-                    profileService.saveProfile(profile);
-                }
-            }
-            onlineRewardService.markOrdinaryClaimCreated(player);
-            player.sendMessage(plugin.message(
-                "claim-name-created",
-                "{name}", claim.name(),
-                "{width}", String.valueOf(claim.width()),
-                "{depth}", String.valueOf(claim.depth()),
-                "{cost}", ClaimActionService.formatMoney(createCost)
-            ));
-            if (firstOrdinaryClaim) {
-                player.sendMessage(chatMessage(
-                    "second-claim-selection-tip",
-                    "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
-                ));
-            }
+            completeClaimAsync(player, pending, request, coreLocation, createCost);
         } catch (RuntimeException exception) {
-            rollbackFailedClaimCreation(claim, coreLocation, pending, player, createCost);
-            if (exception instanceof IllegalArgumentException illegalArgumentException
-                && "claim-name-exists".equals(illegalArgumentException.getMessage())) {
-                player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
-            } else if (exception instanceof IllegalArgumentException illegalArgumentException
-                && "claim-overlap".equals(illegalArgumentException.getMessage())) {
-                player.sendMessage(plugin.message("claim-overlap"));
-            } else if (exception instanceof IllegalArgumentException illegalArgumentException
-                && "claim-core-blocked".equals(illegalArgumentException.getMessage())) {
-                player.sendMessage(plugin.message("claim-core-blocked"));
-            } else if (exception instanceof IllegalArgumentException illegalArgumentException
-                && "claim-core-too-close".equals(illegalArgumentException.getMessage())) {
-                player.sendMessage(plugin.message("claim-core-too-close"));
-            } else if (exception instanceof IllegalArgumentException illegalArgumentException
-                && "claim-no-slot".equals(illegalArgumentException.getMessage())) {
-                player.sendMessage(plugin.message("claim-no-slot"));
-            } else {
-                plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
-                player.sendMessage(plugin.message("claim-create-failed"));
-            }
+            plugin.platformScheduler().runPlayerTask(player, () -> {
+                rollbackFailedClaimCreation(coreLocation, pending, player, createCost);
+                sendPendingCreationFailure(player, exception, requestName(name));
+            });
         }
     }
 
-    private void rollbackFailedClaimCreation(Claim claim, Location coreLocation, PendingClaim pending, Player player, double createCost) {
-        if (claim != null) {
-            claimService.removeClaim(claim);
-        } else {
-            clearPlacedCoreBlock(coreLocation);
+    private void completeClaimAsync(Player player, PendingClaim pending, ClaimCreationRequest request, Location coreLocation, double createCost) {
+        databaseAsyncExecutor.supply(() -> {
+            ClaimCreationResult result = claimService.createClaim(request);
+            markStarterCoreUsedIfNeeded(pending, request);
+            return result;
+        }).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                plugin.getLogger().log(Level.WARNING, "Database claim creation failed for pending claim " + request.name(), throwable);
+                try {
+                    plugin.platformScheduler().runLocationTask(coreLocation, () -> claimCoreRegionService.clearTemporaryCore(coreLocation));
+                } catch (RuntimeException cleanupException) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to schedule pending claim core cleanup after database failure.", cleanupException);
+                }
+                plugin.platformScheduler().runPlayerTask(player, () -> {
+                    refundCreationPayment(player, createCost);
+                    refundCore(pending);
+                    sendPendingCreationFailure(player, asRuntimeException(throwable), request.name());
+                });
+                return;
+            }
+            try {
+                plugin.platformScheduler().runLocationTask(coreLocation, () -> {
+                    ensureCommittedCoreStillExists(result.claim(), coreLocation);
+                    plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+                });
+            } catch (RuntimeException scheduleException) {
+                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule pending success finalization: " + result.claim().id(), scheduleException);
+                plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+            }
+        });
+    }
+
+    private void finishPendingClaim(Player player, PendingClaim pending, ClaimCreationResult result, double createCost) {
+        Claim claim = result.claim();
+        hologramService.spawnClaimHologram(claim);
+        claimVisualService.showClaim(player, claim);
+        onlineRewardService.markOrdinaryClaimCreated(player);
+        player.sendMessage(plugin.message(
+            "claim-name-created",
+            "{name}", claim.name(),
+            "{width}", String.valueOf(claim.width()),
+            "{depth}", String.valueOf(claim.depth()),
+            "{cost}", ClaimActionService.formatMoney(createCost)
+        ));
+        if (result.previousOwnerClaimCount() == 0) {
+            player.sendMessage(chatMessage(
+                "second-claim-selection-tip",
+                "&6&l提示: &7第二块领地开始，直接拿普通金锄头左键点 1、右键点 2，再输入 &e/claim create <名字> &7即可。"
+            ));
         }
+    }
+
+    private void markStarterCoreUsedIfNeeded(PendingClaim pending, ClaimCreationRequest request) {
+        if (!pending.starterCore()) {
+            return;
+        }
+        try {
+            PlayerProfile profile = profileService.getOrCreate(request.owner(), request.ownerName());
+            if (!profile.starterCoreUsed()) {
+                profile.setStarterCoreUsed(true);
+                profileService.saveProfile(profile);
+            }
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.WARNING, "Claim committed but starter core profile update failed for " + request.owner(), exception);
+        }
+    }
+
+    private void rollbackFailedClaimCreation(Location coreLocation, PendingClaim pending, Player player, double createCost) {
+        clearPlacedCoreBlock(coreLocation);
+        refundCreationPayment(player, createCost);
+        refundCore(pending);
+    }
+
+    private void refundCreationPayment(Player player, double createCost) {
         if (createCost > 0D && economyHook.available()) {
             economyHook.deposit(player, createCost);
         }
-        refundCore(pending);
     }
 
     private void clearPlacedCoreBlock(Location coreLocation) {
@@ -252,7 +289,7 @@ public final class PendingClaimService {
         refundCore(pending);
         Player player = plugin.getServer().getPlayer(playerId);
         if (player != null) {
-            player.sendMessage(plugin.message("claim-name-timeout"));
+            plugin.platformScheduler().runPlayerTask(player, () -> player.sendMessage(plugin.message("claim-name-timeout")));
         }
     }
 
@@ -276,7 +313,7 @@ public final class PendingClaimService {
             return ValidationResult.denied(plugin.message("world-missing"));
         }
         PlayerProfile profile = profileService.getOrCreate(player.getUniqueId(), player.getName());
-        int claimCount = claimService.countClaims(player.getUniqueId());
+        int claimCount = claimService.claimsOf(player.getUniqueId()).size();
         if (starterCore && claimCount > 0) {
             return ValidationResult.denied(plugin.message("starter-core-first-only"));
         }
@@ -296,23 +333,6 @@ public final class PendingClaimService {
             return ValidationResult.denied(plugin.message("claim-no-slot"));
         }
 
-        int initialDistance = group.initialDistance();
-        int minX = coreLocation.getBlockX() - initialDistance;
-        int maxX = coreLocation.getBlockX() + initialDistance;
-        int minZ = coreLocation.getBlockZ() - initialDistance;
-        int maxZ = coreLocation.getBlockZ() + initialDistance;
-        if (claimService.overlaps(world.getName(), minX, maxX, world.getMinHeight(), world.getMaxHeight() - 1, minZ, maxZ, null, true)) {
-            return ValidationResult.denied(plugin.message("claim-overlap"));
-        }
-        if (claimService.hasCoreWithinSpacing(
-            world.getName(),
-            coreLocation.getBlockX(),
-            coreLocation.getBlockZ(),
-            plugin.settings().minimumCoreSpacing(),
-            null
-        )) {
-            return ValidationResult.denied(plugin.message("claim-core-too-close"));
-        }
         return ValidationResult.allowed(group, claimCount);
     }
 
@@ -320,16 +340,20 @@ public final class PendingClaimService {
         Location location = pending.coreLocation();
         Player player = plugin.getServer().getPlayer(pending.ownerId());
         if (player != null) {
-            if (pending.starterCore()) {
-                claimCoreFactory.giveStarterCore(player, 1);
-            } else {
-                claimCoreFactory.giveClaimCore(player, 1);
-            }
+            plugin.platformScheduler().runPlayerTask(player, () -> giveRefundedCore(player, pending));
         } else if (location.getWorld() != null) {
             plugin.platformScheduler().runLocationTask(location, () -> location.getWorld().dropItemNaturally(
                 location.clone().add(0.5D, 0.5D, 0.5D),
                 pending.starterCore() ? claimCoreFactory.createStarterCore(1) : claimCoreFactory.createClaimCore(1)
             ));
+        }
+    }
+
+    private void giveRefundedCore(Player player, PendingClaim pending) {
+        if (pending.starterCore()) {
+            claimCoreFactory.giveStarterCore(player, 1);
+        } else {
+            claimCoreFactory.giveClaimCore(player, 1);
         }
     }
 
@@ -359,5 +383,58 @@ public final class PendingClaimService {
             message = message.replace(replacements[index], replacements[index + 1]);
         }
         return message;
+    }
+
+    private void sendPendingCreationFailure(Player player, RuntimeException exception, String name) {
+        String reason = rootReason(exception);
+        switch (reason) {
+            case "claim-name-exists" -> player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
+            case "claim-overlap" -> player.sendMessage(plugin.message("claim-overlap"));
+            case "claim-core-blocked" -> player.sendMessage(plugin.message("claim-core-blocked"));
+            case "claim-core-too-close" -> player.sendMessage(plugin.message("claim-core-too-close"));
+            case "claim-no-slot" -> player.sendMessage(plugin.message("claim-no-slot"));
+            case "claim-world-only" -> player.sendMessage(plugin.message("claim-world-only", "{world}", plugin.settings().claimWorldsDisplay()));
+            case "selection-too-large" -> player.sendMessage(plugin.message("selection-too-large", "{max}", String.valueOf(plugin.groups().resolve(player).maxDistance() * 2 + 1)));
+            default -> {
+                plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
+                player.sendMessage(plugin.message("claim-create-failed"));
+            }
+        }
+    }
+
+    private void ensureCommittedCoreStillExists(Claim claim, Location coreLocation) {
+        if (claimCoreRegionService.isCoreStillPlaced(coreLocation)) {
+            return;
+        }
+        try {
+            claimCoreRegionService.placeTemporaryCore(coreLocation, ClaimCreationOptions.coreClaim(0, 0, 0, 0));
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Claim " + claim.id() + " committed to database but its core block is missing or blocked.", exception);
+        }
+    }
+
+    private RuntimeException asRuntimeException(Throwable throwable) {
+        if (throwable instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        if (throwable.getCause() instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        return new IllegalStateException(throwable);
+    }
+
+    private String rootReason(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof IllegalArgumentException && current.getMessage() != null) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        return "";
+    }
+
+    private String requestName(String name) {
+        return name == null ? "" : name;
     }
 }

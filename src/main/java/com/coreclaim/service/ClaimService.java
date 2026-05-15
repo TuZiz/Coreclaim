@@ -15,6 +15,8 @@ import com.coreclaim.claim.auth.ClaimAuthorizationService;
 import com.coreclaim.claim.defaults.ClaimDefaultsService;
 import com.coreclaim.claim.mutation.ClaimMutationService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
+import com.coreclaim.claim.mutation.ClaimCreationRequest;
+import com.coreclaim.claim.mutation.ClaimCreationResult;
 import com.coreclaim.claim.persistence.ClaimPersistenceRepository;
 import com.coreclaim.claim.query.ClaimLookupService;
 import com.coreclaim.storage.DatabaseManager;
@@ -278,6 +280,10 @@ public final class ClaimService {
 
     public Claim createClaim(UUID owner, String ownerName, String name, Location center, int initialDistance, ClaimCreationOptions options) {
         return mutationService.createClaim(owner, ownerName, name, center, initialDistance, options);
+    }
+
+    public ClaimCreationResult createClaim(ClaimCreationRequest request) {
+        return mutationService.createClaim(request);
     }
 
     public Claim createClaimFromBounds(UUID owner, String ownerName, String name, Location coreLocation, int minY, int maxY, int east, int south, int west, int north) {

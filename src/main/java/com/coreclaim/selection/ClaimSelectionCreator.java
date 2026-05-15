@@ -5,10 +5,14 @@ import com.coreclaim.service.HologramService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
+import com.coreclaim.claim.mutation.ClaimCreationRequest;
+import com.coreclaim.claim.mutation.ClaimCreationResult;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.model.Claim;
+import com.coreclaim.storage.DatabaseAsyncExecutor;
 import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +31,8 @@ final class ClaimSelectionCreator {
     private final OnlineRewardService onlineRewardService;
     private final ClaimSelectionPreviewBuilder previewBuilder;
     private final Map<UUID, ClaimSelectionSession> sessions;
+    private final DatabaseAsyncExecutor databaseAsyncExecutor;
+    private final ClaimCoreRegionService claimCoreRegionService;
 
     ClaimSelectionCreator(
         CoreClaimPlugin plugin,
@@ -36,7 +42,9 @@ final class ClaimSelectionCreator {
         EconomyHook economyHook,
         OnlineRewardService onlineRewardService,
         ClaimSelectionPreviewBuilder previewBuilder,
-        Map<UUID, ClaimSelectionSession> sessions
+        Map<UUID, ClaimSelectionSession> sessions,
+        DatabaseAsyncExecutor databaseAsyncExecutor,
+        ClaimCoreRegionService claimCoreRegionService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -46,6 +54,8 @@ final class ClaimSelectionCreator {
         this.onlineRewardService = onlineRewardService;
         this.previewBuilder = previewBuilder;
         this.sessions = sessions;
+        this.databaseAsyncExecutor = databaseAsyncExecutor;
+        this.claimCoreRegionService = claimCoreRegionService;
     }
 
     boolean createClaim(Player player, String rawName) {
@@ -61,10 +71,11 @@ final class ClaimSelectionCreator {
             return false;
         }
 
-        boolean firstOrdinaryClaim = claimService.countClaims(player.getUniqueId()) == 0;
         ClaimGroup group = plugin.groups().resolve(player);
+        UUID ownerId = player.getUniqueId();
+        String ownerName = player.getName();
         try {
-            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createClaimOnRegion(player, name, preview, group, firstOrdinaryClaim));
+            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createClaimOnRegion(player, ownerId, ownerName, name, preview, group));
         } catch (RuntimeException exception) {
             refundCost(player, preview.cost());
             sendCreationFailure(player, exception, name);
@@ -84,8 +95,10 @@ final class ClaimSelectionCreator {
         }
 
         ClaimGroup group = plugin.groups().resolve(player);
+        UUID ownerId = player.getUniqueId();
+        String ownerName = player.getName();
         try {
-            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createSystemClaimOnRegion(player, name, preview, group));
+            plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> createSystemClaimOnRegion(player, ownerId, ownerName, name, preview, group));
         } catch (RuntimeException exception) {
             sendCreationFailure(player, exception, name);
             return false;
@@ -93,12 +106,13 @@ final class ClaimSelectionCreator {
         return true;
     }
 
-    private void createClaimOnRegion(Player player, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group, boolean firstOrdinaryClaim) {
-        Claim claim;
+    private void createClaimOnRegion(Player player, UUID ownerId, String ownerName, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
+        ClaimCreationOptions options = selectionOptions(group, false);
         try {
-            claim = claimService.createClaimFromBounds(
-                player.getUniqueId(),
-                player.getName(),
+            claimCoreRegionService.placeTemporaryCore(preview.coreLocation(), options);
+            ClaimCreationRequest request = ClaimCreationRequest.bounds(
+                ownerId,
+                ownerName,
                 name,
                 preview.coreLocation(),
                 preview.minY(),
@@ -108,35 +122,24 @@ final class ClaimSelectionCreator {
                 preview.west(),
                 preview.north(),
                 false,
-                selectionOptions(group, false)
+                options
             );
+            createSelectionClaimAsync(player, name, preview, request, true);
         } catch (RuntimeException exception) {
-            refundCost(player, preview.cost());
-            sendCreationFailure(player, exception, name);
-            return;
-        }
-        finishCreatedClaim(player, claim, preview);
-        onlineRewardService.markOrdinaryClaimCreated(player);
-        player.sendMessage(plugin.message(
-            "selection-create-success",
-            "{name}", claim.name(),
-            "{width}", String.valueOf(claim.width()),
-            "{height}", String.valueOf(claim.height()),
-            "{depth}", String.valueOf(claim.depth()),
-            "{volume}", String.valueOf(preview.volume()),
-            "{cost}", MONEY.format(preview.cost())
-        ));
-        if (firstOrdinaryClaim) {
-            player.sendMessage(plugin.message("second-claim-selection-tip"));
+            plugin.platformScheduler().runPlayerTask(player, () -> {
+                refundCost(player, preview.cost());
+                sendCreationFailure(player, exception, name);
+            });
         }
     }
 
-    private void createSystemClaimOnRegion(Player player, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
-        Claim claim;
+    private void createSystemClaimOnRegion(Player player, UUID ownerId, String ownerName, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
+        ClaimCreationOptions options = selectionOptions(group, true);
         try {
-            claim = claimService.createClaimFromBounds(
-                player.getUniqueId(),
-                player.getName(),
+            claimCoreRegionService.placeTemporaryCore(preview.coreLocation(), options);
+            ClaimCreationRequest request = ClaimCreationRequest.bounds(
+                ownerId,
+                ownerName,
                 name,
                 preview.coreLocation(),
                 preview.minY(),
@@ -146,13 +149,68 @@ final class ClaimSelectionCreator {
                 preview.west(),
                 preview.north(),
                 true,
-                selectionOptions(group, true)
+                options
             );
+            createSelectionClaimAsync(player, name, preview, request, false);
         } catch (RuntimeException exception) {
-            sendCreationFailure(player, exception, name);
+            plugin.platformScheduler().runPlayerTask(player, () -> sendCreationFailure(player, exception, name));
+        }
+    }
+
+    private void createSelectionClaimAsync(
+        Player player,
+        String name,
+        ClaimSelectionService.SelectionPreview preview,
+        ClaimCreationRequest request,
+        boolean chargeCost
+    ) {
+        databaseAsyncExecutor.supply(() -> claimService.createClaim(request)).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                plugin.getLogger().log(Level.WARNING, "Database claim creation failed for selection claim " + name, throwable);
+                try {
+                    plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> claimCoreRegionService.clearTemporaryCore(preview.coreLocation()));
+                } catch (RuntimeException cleanupException) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to schedule selection claim core cleanup after database failure.", cleanupException);
+                }
+                plugin.platformScheduler().runPlayerTask(player, () -> {
+                    if (chargeCost) {
+                        refundCost(player, preview.cost());
+                    }
+                    sendCreationFailure(player, asRuntimeException(throwable), name);
+                });
+                return;
+            }
+            try {
+                plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> {
+                    ensureCommittedCoreStillExists(result.claim(), preview.coreLocation());
+                    plugin.platformScheduler().runPlayerTask(player, () -> finishSelectionClaim(player, result, preview, chargeCost));
+                });
+            } catch (RuntimeException scheduleException) {
+                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule selection success finalization: " + result.claim().id(), scheduleException);
+                plugin.platformScheduler().runPlayerTask(player, () -> finishSelectionClaim(player, result, preview, chargeCost));
+            }
+        });
+    }
+
+    private void finishSelectionClaim(Player player, ClaimCreationResult result, ClaimSelectionService.SelectionPreview preview, boolean chargedCost) {
+        Claim claim = result.claim();
+        finishCreatedClaim(player, claim, preview);
+        if (chargedCost) {
+            onlineRewardService.markOrdinaryClaimCreated(player);
+            player.sendMessage(plugin.message(
+                "selection-create-success",
+                "{name}", claim.name(),
+                "{width}", String.valueOf(claim.width()),
+                "{height}", String.valueOf(claim.height()),
+                "{depth}", String.valueOf(claim.depth()),
+                "{volume}", String.valueOf(preview.volume()),
+                "{cost}", MONEY.format(preview.cost())
+            ));
+            if (result.previousOwnerClaimCount() == 0) {
+                player.sendMessage(plugin.message("second-claim-selection-tip"));
+            }
             return;
         }
-        finishCreatedClaim(player, claim, preview);
         player.sendMessage(plugin.message(
             "selection-create-system-success",
             "{name}", claim.name(),
@@ -182,10 +240,6 @@ final class ClaimSelectionCreator {
         }
         if (name.length() > plugin.settings().claimNameMaxLength()) {
             player.sendMessage(plugin.message("claim-name-too-long", "{max}", String.valueOf(plugin.settings().claimNameMaxLength())));
-            return null;
-        }
-        if (claimService.isClaimNameTaken(name)) {
-            player.sendMessage(plugin.message("claim-name-exists", "{name}", name));
             return null;
         }
         return name;
@@ -250,6 +304,27 @@ final class ClaimSelectionCreator {
                 player.sendMessage(plugin.message("claim-create-failed"));
             }
         }
+    }
+
+    private void ensureCommittedCoreStillExists(Claim claim, org.bukkit.Location coreLocation) {
+        if (claimCoreRegionService.isCoreStillPlaced(coreLocation)) {
+            return;
+        }
+        try {
+            claimCoreRegionService.placeTemporaryCore(coreLocation, ClaimCreationOptions.selectionClaim(0, 0, 0, 0, 0, claim.systemManaged()));
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Claim " + claim.id() + " committed to database but its core block is missing or blocked.", exception);
+        }
+    }
+
+    private RuntimeException asRuntimeException(Throwable throwable) {
+        if (throwable instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        if (throwable.getCause() instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        return new IllegalStateException(throwable);
     }
 
     private String rootReason(Throwable throwable) {

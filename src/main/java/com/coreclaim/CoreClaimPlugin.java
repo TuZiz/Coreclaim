@@ -5,6 +5,7 @@ import com.coreclaim.bootstrap.ListenerRegistrar;
 import com.coreclaim.bootstrap.PluginBootstrap;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
+import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -27,6 +28,7 @@ import com.coreclaim.service.PendingClaimService;
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
 import com.coreclaim.storage.DatabaseManager;
+import com.coreclaim.storage.DatabaseAsyncExecutor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -47,6 +49,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private PluginResourceManager resourceManager;
     private PlatformScheduler platformScheduler;
     private DatabaseManager databaseManager;
+    private DatabaseAsyncExecutor databaseAsyncExecutor;
+    private ClaimCoreRegionService claimCoreRegionService;
     private ClaimCoreFactory claimCoreFactory;
     private ProfileService profileService;
     private ClaimService claimService;
@@ -79,6 +83,8 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.groupConfig = bootstrap.groupConfig();
         this.platformScheduler = bootstrap.platformScheduler();
         this.databaseManager = bootstrap.databaseManager();
+        this.databaseAsyncExecutor = bootstrap.databaseAsyncExecutor();
+        this.claimCoreRegionService = bootstrap.claimCoreRegionService();
         this.claimCoreFactory = bootstrap.claimCoreFactory();
         this.profileService = bootstrap.profileService();
         this.claimService = bootstrap.claimService();
@@ -142,6 +148,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         if (hologramService != null) {
             hologramService.shutdown();
         }
+        if (databaseAsyncExecutor != null) {
+            databaseAsyncExecutor.close();
+        }
         if (databaseManager != null) {
             databaseManager.close();
         }
@@ -174,6 +183,14 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     public ClaimCoreFactory claimCoreFactory() {
         return claimCoreFactory;
+    }
+
+    public DatabaseAsyncExecutor databaseAsyncExecutor() {
+        return databaseAsyncExecutor;
+    }
+
+    public ClaimCoreRegionService claimCoreRegionService() {
+        return claimCoreRegionService;
     }
 
     public ProfileService profileService() {

@@ -3,6 +3,7 @@ package com.coreclaim.bootstrap;
 import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
+import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -23,12 +24,15 @@ import com.coreclaim.service.PendingClaimService;
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.service.RemovalConfirmationService;
 import com.coreclaim.storage.DatabaseManager;
+import com.coreclaim.storage.DatabaseAsyncExecutor;
 
 public final class PluginBootstrap {
 
     public BootstrapResult initialize(CoreClaimPlugin plugin, PluginConfig pluginConfig, GroupConfig groupConfig) {
         PlatformScheduler platformScheduler = new PlatformScheduler(plugin);
         DatabaseManager databaseManager = new DatabaseManager(plugin);
+        DatabaseAsyncExecutor databaseAsyncExecutor = new DatabaseAsyncExecutor();
+        ClaimCoreRegionService claimCoreRegionService = new ClaimCoreRegionService(plugin);
         ClaimCoreFactory claimCoreFactory = new ClaimCoreFactory(plugin);
         ProfileService profileService = new ProfileService(databaseManager);
         ClaimService claimService = new ClaimService(plugin, databaseManager, profileService);
@@ -68,7 +72,9 @@ public final class PluginBootstrap {
             hologramService,
             claimVisualService,
             economyHook,
-            onlineRewardService
+            onlineRewardService,
+            databaseAsyncExecutor,
+            claimCoreRegionService
         );
         ClaimActionService claimActionService = new ClaimActionService(
             plugin,
@@ -85,7 +91,9 @@ public final class PluginBootstrap {
             claimVisualService,
             hologramService,
             economyHook,
-            onlineRewardService
+            onlineRewardService,
+            databaseAsyncExecutor,
+            claimCoreRegionService
         );
         ClaimInputService claimInputService = new ClaimInputService(plugin, claimService, profileService);
         ClaimTransferService claimTransferService = new ClaimTransferService(plugin, claimService, profileService);
@@ -105,6 +113,8 @@ public final class PluginBootstrap {
             groupConfig,
             platformScheduler,
             databaseManager,
+            databaseAsyncExecutor,
+            claimCoreRegionService,
             claimCoreFactory,
             profileService,
             claimService,
@@ -131,6 +141,8 @@ public final class PluginBootstrap {
         GroupConfig groupConfig,
         PlatformScheduler platformScheduler,
         DatabaseManager databaseManager,
+        DatabaseAsyncExecutor databaseAsyncExecutor,
+        ClaimCoreRegionService claimCoreRegionService,
         ClaimCoreFactory claimCoreFactory,
         ProfileService profileService,
         ClaimService claimService,

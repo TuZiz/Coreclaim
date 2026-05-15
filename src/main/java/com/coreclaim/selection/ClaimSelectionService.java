@@ -6,7 +6,9 @@ import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.economy.EconomyHook;
+import com.coreclaim.storage.DatabaseAsyncExecutor;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,12 +31,25 @@ public final class ClaimSelectionService {
         ClaimVisualService claimVisualService,
         HologramService hologramService,
         EconomyHook economyHook,
-        OnlineRewardService onlineRewardService
+        OnlineRewardService onlineRewardService,
+        DatabaseAsyncExecutor databaseAsyncExecutor,
+        ClaimCoreRegionService claimCoreRegionService
     ) {
         this.plugin = plugin;
         this.toolSupport = new ClaimSelectionToolSupport(plugin);
         this.previewBuilder = new ClaimSelectionPreviewBuilder(plugin, claimService, claimVisualService, sessions);
-        this.creator = new ClaimSelectionCreator(plugin, claimService, claimVisualService, hologramService, economyHook, onlineRewardService, previewBuilder, sessions);
+        this.creator = new ClaimSelectionCreator(
+            plugin,
+            claimService,
+            claimVisualService,
+            hologramService,
+            economyHook,
+            onlineRewardService,
+            previewBuilder,
+            sessions,
+            databaseAsyncExecutor,
+            claimCoreRegionService
+        );
     }
 
     public boolean isSelectionTool(ItemStack item) {

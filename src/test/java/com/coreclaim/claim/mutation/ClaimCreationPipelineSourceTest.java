@@ -18,7 +18,10 @@ class ClaimCreationPipelineSourceTest {
         assertFalse(regionMethod.contains("claimService.createClaim("));
         assertFalse(regionMethod.contains("databaseManager"));
         assertFalse(regionMethod.contains(".transaction("));
+        assertTrue(regionMethod.contains("pendingCoreReservationService.reserve"));
+        assertTrue(regionMethod.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(source.contains("databaseAsyncExecutor.supply(() -> claimService.createClaim(request))"));
+        assertTrue(source.contains("pendingCoreReservationService.commit(reservation, result.claim())"));
     }
 
     @Test
@@ -29,20 +32,52 @@ class ClaimCreationPipelineSourceTest {
         assertFalse(regionMethod.contains("claimService.createClaim("));
         assertFalse(regionMethod.contains("databaseManager"));
         assertFalse(regionMethod.contains(".transaction("));
-        assertTrue(source.contains("databaseAsyncExecutor.supply(() -> {"));
-        assertTrue(source.contains("ClaimCreationResult result = claimService.createClaim(request);"));
+        assertTrue(regionMethod.contains("pendingCoreReservationService.reserve"));
+        assertTrue(regionMethod.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
+        assertTrue(source.contains("databaseAsyncExecutor.supply(() -> claimService.createClaim(request))"));
+        assertTrue(source.contains("pendingCoreReservationService.commit(reservation, result.claim())"));
     }
 
     @Test
-    void asyncDatabaseFailureCleansCoreAndRefunds() throws IOException {
+    void asyncDatabaseFailureReleasesReservationAndRefunds() throws IOException {
         String selection = read("src/main/java/com/coreclaim/selection/ClaimSelectionCreator.java");
         String pending = read("src/main/java/com/coreclaim/service/PendingClaimService.java");
 
-        assertTrue(selection.contains("claimCoreRegionService.clearTemporaryCore(preview.coreLocation())"));
+        assertTrue(selection.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(selection.contains("refundCost(player, preview.cost())"));
-        assertTrue(pending.contains("claimCoreRegionService.clearTemporaryCore(coreLocation)"));
+        assertTrue(pending.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
         assertTrue(pending.contains("refundCreationPayment(player, createCost)"));
         assertTrue(pending.contains("refundCore(pending)"));
+    }
+
+    @Test
+    void committedClaimWithInvalidReservationIsCompensated() throws IOException {
+        String selection = read("src/main/java/com/coreclaim/selection/ClaimSelectionCreator.java");
+        String pending = read("src/main/java/com/coreclaim/service/PendingClaimService.java");
+
+        assertTrue(selection.contains("compensateCommittedClaimCreationFailure(result.claim(), reservation"));
+        assertTrue(selection.contains("claimService.removeCommittedClaimRecord(claim)"));
+        assertTrue(selection.contains("pendingCoreReservationService.releaseAndClear(reservation)"));
+        assertTrue(pending.contains("compensateCommittedClaimCreationFailure(result.claim(), reservation"));
+        assertTrue(pending.contains("claimService.removeCommittedClaimRecord(claim)"));
+        assertTrue(pending.contains("refundCore(pending)"));
+    }
+
+    @Test
+    void starterCoreUsedIsMarkedOnlyAfterReservationCommit() throws IOException {
+        String source = read("src/main/java/com/coreclaim/service/PendingClaimService.java");
+        String asyncCreate = method(source, "private void completeClaimAsync", "private void finishPendingClaimAfterReservationCommit");
+        String finalSuccess = method(source, "private void finishPendingClaimAfterReservationCommit", "private void compensateCommittedClaimCreationFailure");
+
+        assertFalse(asyncCreate.contains("markStarterCoreUsedIfNeeded"));
+        assertTrue(finalSuccess.contains("markStarterCoreUsedIfNeeded"));
+    }
+
+    @Test
+    void pluginDisableCleansPendingReservations() throws IOException {
+        String source = read("src/main/java/com/coreclaim/CoreClaimPlugin.java");
+
+        assertTrue(source.contains("pendingCoreReservationService.shutdown()"));
     }
 
     @Test

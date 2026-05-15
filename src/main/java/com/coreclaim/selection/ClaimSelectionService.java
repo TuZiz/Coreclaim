@@ -6,7 +6,7 @@ import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.claim.mutation.ClaimCoreRegionService;
+import com.coreclaim.claim.reservation.PendingCoreReservationService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.storage.DatabaseAsyncExecutor;
 import java.util.Map;
@@ -33,7 +33,7 @@ public final class ClaimSelectionService {
         EconomyHook economyHook,
         OnlineRewardService onlineRewardService,
         DatabaseAsyncExecutor databaseAsyncExecutor,
-        ClaimCoreRegionService claimCoreRegionService
+        PendingCoreReservationService pendingCoreReservationService
     ) {
         this.plugin = plugin;
         this.toolSupport = new ClaimSelectionToolSupport(plugin);
@@ -48,7 +48,7 @@ public final class ClaimSelectionService {
             previewBuilder,
             sessions,
             databaseAsyncExecutor,
-            claimCoreRegionService
+            pendingCoreReservationService
         );
     }
 

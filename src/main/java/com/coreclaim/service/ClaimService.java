@@ -451,6 +451,10 @@ public final class ClaimService {
         mutationService.removeClaim(claim);
     }
 
+    public void removeCommittedClaimRecord(Claim claim) {
+        mutationService.removeCommittedClaimRecord(claim);
+    }
+
     public void save() {
         mutationService.save();
     }

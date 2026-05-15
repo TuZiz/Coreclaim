@@ -56,6 +56,9 @@ permissions:
   coreclaim.admin.reward.givecore:
     description: Give claim cores manually
     default: op
+  coreclaim.admin.pendingcore.bypass:
+    description: Bypass pending claim core reservation protection
+    default: op
   coreclaim.transfer:
     description: Transfer your own claims
     default: true

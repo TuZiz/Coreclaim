@@ -138,6 +138,10 @@ public final class ClaimMutationService {
         lifecycleMutations.removeClaim(claim);
     }
 
+    public void removeCommittedClaimRecord(Claim claim) {
+        lifecycleMutations.removeCommittedClaimRecord(claim);
+    }
+
     public void save() {
         lifecycleMutations.save();
     }

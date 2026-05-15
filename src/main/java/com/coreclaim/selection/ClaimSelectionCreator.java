@@ -5,10 +5,12 @@ import com.coreclaim.service.HologramService;
 import com.coreclaim.service.ClaimVisualService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.claim.mutation.ClaimCreationRequest;
 import com.coreclaim.claim.mutation.ClaimCreationResult;
+import com.coreclaim.claim.reservation.ClaimCreationMode;
+import com.coreclaim.claim.reservation.PendingCoreReservation;
+import com.coreclaim.claim.reservation.PendingCoreReservationService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.model.Claim;
@@ -32,7 +34,7 @@ final class ClaimSelectionCreator {
     private final ClaimSelectionPreviewBuilder previewBuilder;
     private final Map<UUID, ClaimSelectionSession> sessions;
     private final DatabaseAsyncExecutor databaseAsyncExecutor;
-    private final ClaimCoreRegionService claimCoreRegionService;
+    private final PendingCoreReservationService pendingCoreReservationService;
 
     ClaimSelectionCreator(
         CoreClaimPlugin plugin,
@@ -44,7 +46,7 @@ final class ClaimSelectionCreator {
         ClaimSelectionPreviewBuilder previewBuilder,
         Map<UUID, ClaimSelectionSession> sessions,
         DatabaseAsyncExecutor databaseAsyncExecutor,
-        ClaimCoreRegionService claimCoreRegionService
+        PendingCoreReservationService pendingCoreReservationService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -55,7 +57,7 @@ final class ClaimSelectionCreator {
         this.previewBuilder = previewBuilder;
         this.sessions = sessions;
         this.databaseAsyncExecutor = databaseAsyncExecutor;
-        this.claimCoreRegionService = claimCoreRegionService;
+        this.pendingCoreReservationService = pendingCoreReservationService;
     }
 
     boolean createClaim(Player player, String rawName) {
@@ -108,8 +110,9 @@ final class ClaimSelectionCreator {
 
     private void createClaimOnRegion(Player player, UUID ownerId, String ownerName, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
         ClaimCreationOptions options = selectionOptions(group, false);
+        PendingCoreReservation reservation = null;
         try {
-            claimCoreRegionService.placeTemporaryCore(preview.coreLocation(), options);
+            reservation = pendingCoreReservationService.reserve(ownerId, preview.coreLocation(), ClaimCreationMode.SELECTION_CLAIM, options);
             ClaimCreationRequest request = ClaimCreationRequest.bounds(
                 ownerId,
                 ownerName,
@@ -124,8 +127,11 @@ final class ClaimSelectionCreator {
                 false,
                 options
             );
-            createSelectionClaimAsync(player, name, preview, request, true);
+            createSelectionClaimAsync(player, name, preview, request, reservation, true);
         } catch (RuntimeException exception) {
+            if (reservation != null) {
+                pendingCoreReservationService.releaseAndClear(reservation);
+            }
             plugin.platformScheduler().runPlayerTask(player, () -> {
                 refundCost(player, preview.cost());
                 sendCreationFailure(player, exception, name);
@@ -135,8 +141,9 @@ final class ClaimSelectionCreator {
 
     private void createSystemClaimOnRegion(Player player, UUID ownerId, String ownerName, String name, ClaimSelectionService.SelectionPreview preview, ClaimGroup group) {
         ClaimCreationOptions options = selectionOptions(group, true);
+        PendingCoreReservation reservation = null;
         try {
-            claimCoreRegionService.placeTemporaryCore(preview.coreLocation(), options);
+            reservation = pendingCoreReservationService.reserve(ownerId, preview.coreLocation(), ClaimCreationMode.SYSTEM_SELECTION_CLAIM, options);
             ClaimCreationRequest request = ClaimCreationRequest.bounds(
                 ownerId,
                 ownerName,
@@ -151,8 +158,11 @@ final class ClaimSelectionCreator {
                 true,
                 options
             );
-            createSelectionClaimAsync(player, name, preview, request, false);
+            createSelectionClaimAsync(player, name, preview, request, reservation, false);
         } catch (RuntimeException exception) {
+            if (reservation != null) {
+                pendingCoreReservationService.releaseAndClear(reservation);
+            }
             plugin.platformScheduler().runPlayerTask(player, () -> sendCreationFailure(player, exception, name));
         }
     }
@@ -162,13 +172,14 @@ final class ClaimSelectionCreator {
         String name,
         ClaimSelectionService.SelectionPreview preview,
         ClaimCreationRequest request,
+        PendingCoreReservation reservation,
         boolean chargeCost
     ) {
         databaseAsyncExecutor.supply(() -> claimService.createClaim(request)).whenComplete((result, throwable) -> {
             if (throwable != null) {
                 plugin.getLogger().log(Level.WARNING, "Database claim creation failed for selection claim " + name, throwable);
                 try {
-                    plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> claimCoreRegionService.clearTemporaryCore(preview.coreLocation()));
+                    plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> pendingCoreReservationService.releaseAndClear(reservation));
                 } catch (RuntimeException cleanupException) {
                     plugin.getLogger().log(Level.WARNING, "Failed to schedule selection claim core cleanup after database failure.", cleanupException);
                 }
@@ -182,13 +193,48 @@ final class ClaimSelectionCreator {
             }
             try {
                 plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> {
-                    ensureCommittedCoreStillExists(result.claim(), preview.coreLocation());
-                    plugin.platformScheduler().runPlayerTask(player, () -> finishSelectionClaim(player, result, preview, chargeCost));
+                    if (pendingCoreReservationService.validateStillReserved(reservation)) {
+                        pendingCoreReservationService.commit(reservation, result.claim());
+                        plugin.platformScheduler().runPlayerTask(player, () -> finishSelectionClaim(player, result, preview, chargeCost));
+                        return;
+                    }
+                    compensateCommittedClaimCreationFailure(result.claim(), reservation, player, preview, chargeCost, "pending-core-invalid");
                 });
             } catch (RuntimeException scheduleException) {
-                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule selection success finalization: " + result.claim().id(), scheduleException);
-                plugin.platformScheduler().runPlayerTask(player, () -> finishSelectionClaim(player, result, preview, chargeCost));
+                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule selection reservation validation: " + result.claim().id(), scheduleException);
+                compensateCommittedClaimCreationFailure(result.claim(), reservation, player, preview, chargeCost, "pending-core-validation-schedule-failed");
             }
+        });
+    }
+
+    private void compensateCommittedClaimCreationFailure(
+        Claim claim,
+        PendingCoreReservation reservation,
+        Player player,
+        ClaimSelectionService.SelectionPreview preview,
+        boolean shouldRefundCost,
+        String reason
+    ) {
+        databaseAsyncExecutor.run(() -> claimService.removeCommittedClaimRecord(claim)).whenComplete((ignored, throwable) -> {
+            if (throwable != null) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to compensate committed selection claim " + claim.id() + " after " + reason, throwable);
+                try {
+                    claimService.reloadClaims();
+                } catch (RuntimeException reloadException) {
+                    plugin.getLogger().log(Level.SEVERE, "Failed to reload claims after compensation failure for " + claim.id(), reloadException);
+                }
+            }
+            try {
+                plugin.platformScheduler().runLocationTask(preview.coreLocation(), () -> pendingCoreReservationService.releaseAndClear(reservation));
+            } catch (RuntimeException cleanupException) {
+                plugin.getLogger().log(Level.WARNING, "Failed to schedule reservation cleanup after selection compensation: " + claim.id(), cleanupException);
+            }
+            plugin.platformScheduler().runPlayerTask(player, () -> {
+                if (shouldRefundCost) {
+                    refundCost(player, preview.cost());
+                }
+                sendCreationFailure(player, new IllegalStateException("pending-core-invalid"), claim.name());
+            });
         });
     }
 
@@ -303,17 +349,6 @@ final class ClaimSelectionCreator {
                 plugin.getLogger().log(Level.WARNING, "Failed to create selection claim for " + player.getName(), exception);
                 player.sendMessage(plugin.message("claim-create-failed"));
             }
-        }
-    }
-
-    private void ensureCommittedCoreStillExists(Claim claim, org.bukkit.Location coreLocation) {
-        if (claimCoreRegionService.isCoreStillPlaced(coreLocation)) {
-            return;
-        }
-        try {
-            claimCoreRegionService.placeTemporaryCore(coreLocation, ClaimCreationOptions.selectionClaim(0, 0, 0, 0, 0, claim.systemManaged()));
-        } catch (RuntimeException exception) {
-            plugin.getLogger().log(Level.SEVERE, "Claim " + claim.id() + " committed to database but its core block is missing or blocked.", exception);
         }
     }
 

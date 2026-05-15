@@ -6,6 +6,7 @@ import com.coreclaim.bootstrap.PluginBootstrap;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
 import com.coreclaim.claim.mutation.ClaimCoreRegionService;
+import com.coreclaim.claim.reservation.PendingCoreReservationService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -51,6 +52,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
     private DatabaseManager databaseManager;
     private DatabaseAsyncExecutor databaseAsyncExecutor;
     private ClaimCoreRegionService claimCoreRegionService;
+    private PendingCoreReservationService pendingCoreReservationService;
     private ClaimCoreFactory claimCoreFactory;
     private ProfileService profileService;
     private ClaimService claimService;
@@ -85,6 +87,7 @@ public final class CoreClaimPlugin extends JavaPlugin {
         this.databaseManager = bootstrap.databaseManager();
         this.databaseAsyncExecutor = bootstrap.databaseAsyncExecutor();
         this.claimCoreRegionService = bootstrap.claimCoreRegionService();
+        this.pendingCoreReservationService = bootstrap.pendingCoreReservationService();
         this.claimCoreFactory = bootstrap.claimCoreFactory();
         this.profileService = bootstrap.profileService();
         this.claimService = bootstrap.claimService();
@@ -148,6 +151,9 @@ public final class CoreClaimPlugin extends JavaPlugin {
         if (hologramService != null) {
             hologramService.shutdown();
         }
+        if (pendingCoreReservationService != null) {
+            pendingCoreReservationService.shutdown();
+        }
         if (databaseAsyncExecutor != null) {
             databaseAsyncExecutor.close();
         }
@@ -191,6 +197,10 @@ public final class CoreClaimPlugin extends JavaPlugin {
 
     public ClaimCoreRegionService claimCoreRegionService() {
         return claimCoreRegionService;
+    }
+
+    public PendingCoreReservationService pendingCoreReservationService() {
+        return pendingCoreReservationService;
     }
 
     public ProfileService profileService() {

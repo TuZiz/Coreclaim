@@ -2,10 +2,12 @@ package com.coreclaim.service;
 
 import com.coreclaim.profile.ProfileService;
 import com.coreclaim.CoreClaimPlugin;
-import com.coreclaim.claim.mutation.ClaimCoreRegionService;
 import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.claim.mutation.ClaimCreationRequest;
 import com.coreclaim.claim.mutation.ClaimCreationResult;
+import com.coreclaim.claim.reservation.ClaimCreationMode;
+import com.coreclaim.claim.reservation.PendingCoreReservation;
+import com.coreclaim.claim.reservation.PendingCoreReservationService;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -32,7 +34,7 @@ public final class PendingClaimService {
     private final EconomyHook economyHook;
     private final OnlineRewardService onlineRewardService;
     private final DatabaseAsyncExecutor databaseAsyncExecutor;
-    private final ClaimCoreRegionService claimCoreRegionService;
+    private final PendingCoreReservationService pendingCoreReservationService;
     private final Map<UUID, PendingClaim> pendingClaims = new ConcurrentHashMap<>();
     private final Map<UUID, com.coreclaim.platform.PlatformScheduler.TaskHandle> timeoutTasks = new ConcurrentHashMap<>();
 
@@ -46,7 +48,7 @@ public final class PendingClaimService {
         EconomyHook economyHook,
         OnlineRewardService onlineRewardService,
         DatabaseAsyncExecutor databaseAsyncExecutor,
-        ClaimCoreRegionService claimCoreRegionService
+        PendingCoreReservationService pendingCoreReservationService
     ) {
         this.plugin = plugin;
         this.claimService = claimService;
@@ -57,7 +59,7 @@ public final class PendingClaimService {
         this.economyHook = economyHook;
         this.onlineRewardService = onlineRewardService;
         this.databaseAsyncExecutor = databaseAsyncExecutor;
-        this.claimCoreRegionService = claimCoreRegionService;
+        this.pendingCoreReservationService = pendingCoreReservationService;
     }
 
     public boolean beginClaimCreation(Player player, Location coreLocation, boolean starterCore) {
@@ -151,6 +153,7 @@ public final class PendingClaimService {
         ClaimGroup group,
         double createCost
     ) {
+        PendingCoreReservation reservation = null;
         try {
             ClaimCreationOptions options = ClaimCreationOptions.coreClaim(
                 group.maxClaims(),
@@ -158,7 +161,7 @@ public final class PendingClaimService {
                 plugin.settings().minimumGap(),
                 plugin.settings().minimumCoreSpacing()
             );
-            claimCoreRegionService.placeTemporaryCore(coreLocation, options);
+            reservation = pendingCoreReservationService.reserve(ownerId, coreLocation, ClaimCreationMode.CORE_CLAIM, options);
             ClaimCreationRequest request = ClaimCreationRequest.core(
                 ownerId,
                 ownerName,
@@ -167,8 +170,11 @@ public final class PendingClaimService {
                 group.initialDistance(),
                 options
             );
-            completeClaimAsync(player, pending, request, coreLocation, createCost);
+            completeClaimAsync(player, pending, request, reservation, coreLocation, createCost);
         } catch (RuntimeException exception) {
+            if (reservation != null) {
+                pendingCoreReservationService.releaseAndClear(reservation);
+            }
             plugin.platformScheduler().runPlayerTask(player, () -> {
                 rollbackFailedClaimCreation(coreLocation, pending, player, createCost);
                 sendPendingCreationFailure(player, exception, requestName(name));
@@ -176,16 +182,19 @@ public final class PendingClaimService {
         }
     }
 
-    private void completeClaimAsync(Player player, PendingClaim pending, ClaimCreationRequest request, Location coreLocation, double createCost) {
-        databaseAsyncExecutor.supply(() -> {
-            ClaimCreationResult result = claimService.createClaim(request);
-            markStarterCoreUsedIfNeeded(pending, request);
-            return result;
-        }).whenComplete((result, throwable) -> {
+    private void completeClaimAsync(
+        Player player,
+        PendingClaim pending,
+        ClaimCreationRequest request,
+        PendingCoreReservation reservation,
+        Location coreLocation,
+        double createCost
+    ) {
+        databaseAsyncExecutor.supply(() -> claimService.createClaim(request)).whenComplete((result, throwable) -> {
             if (throwable != null) {
                 plugin.getLogger().log(Level.WARNING, "Database claim creation failed for pending claim " + request.name(), throwable);
                 try {
-                    plugin.platformScheduler().runLocationTask(coreLocation, () -> claimCoreRegionService.clearTemporaryCore(coreLocation));
+                    plugin.platformScheduler().runLocationTask(coreLocation, () -> pendingCoreReservationService.releaseAndClear(reservation));
                 } catch (RuntimeException cleanupException) {
                     plugin.getLogger().log(Level.WARNING, "Failed to schedule pending claim core cleanup after database failure.", cleanupException);
                 }
@@ -198,13 +207,69 @@ public final class PendingClaimService {
             }
             try {
                 plugin.platformScheduler().runLocationTask(coreLocation, () -> {
-                    ensureCommittedCoreStillExists(result.claim(), coreLocation);
-                    plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+                    if (pendingCoreReservationService.validateStillReserved(reservation)) {
+                        pendingCoreReservationService.commit(reservation, result.claim());
+                        finishPendingClaimAfterReservationCommit(player, pending, request, result, createCost);
+                        return;
+                    }
+                    compensateCommittedClaimCreationFailure(result.claim(), reservation, player, pending, createCost, true, "pending-core-invalid");
                 });
             } catch (RuntimeException scheduleException) {
-                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule pending success finalization: " + result.claim().id(), scheduleException);
-                plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+                plugin.getLogger().log(Level.SEVERE, "Claim committed but failed to schedule pending reservation validation: " + result.claim().id(), scheduleException);
+                compensateCommittedClaimCreationFailure(result.claim(), reservation, player, pending, createCost, true, "pending-core-validation-schedule-failed");
             }
+        });
+    }
+
+    private void finishPendingClaimAfterReservationCommit(
+        Player player,
+        PendingClaim pending,
+        ClaimCreationRequest request,
+        ClaimCreationResult result,
+        double createCost
+    ) {
+        if (!pending.starterCore()) {
+            plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+            return;
+        }
+        databaseAsyncExecutor.run(() -> markStarterCoreUsedIfNeeded(pending, request)).whenComplete((ignored, throwable) -> {
+            if (throwable != null) {
+                plugin.getLogger().log(Level.WARNING, "Claim committed but starter core profile update failed for " + request.owner(), throwable);
+            }
+            plugin.platformScheduler().runPlayerTask(player, () -> finishPendingClaim(player, pending, result, createCost));
+        });
+    }
+
+    private void compensateCommittedClaimCreationFailure(
+        Claim claim,
+        PendingCoreReservation reservation,
+        Player player,
+        PendingClaim pending,
+        double createCost,
+        boolean refundCore,
+        String reason
+    ) {
+        databaseAsyncExecutor.run(() -> claimService.removeCommittedClaimRecord(claim)).whenComplete((ignored, throwable) -> {
+            if (throwable != null) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to compensate committed pending claim " + claim.id() + " after " + reason, throwable);
+                try {
+                    claimService.reloadClaims();
+                } catch (RuntimeException reloadException) {
+                    plugin.getLogger().log(Level.SEVERE, "Failed to reload claims after pending compensation failure for " + claim.id(), reloadException);
+                }
+            }
+            try {
+                plugin.platformScheduler().runLocationTask(pending.coreLocation(), () -> pendingCoreReservationService.releaseAndClear(reservation));
+            } catch (RuntimeException cleanupException) {
+                plugin.getLogger().log(Level.WARNING, "Failed to schedule reservation cleanup after pending compensation: " + claim.id(), cleanupException);
+            }
+            plugin.platformScheduler().runPlayerTask(player, () -> {
+                refundCreationPayment(player, createCost);
+                if (refundCore) {
+                    refundCore(pending);
+                }
+                sendPendingCreationFailure(player, new IllegalStateException("pending-core-invalid"), claim.name());
+            });
         });
     }
 
@@ -239,7 +304,7 @@ public final class PendingClaimService {
                 profileService.saveProfile(profile);
             }
         } catch (RuntimeException exception) {
-            plugin.getLogger().log(Level.WARNING, "Claim committed but starter core profile update failed for " + request.owner(), exception);
+            throw exception;
         }
     }
 
@@ -399,17 +464,6 @@ public final class PendingClaimService {
                 plugin.getLogger().log(Level.WARNING, "Failed to complete pending claim creation for " + player.getName(), exception);
                 player.sendMessage(plugin.message("claim-create-failed"));
             }
-        }
-    }
-
-    private void ensureCommittedCoreStillExists(Claim claim, Location coreLocation) {
-        if (claimCoreRegionService.isCoreStillPlaced(coreLocation)) {
-            return;
-        }
-        try {
-            claimCoreRegionService.placeTemporaryCore(coreLocation, ClaimCreationOptions.coreClaim(0, 0, 0, 0));
-        } catch (RuntimeException exception) {
-            plugin.getLogger().log(Level.SEVERE, "Claim " + claim.id() + " committed to database but its core block is missing or blocked.", exception);
         }
     }
 

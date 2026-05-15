@@ -20,13 +20,7 @@ final class ClaimLifecycleMutations {
 
     void removeClaim(Claim claim) {
         synchronized (context.runtime.mutationLock()) {
-            context.runtime.claims().remove(claim.id());
-            context.lookupService.rebuildClaimChunkIndex();
-            context.cancelSaleListing(claim.id());
-            context.runtime.databaseManager().update(
-                "DELETE FROM claims WHERE id = ?",
-                statement -> statement.setInt(1, claim.id())
-            );
+            removeCommittedClaimRecord(claim);
 
             World world = context.lookupService.isLocalClaim(claim) ? context.runtime.plugin().getServer().getWorld(claim.world()) : null;
             if (world != null) {
@@ -37,6 +31,18 @@ final class ClaimLifecycleMutations {
                     }
                 });
             }
+        }
+    }
+
+    void removeCommittedClaimRecord(Claim claim) {
+        synchronized (context.runtime.mutationLock()) {
+            context.runtime.claims().remove(claim.id());
+            context.lookupService.rebuildClaimChunkIndex();
+            context.cancelSaleListing(claim.id());
+            context.runtime.databaseManager().update(
+                "DELETE FROM claims WHERE id = ?",
+                statement -> statement.setInt(1, claim.id())
+            );
             context.publishClaimSync(ClaimSyncEventType.CLAIM_DELETED, claim.id());
             context.untrackClaim(claim.id());
         }

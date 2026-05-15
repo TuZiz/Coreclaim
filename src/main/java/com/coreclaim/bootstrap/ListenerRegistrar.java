@@ -10,6 +10,7 @@ import com.coreclaim.listener.ClaimNamingListener;
 import com.coreclaim.listener.ClaimSelectionListener;
 import com.coreclaim.listener.CrossServerTeleportListener;
 import com.coreclaim.listener.MenuListener;
+import com.coreclaim.listener.PendingCoreProtectionListener;
 import com.coreclaim.listener.RemovalConfirmListener;
 import com.coreclaim.listener.SelectionToolListener;
 import com.coreclaim.protection.listener.BlockProtectionListener;
@@ -34,6 +35,7 @@ public final class ListenerRegistrar {
             plugin
         );
         plugin.getServer().getPluginManager().registerEvents(new BlockProtectionListener(protectionRuleSupport), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new PendingCoreProtectionListener(bootstrap.pendingCoreReservationService()), plugin);
         plugin.getServer().getPluginManager().registerEvents(new InteractionProtectionListener(protectionRuleSupport), plugin);
         plugin.getServer().getPluginManager().registerEvents(new EntityProtectionListener(protectionRuleSupport), plugin);
         plugin.getServer().getPluginManager().registerEvents(new ProjectileProtectionListener(protectionRuleSupport), plugin);

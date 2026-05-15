@@ -4,6 +4,7 @@ import com.coreclaim.CoreClaimPlugin;
 import com.coreclaim.config.GroupConfig;
 import com.coreclaim.config.PluginConfig;
 import com.coreclaim.claim.mutation.ClaimCoreRegionService;
+import com.coreclaim.claim.reservation.PendingCoreReservationService;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.gui.MenuService;
 import com.coreclaim.item.ClaimCoreFactory;
@@ -33,6 +34,7 @@ public final class PluginBootstrap {
         DatabaseManager databaseManager = new DatabaseManager(plugin);
         DatabaseAsyncExecutor databaseAsyncExecutor = new DatabaseAsyncExecutor();
         ClaimCoreRegionService claimCoreRegionService = new ClaimCoreRegionService(plugin);
+        PendingCoreReservationService pendingCoreReservationService = new PendingCoreReservationService(plugin, claimCoreRegionService);
         ClaimCoreFactory claimCoreFactory = new ClaimCoreFactory(plugin);
         ProfileService profileService = new ProfileService(databaseManager);
         ClaimService claimService = new ClaimService(plugin, databaseManager, profileService);
@@ -74,7 +76,7 @@ public final class PluginBootstrap {
             economyHook,
             onlineRewardService,
             databaseAsyncExecutor,
-            claimCoreRegionService
+            pendingCoreReservationService
         );
         ClaimActionService claimActionService = new ClaimActionService(
             plugin,
@@ -93,7 +95,7 @@ public final class PluginBootstrap {
             economyHook,
             onlineRewardService,
             databaseAsyncExecutor,
-            claimCoreRegionService
+            pendingCoreReservationService
         );
         ClaimInputService claimInputService = new ClaimInputService(plugin, claimService, profileService);
         ClaimTransferService claimTransferService = new ClaimTransferService(plugin, claimService, profileService);
@@ -115,6 +117,7 @@ public final class PluginBootstrap {
             databaseManager,
             databaseAsyncExecutor,
             claimCoreRegionService,
+            pendingCoreReservationService,
             claimCoreFactory,
             profileService,
             claimService,
@@ -143,6 +146,7 @@ public final class PluginBootstrap {
         DatabaseManager databaseManager,
         DatabaseAsyncExecutor databaseAsyncExecutor,
         ClaimCoreRegionService claimCoreRegionService,
+        PendingCoreReservationService pendingCoreReservationService,
         ClaimCoreFactory claimCoreFactory,
         ProfileService profileService,
         ClaimService claimService,

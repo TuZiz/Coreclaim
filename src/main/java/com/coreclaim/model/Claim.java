@@ -29,6 +29,7 @@ public final class Claim {
     private String enterMessage;
     private String leaveMessage;
     private final boolean systemManaged;
+    private final ClaimCreationType creationType;
     private boolean denyAll;
     private long lastExpandedAt;
 
@@ -74,6 +75,94 @@ public final class Claim {
         Float teleportPitch,
         long lastExpandedAt
     ) {
+        this(
+            id,
+            owner,
+            ownerName,
+            name,
+            serverId,
+            world,
+            centerX,
+            centerY,
+            centerZ,
+            minY,
+            maxY,
+            fullHeight,
+            east,
+            south,
+            west,
+            north,
+            createdAt,
+            coreVisible,
+            enterMessage,
+            leaveMessage,
+            allowPlace,
+            allowBreak,
+            allowInteract,
+            allowContainer,
+            allowMobInteract,
+            allowAnimalSpawn,
+            allowMonsterSpawn,
+            allowRedstone,
+            allowExplosion,
+            allowBucket,
+            allowTeleport,
+            allowFlight,
+            systemManaged,
+            ClaimCreationType.UNKNOWN_LEGACY,
+            denyAll,
+            teleportX,
+            teleportY,
+            teleportZ,
+            teleportYaw,
+            teleportPitch,
+            lastExpandedAt
+        );
+    }
+
+    public Claim(
+        int id,
+        UUID owner,
+        String ownerName,
+        String name,
+        String serverId,
+        String world,
+        int centerX,
+        int centerY,
+        int centerZ,
+        int minY,
+        int maxY,
+        boolean fullHeight,
+        int east,
+        int south,
+        int west,
+        int north,
+        long createdAt,
+        boolean coreVisible,
+        String enterMessage,
+        String leaveMessage,
+        boolean allowPlace,
+        boolean allowBreak,
+        boolean allowInteract,
+        boolean allowContainer,
+        boolean allowMobInteract,
+        boolean allowAnimalSpawn,
+        boolean allowMonsterSpawn,
+        boolean allowRedstone,
+        boolean allowExplosion,
+        boolean allowBucket,
+        boolean allowTeleport,
+        boolean allowFlight,
+        boolean systemManaged,
+        ClaimCreationType creationType,
+        boolean denyAll,
+        Double teleportX,
+        Double teleportY,
+        Double teleportZ,
+        Float teleportYaw,
+        Float teleportPitch,
+        long lastExpandedAt
+    ) {
         this.id = id;
         this.owner = owner;
         this.ownerName = ownerName;
@@ -106,6 +195,7 @@ public final class Claim {
             allowFlight
         );
         this.systemManaged = systemManaged;
+        this.creationType = creationType == null ? ClaimCreationType.UNKNOWN_LEGACY : creationType;
         this.denyAll = denyAll;
         this.teleportPoint = new ClaimTeleportPoint(teleportX, teleportY, teleportZ, teleportYaw, teleportPitch);
         this.lastExpandedAt = Math.max(0L, lastExpandedAt);
@@ -271,6 +361,10 @@ public final class Claim {
 
     public boolean systemManaged() {
         return systemManaged;
+    }
+
+    public ClaimCreationType creationType() {
+        return creationType;
     }
 
     public synchronized void setDenyAll(boolean denyAll) {

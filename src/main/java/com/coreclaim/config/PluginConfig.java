@@ -3,6 +3,7 @@ package com.coreclaim.config;
 import static com.coreclaim.config.PluginConfigLoader.clampColor;
 import static com.coreclaim.config.PluginConfigLoader.defaultPermissionValue;
 import static com.coreclaim.config.PluginConfigLoader.loadClaimSyncSettings;
+import static com.coreclaim.config.PluginConfigLoader.loadClaimExpansionPricingSettings;
 import static com.coreclaim.config.PluginConfigLoader.loadFlagDefaults;
 import static com.coreclaim.config.PluginConfigLoader.loadLegacyWorldServerMap;
 import static com.coreclaim.config.PluginConfigLoader.loadNewClaimFlagDefaults;
@@ -89,6 +90,7 @@ public final class PluginConfig {
     private final Map<ClaimFlag, ClaimFlagState> newClaimFlagDefaults;
     private final Map<ClaimFlag, ClaimFlagState> systemClaimFlagDefaults;
     private final ClaimSyncSettings claimSyncSettings;
+    private final ClaimExpansionPricingSettings claimExpansionPricingSettings;
 
     public PluginConfig(FileConfiguration config, FileConfiguration rulesConfig) {
         this.claimWorld = config.getString("world", "world");
@@ -188,6 +190,7 @@ public final class PluginConfig {
             true
         );
         this.claimSyncSettings = loadClaimSyncSettings(config);
+        this.claimExpansionPricingSettings = loadClaimExpansionPricingSettings(config);
     }
 
     public String claimWorld() {
@@ -475,6 +478,10 @@ public final class PluginConfig {
 
     public ClaimSyncSettings claimSync() {
         return claimSyncSettings;
+    }
+
+    public ClaimExpansionPricingSettings claimExpansionPricing() {
+        return claimExpansionPricingSettings;
     }
 
     public String resolveLegacyCrossServerTargetServer(String worldName) {

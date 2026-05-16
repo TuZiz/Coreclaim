@@ -85,6 +85,7 @@ final class DatabaseSchemaInitializer {
                 allow_teleport %s NOT NULL DEFAULT 0,
                 allow_flight %s NOT NULL DEFAULT 0,
                 system_managed %s NOT NULL DEFAULT 0,
+                creation_type %s NOT NULL DEFAULT 'UNKNOWN_LEGACY',
                 deny_all %s NOT NULL DEFAULT 0,
                 tp_x %s,
                 tp_y %s,
@@ -99,7 +100,7 @@ final class DatabaseSchemaInitializer {
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
-                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
+                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), shortTextType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
             ),
             statement -> {
             }
@@ -130,6 +131,7 @@ final class DatabaseSchemaInitializer {
         ensureColumn("claims", "allow_teleport", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_flight", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "system_managed", booleanType() + " NOT NULL DEFAULT 0");
+        ensureColumn("claims", "creation_type", shortTextType() + " NOT NULL DEFAULT 'UNKNOWN_LEGACY'");
         ensureColumn("claims", "deny_all", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "tp_x", doubleType());
         ensureColumn("claims", "tp_y", doubleType());
@@ -148,6 +150,17 @@ final class DatabaseSchemaInitializer {
                 system_managed = CASE WHEN system_managed IS NULL THEN 0 ELSE system_managed END,
                 enter_message = CASE WHEN enter_message IS NULL THEN '' ELSE enter_message END,
                 leave_message = CASE WHEN leave_message IS NULL THEN '' ELSE leave_message END
+            """,
+            statement -> {
+            }
+        );
+        update(
+            """
+            UPDATE claims
+            SET creation_type = CASE
+                WHEN creation_type IS NULL OR TRIM(creation_type) = '' THEN 'UNKNOWN_LEGACY'
+                ELSE creation_type
+            END
             """,
             statement -> {
             }

@@ -2,6 +2,9 @@ package com.coreclaim.service;
 
 import com.coreclaim.teleport.CrossServerTeleportService;
 import com.coreclaim.CoreClaimPlugin;
+import com.coreclaim.claim.expansion.ExpansionCostCalculator;
+import com.coreclaim.claim.expansion.ExpansionCostResult;
+import com.coreclaim.claim.expansion.ExpansionPricingMode;
 import com.coreclaim.config.ClaimGroup;
 import com.coreclaim.economy.EconomyHook;
 import com.coreclaim.model.Claim;
@@ -26,6 +29,7 @@ public final class ClaimActionService {
     private final ClaimVisualService claimVisualService;
     private final EconomyHook economyHook;
     private final CrossServerTeleportService crossServerTeleportService;
+    private final ExpansionCostCalculator expansionCostCalculator;
 
     public ClaimActionService(
         CoreClaimPlugin plugin,
@@ -41,6 +45,7 @@ public final class ClaimActionService {
         this.claimVisualService = claimVisualService;
         this.economyHook = economyHook;
         this.crossServerTeleportService = crossServerTeleportService;
+        this.expansionCostCalculator = new ExpansionCostCalculator(plugin.settings().claimExpansionPricing());
     }
 
     public Claim findOwnedClaim(Player player) {
@@ -145,7 +150,12 @@ public final class ClaimActionService {
             "{cost}", MONEY.format(preview.cost()),
             "{width}", String.valueOf(preview.width()),
             "{height}", String.valueOf(preview.height()),
-            "{depth}", String.valueOf(preview.depth())
+            "{depth}", String.valueOf(preview.depth()),
+            "{pricing_mode}", preview.pricingMode().name(),
+            "{charged_blocks}", MONEY.format(preview.chargedBlocks()),
+            "{raw_added_blocks}", String.valueOf(preview.rawAddedBlocks()),
+            "{added_area}", String.valueOf(preview.addedHorizontalArea()),
+            "{charged_height}", String.valueOf(preview.chargedHeight())
         ));
         return true;
     }
@@ -328,7 +338,7 @@ public final class ClaimActionService {
         int currentDistance = claim.distance(direction);
         int expandAmount = clampExpandAmount(group, claim, direction, amount, worldMinY, worldMaxY);
         if (expandAmount <= 0) {
-            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, claim.fullHeight(), true, false);
+            return blockedExpansionPreview(currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, claim.fullHeight(), true, false);
         }
 
         int targetDistance = currentDistance + expandAmount;
@@ -347,22 +357,92 @@ public final class ClaimActionService {
         int minZ = claim.centerZ() - north;
         int maxZ = claim.centerZ() + south;
         if (claimService.overlaps(claim.world(), minX, maxX, minY, maxY, minZ, maxZ, claim.id(), fullHeight)) {
-            return new ExpansionPreview(false, 0D, currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, fullHeight, false, true);
+            return blockedExpansionPreview(currentDistance, 0, claim.width(), claim.height(), claim.depth(), east, south, west, north, minY, maxY, fullHeight, false, true);
         }
 
         int oldHeight = claim.height();
         long oldArea = claim.area();
         long newArea = (long) (east + west + 1) * (south + north + 1);
         int newHeight = maxY - minY + 1;
-        long costBlocks = expansionCostBlocks(oldArea, oldHeight, newArea, newHeight);
-        double cost = costBlocks * group.expandPricePerBlock();
-        return new ExpansionPreview(true, cost, targetDistance, expandAmount, east + west + 1, newHeight, south + north + 1, east, south, west, north, minY, maxY, fullHeight, false, false);
+        ExpansionCostResult costResult = expansionCostCalculator.calculate(
+            claim,
+            group,
+            worldMinY,
+            worldMaxY,
+            oldArea,
+            oldHeight,
+            newArea,
+            newHeight,
+            direction.vertical()
+        );
+        return new ExpansionPreview(
+            true,
+            costResult.cost(),
+            targetDistance,
+            expandAmount,
+            east + west + 1,
+            newHeight,
+            south + north + 1,
+            east,
+            south,
+            west,
+            north,
+            minY,
+            maxY,
+            fullHeight,
+            false,
+            false,
+            costResult.chargedBlocks(),
+            costResult.rawAddedBlocks(),
+            costResult.addedHorizontalArea(),
+            costResult.chargedHeight(),
+            costResult.mode()
+        );
     }
 
     static long expansionCostBlocks(long oldArea, int oldHeight, long newArea, int newHeight) {
-        long oldVolume = Math.max(0L, oldArea) * Math.max(0, oldHeight);
-        long newVolume = Math.max(0L, newArea) * Math.max(0, newHeight);
-        return Math.max(0L, newVolume - oldVolume);
+        return ExpansionCostCalculator.rawAddedBlocks(oldArea, oldHeight, newArea, newHeight);
+    }
+
+    private ExpansionPreview blockedExpansionPreview(
+        int currentDistance,
+        int expandAmount,
+        int width,
+        int height,
+        int depth,
+        int east,
+        int south,
+        int west,
+        int north,
+        int minY,
+        int maxY,
+        boolean fullHeight,
+        boolean hitMax,
+        boolean overlap
+    ) {
+        return new ExpansionPreview(
+            false,
+            0D,
+            currentDistance,
+            expandAmount,
+            width,
+            height,
+            depth,
+            east,
+            south,
+            west,
+            north,
+            minY,
+            maxY,
+            fullHeight,
+            hitMax,
+            overlap,
+            0D,
+            0L,
+            0L,
+            0,
+            ExpansionPricingMode.REAL_VOLUME
+        );
     }
 
     private int clampExpandAmount(ClaimGroup group, Claim claim, ClaimDirection direction, int amount, int worldMinY, int worldMaxY) {
@@ -433,8 +513,60 @@ public final class ClaimActionService {
         int maxY,
         boolean fullHeight,
         boolean hitMax,
-        boolean overlap
+        boolean overlap,
+        double chargedBlocks,
+        long rawAddedBlocks,
+        long addedHorizontalArea,
+        int chargedHeight,
+        ExpansionPricingMode pricingMode
     ) {
+        public ExpansionPreview(
+            boolean allowed,
+            double cost,
+            int targetDistance,
+            int expandAmount,
+            int width,
+            int height,
+            int depth,
+            int east,
+            int south,
+            int west,
+            int north,
+            int minY,
+            int maxY,
+            boolean fullHeight,
+            boolean hitMax,
+            boolean overlap
+        ) {
+            this(
+                allowed,
+                cost,
+                targetDistance,
+                expandAmount,
+                width,
+                height,
+                depth,
+                east,
+                south,
+                west,
+                north,
+                minY,
+                maxY,
+                fullHeight,
+                hitMax,
+                overlap,
+                cost,
+                0L,
+                0L,
+                height,
+                ExpansionPricingMode.REAL_VOLUME
+            );
+        }
+
+        public ExpansionPreview {
+            pricingMode = pricingMode == null ? ExpansionPricingMode.REAL_VOLUME : pricingMode;
+        }
+
         public String costText() {
             return allowed ? formatMoney(cost) : "--";
         }

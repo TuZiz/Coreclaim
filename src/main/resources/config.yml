@@ -16,6 +16,26 @@ starter-reward-minutes: 30
 # 指令 / GUI 每次向单个方向扩建的固定格数
 direction-expand-amount: 10
 
+# 扩建计费模型。实际保护范围不受这里影响，只改变扩建费用计算。
+claim-expansion-pricing:
+  # 老数据库没有创建来源字段时，是否把 fullHeight=true 的旧领地按核心领地优惠计费
+  legacy-full-height-claims-as-core: true
+  core-full-height:
+    enabled: true
+    # 核心领地实际仍然全高度保护，但水平扩建计费最多按这个高度算
+    effective-height-cap: 96
+    # 高度折扣，避免全高度保护扩建费用过高
+    height-price-factor: 0.35
+    # 核心创建领地专属折扣
+    full-height-discount: 0.55
+    # 最低扩建费用；0 表示不限制，且费用为 0 时不会强制最低费用
+    minimum-cost: 0.0
+    # 单次最高扩建费用；-1 或 0 表示不限制
+    maximum-cost-per-expansion: -1.0
+  selection:
+    # 选区领地始终按真实新增体积计费，不套用核心领地折扣
+    use-real-volume: true
+
 # 领地核心之间的最小间隔
 # 设为 0 时只禁止领地重叠，允许两个领地边界挨在一起
 minimum-gap: 0

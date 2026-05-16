@@ -93,6 +93,20 @@ final class PluginConfigLoader {
         );
     }
 
+    static ClaimExpansionPricingSettings loadClaimExpansionPricingSettings(FileConfiguration config) {
+        ClaimExpansionPricingSettings defaults = ClaimExpansionPricingSettings.defaults();
+        return new ClaimExpansionPricingSettings(
+            config.getBoolean("claim-expansion-pricing.legacy-full-height-claims-as-core", defaults.legacyFullHeightClaimsAsCore()),
+            config.getBoolean("claim-expansion-pricing.core-full-height.enabled", defaults.coreFullHeightEnabled()),
+            config.getInt("claim-expansion-pricing.core-full-height.effective-height-cap", defaults.effectiveHeightCap()),
+            config.getDouble("claim-expansion-pricing.core-full-height.height-price-factor", defaults.heightPriceFactor()),
+            config.getDouble("claim-expansion-pricing.core-full-height.full-height-discount", defaults.fullHeightDiscount()),
+            config.getDouble("claim-expansion-pricing.core-full-height.minimum-cost", defaults.minimumCost()),
+            config.getDouble("claim-expansion-pricing.core-full-height.maximum-cost-per-expansion", defaults.maximumCostPerExpansion()),
+            config.getBoolean("claim-expansion-pricing.selection.use-real-volume", defaults.selectionUseRealVolume())
+        );
+    }
+
     static Map<ClaimPermission, Boolean> loadPermissionDefaults(
         FileConfiguration primaryConfig,
         FileConfiguration legacyConfig,

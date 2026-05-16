@@ -28,6 +28,8 @@ final class SqliteMigrationService {
             "min_y", "max_y", "full_height", "radius", "east", "south", "west", "north", "enter_message", "leave_message",
             "allow_place", "allow_break", "allow_interact", "allow_container", "allow_redstone", "allow_explosion",
             "allow_bucket", "allow_teleport", "allow_flight", "last_expanded_at", "created_at"
+        }, new String[] {
+            "creation_type"
         }),
         new TableCopy("claim_members", new String[] {"claim_id", "player_uuid"}),
         new TableCopy("claim_blacklist", new String[] {"claim_id", "player_uuid"}),
@@ -129,17 +131,18 @@ final class SqliteMigrationService {
     }
 
     private void copyTable(Connection sourceConnection, Connection targetConnection, TableCopy table) throws SQLException {
-        String columns = String.join(", ", table.columns());
-        String insertSql = "INSERT INTO " + table.name() + " (" + columns + ") VALUES (" + placeholders(table.columns().length) + ")";
+        String[] columns = columnsToCopy(sourceConnection, table);
+        String columnList = String.join(", ", columns);
+        String insertSql = "INSERT INTO " + table.name() + " (" + columnList + ") VALUES (" + placeholders(columns.length) + ")";
         try (
             Statement selectStatement = sourceConnection.createStatement();
-            ResultSet resultSet = selectStatement.executeQuery("SELECT " + columns + " FROM " + table.name());
+            ResultSet resultSet = selectStatement.executeQuery("SELECT " + columnList + " FROM " + table.name());
             PreparedStatement insertStatement = targetConnection.prepareStatement(insertSql)
         ) {
             int batchSize = 0;
             while (resultSet.next()) {
-                for (int index = 0; index < table.columns().length; index++) {
-                    insertStatement.setObject(index + 1, resultSet.getObject(table.columns()[index]));
+                for (int index = 0; index < columns.length; index++) {
+                    insertStatement.setObject(index + 1, resultSet.getObject(columns[index]));
                 }
                 insertStatement.addBatch();
                 batchSize++;
@@ -152,6 +155,16 @@ final class SqliteMigrationService {
                 insertStatement.executeBatch();
             }
         }
+    }
+
+    private String[] columnsToCopy(Connection sourceConnection, TableCopy table) throws SQLException {
+        java.util.List<String> columns = new java.util.ArrayList<>(java.util.List.of(table.columns()));
+        for (String optionalColumn : table.optionalColumns()) {
+            if (columnExists(sourceConnection, table.name(), optionalColumn)) {
+                columns.add(optionalColumn);
+            }
+        }
+        return columns.toArray(String[]::new);
     }
 
     private File backupSqliteSource(File sourceFile) throws IOException {
@@ -199,13 +212,33 @@ final class SqliteMigrationService {
         }
     }
 
+    private boolean columnExists(Connection connection, String table, String column) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
+        try (ResultSet resultSet = metaData.getColumns(null, null, table, null)) {
+            while (resultSet.next()) {
+                if (column.equalsIgnoreCase(resultSet.getString("COLUMN_NAME"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private String placeholders(int count) {
         return "?, ".repeat(Math.max(0, count - 1)) + "?";
     }
 
-    private record TableCopy(String name, String[] columns, boolean optional) {
+    private record TableCopy(String name, String[] columns, String[] optionalColumns, boolean optional) {
         private TableCopy(String name, String[] columns) {
-            this(name, columns, false);
+            this(name, columns, new String[0], false);
+        }
+
+        private TableCopy(String name, String[] columns, String[] optionalColumns) {
+            this(name, columns, optionalColumns, false);
+        }
+
+        private TableCopy(String name, String[] columns, boolean optional) {
+            this(name, columns, new String[0], optional);
         }
     }
 }

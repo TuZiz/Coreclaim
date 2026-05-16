@@ -45,7 +45,7 @@ public final class ClaimPersistenceRepository {
             SELECT id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                    allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
-                   system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+                   system_managed, creation_type, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
             FROM claims
             WHERE id = ?
             """,
@@ -63,7 +63,7 @@ public final class ClaimPersistenceRepository {
             SELECT id, owner_uuid, owner_name, name, core_visible, world, server_id, center_x, center_y, center_z,
                    min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                    allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight,
-                   system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+                   system_managed, creation_type, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
             FROM claims
             """,
             statement -> {
@@ -236,22 +236,23 @@ public final class ClaimPersistenceRepository {
                     statement.setInt(32, claim.permission(ClaimPermission.TELEPORT) ? 1 : 0);
                     statement.setInt(33, claim.permission(ClaimPermission.FLIGHT) ? 1 : 0);
                     statement.setInt(34, claim.systemManaged() ? 1 : 0);
-                    statement.setInt(35, claim.denyAll() ? 1 : 0);
+                    statement.setString(35, claim.creationType().databaseValue());
+                    statement.setInt(36, claim.denyAll() ? 1 : 0);
                     if (claim.hasTeleportPoint()) {
-                        statement.setDouble(36, claim.teleportX());
-                        statement.setDouble(37, claim.teleportY());
-                        statement.setDouble(38, claim.teleportZ());
-                        statement.setDouble(39, claim.teleportYaw());
-                        statement.setDouble(40, claim.teleportPitch());
+                        statement.setDouble(37, claim.teleportX());
+                        statement.setDouble(38, claim.teleportY());
+                        statement.setDouble(39, claim.teleportZ());
+                        statement.setDouble(40, claim.teleportYaw());
+                        statement.setDouble(41, claim.teleportPitch());
                     } else {
-                        statement.setNull(36, java.sql.Types.DOUBLE);
                         statement.setNull(37, java.sql.Types.DOUBLE);
                         statement.setNull(38, java.sql.Types.DOUBLE);
                         statement.setNull(39, java.sql.Types.DOUBLE);
                         statement.setNull(40, java.sql.Types.DOUBLE);
+                        statement.setNull(41, java.sql.Types.DOUBLE);
                     }
-                    statement.setLong(41, claim.lastExpandedAt());
-                    statement.setLong(42, claim.createdAt());
+                    statement.setLong(42, claim.lastExpandedAt());
+                    statement.setLong(43, claim.createdAt());
                 }
             );
             for (Map.Entry<UUID, ClaimMemberSettings> entry : claim.memberSettings().entrySet()) {

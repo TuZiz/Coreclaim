@@ -1,6 +1,7 @@
 package com.coreclaim.claim.persistence;
 
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimCreationType;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimMemberSettings;
@@ -55,6 +56,7 @@ final class ClaimRowMapper {
             resultSet.getInt("allow_teleport") != 0,
             resultSet.getInt("allow_flight") != 0,
             resultSet.getInt("system_managed") != 0,
+            ClaimCreationType.fromDatabase(resultSet.getString("creation_type")),
             resultSet.getInt("deny_all") != 0,
             nullableDouble(resultSet, "tp_x"),
             nullableDouble(resultSet, "tp_y"),
@@ -103,6 +105,7 @@ final class ClaimRowMapper {
             claim.permission(ClaimPermission.TELEPORT),
             claim.permission(ClaimPermission.FLIGHT),
             claim.systemManaged(),
+            claim.creationType(),
             claim.denyAll(),
             claim.teleportX(),
             claim.teleportY(),

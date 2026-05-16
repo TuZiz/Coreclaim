@@ -1,6 +1,7 @@
 package com.coreclaim.claim.mutation;
 
 import java.util.UUID;
+import com.coreclaim.model.ClaimCreationType;
 import org.bukkit.Location;
 import org.bukkit.World;
 
@@ -22,8 +23,52 @@ public record ClaimCreationRequest(
     int north,
     boolean fullHeight,
     boolean systemManaged,
+    ClaimCreationType creationType,
     ClaimCreationOptions options
 ) {
+
+    public ClaimCreationRequest(
+        UUID owner,
+        String ownerName,
+        String name,
+        String world,
+        int centerX,
+        int centerY,
+        int centerZ,
+        int worldMinY,
+        int worldMaxY,
+        int minY,
+        int maxY,
+        int east,
+        int south,
+        int west,
+        int north,
+        boolean fullHeight,
+        boolean systemManaged,
+        ClaimCreationOptions options
+    ) {
+        this(
+            owner,
+            ownerName,
+            name,
+            world,
+            centerX,
+            centerY,
+            centerZ,
+            worldMinY,
+            worldMaxY,
+            minY,
+            maxY,
+            east,
+            south,
+            west,
+            north,
+            fullHeight,
+            systemManaged,
+            ClaimCreationType.UNKNOWN_LEGACY,
+            options
+        );
+    }
 
     public static ClaimCreationRequest core(
         UUID owner,
@@ -52,6 +97,7 @@ public record ClaimCreationRequest(
             initialDistance,
             true,
             false,
+            ClaimCreationType.CORE,
             options
         );
     }
@@ -89,6 +135,7 @@ public record ClaimCreationRequest(
             north,
             false,
             systemManaged,
+            systemManaged ? ClaimCreationType.SYSTEM_SELECTION : ClaimCreationType.SELECTION,
             options
         );
     }

@@ -11,9 +11,10 @@ class UpsertSqlFactoryTest {
     void claimUpsertSqlIncludesSpawnColumnsAndExpectedPlaceholders() {
         String sql = new UpsertSqlFactory(true).claimUpsertSql();
         assertTrue(sql.contains("name_key"));
+        assertTrue(sql.contains("creation_type"));
         assertTrue(sql.contains("allow_animal_spawn"));
         assertTrue(sql.contains("allow_monster_spawn"));
-        assertEquals(42L, sql.chars().filter(ch -> ch == '?').count());
+        assertEquals(43L, sql.chars().filter(ch -> ch == '?').count());
     }
 
     @Test

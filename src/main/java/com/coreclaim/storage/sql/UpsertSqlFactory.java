@@ -85,8 +85,8 @@ public final class UpsertSqlFactory {
                     id, owner_uuid, owner_name, name, name_key, core_visible, world, server_id, center_x, center_y, center_z,
                     min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
                     allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone,
-                    allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, creation_type, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     owner_uuid = VALUES(owner_uuid),
                     owner_name = VALUES(owner_name),
@@ -121,6 +121,7 @@ public final class UpsertSqlFactory {
                     allow_teleport = VALUES(allow_teleport),
                     allow_flight = VALUES(allow_flight),
                     system_managed = VALUES(system_managed),
+                    creation_type = VALUES(creation_type),
                     deny_all = VALUES(deny_all),
                     tp_x = VALUES(tp_x),
                     tp_y = VALUES(tp_y),
@@ -135,8 +136,8 @@ public final class UpsertSqlFactory {
             INSERT INTO claims (
                 id, owner_uuid, owner_name, name, name_key, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, creation_type, deny_all, tp_x, tp_y, tp_z, tp_yaw, tp_pitch, last_expanded_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 owner_uuid = excluded.owner_uuid,
                 owner_name = excluded.owner_name,
@@ -171,6 +172,7 @@ public final class UpsertSqlFactory {
                 allow_teleport = excluded.allow_teleport,
                 allow_flight = excluded.allow_flight,
                 system_managed = excluded.system_managed,
+                creation_type = excluded.creation_type,
                 deny_all = excluded.deny_all,
                 tp_x = excluded.tp_x,
                 tp_y = excluded.tp_y,

@@ -107,4 +107,34 @@ class PluginConfigLoaderTest {
         assertTrue(config.claimSync().hasRedisMessageSecret());
         assertEquals("secret-value", config.claimSync().redisMessageSecret());
     }
+
+    @Test
+    void claimExpansionPricingDefaultsLoadWhenConfigMissing() {
+        PluginConfig config = new PluginConfig(new YamlConfiguration(), new YamlConfiguration());
+
+        assertTrue(config.claimExpansionPricing().legacyFullHeightClaimsAsCore());
+        assertTrue(config.claimExpansionPricing().coreFullHeightEnabled());
+        assertEquals(96, config.claimExpansionPricing().effectiveHeightCap());
+        assertEquals(0.35D, config.claimExpansionPricing().heightPriceFactor(), 0.000001D);
+        assertEquals(0.55D, config.claimExpansionPricing().fullHeightDiscount(), 0.000001D);
+        assertEquals(-1D, config.claimExpansionPricing().maximumCostPerExpansion(), 0.000001D);
+    }
+
+    @Test
+    void claimExpansionPricingInvalidValuesAreClamped() {
+        YamlConfiguration rawConfig = new YamlConfiguration();
+        rawConfig.set("claim-expansion-pricing.core-full-height.effective-height-cap", 0);
+        rawConfig.set("claim-expansion-pricing.core-full-height.height-price-factor", -1D);
+        rawConfig.set("claim-expansion-pricing.core-full-height.full-height-discount", -2D);
+        rawConfig.set("claim-expansion-pricing.core-full-height.minimum-cost", -5D);
+        rawConfig.set("claim-expansion-pricing.core-full-height.maximum-cost-per-expansion", 0D);
+
+        PluginConfig config = new PluginConfig(rawConfig, new YamlConfiguration());
+
+        assertEquals(96, config.claimExpansionPricing().effectiveHeightCap());
+        assertEquals(0D, config.claimExpansionPricing().heightPriceFactor(), 0.000001D);
+        assertEquals(0D, config.claimExpansionPricing().fullHeightDiscount(), 0.000001D);
+        assertEquals(0D, config.claimExpansionPricing().minimumCost(), 0.000001D);
+        assertEquals(-1D, config.claimExpansionPricing().maximumCostPerExpansion(), 0.000001D);
+    }
 }

@@ -1,6 +1,7 @@
 package com.coreclaim.claim.mutation;
 
 import com.coreclaim.model.Claim;
+import com.coreclaim.model.ClaimCreationType;
 import com.coreclaim.sync.ClaimSyncEventType;
 import java.time.Instant;
 import java.util.logging.Level;
@@ -66,6 +67,7 @@ final class ClaimCreationMutations {
             request.north(),
             request.fullHeight(),
             request.systemManaged(),
+            request.creationType(),
             effectiveOptions
         );
         synchronized (context.runtime.mutationLock()) {
@@ -96,8 +98,8 @@ final class ClaimCreationMutations {
             INSERT INTO claims (
                 owner_uuid, owner_name, name, name_key, core_visible, world, server_id, center_x, center_y, center_z,
                 min_y, max_y, full_height, radius, east, south, west, north, enter_message, leave_message,
-                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, last_expanded_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                allow_place, allow_break, allow_interact, allow_container, allow_mob_interact, allow_animal_spawn, allow_monster_spawn, allow_redstone, allow_explosion, allow_bucket, allow_teleport, allow_flight, system_managed, creation_type, last_expanded_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             statement -> {
                 statement.setString(1, request.owner().toString());
@@ -133,8 +135,9 @@ final class ClaimCreationMutations {
                 statement.setInt(31, 0);
                 statement.setInt(32, 1);
                 statement.setInt(33, request.systemManaged() ? 1 : 0);
-                statement.setLong(34, 0L);
-                statement.setLong(35, createdAt);
+                statement.setString(34, creationType(request).databaseValue());
+                statement.setLong(35, 0L);
+                statement.setLong(36, createdAt);
             }
         );
     }
@@ -174,6 +177,7 @@ final class ClaimCreationMutations {
             false,
             true,
             request.systemManaged(),
+            creationType(request),
             false,
             null,
             null,
@@ -182,6 +186,10 @@ final class ClaimCreationMutations {
             null,
             0L
         );
+    }
+
+    private ClaimCreationType creationType(ClaimCreationRequest request) {
+        return request.creationType() == null ? ClaimCreationType.UNKNOWN_LEGACY : request.creationType();
     }
 
     private void registerCommittedClaim(Claim claim) {

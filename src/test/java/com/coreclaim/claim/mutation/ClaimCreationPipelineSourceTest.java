@@ -111,6 +111,17 @@ class ClaimCreationPipelineSourceTest {
         assertFalse(registerMethod.contains("throw exception"));
     }
 
+    @Test
+    void creationTypeIsWrittenForCoreSelectionAndSystemSelection() throws IOException {
+        String request = read("src/main/java/com/coreclaim/claim/mutation/ClaimCreationRequest.java");
+        String mutation = read("src/main/java/com/coreclaim/claim/mutation/ClaimCreationMutations.java");
+
+        assertTrue(request.contains("ClaimCreationType.CORE"));
+        assertTrue(request.contains("systemManaged ? ClaimCreationType.SYSTEM_SELECTION : ClaimCreationType.SELECTION"));
+        assertTrue(mutation.contains("creation_type"));
+        assertTrue(mutation.contains("statement.setString(34, creationType(request).databaseValue())"));
+    }
+
     private static String read(String path) throws IOException {
         return Files.readString(Path.of(path));
     }

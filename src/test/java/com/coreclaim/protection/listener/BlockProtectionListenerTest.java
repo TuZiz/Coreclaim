@@ -6,7 +6,12 @@ import static com.coreclaim.protection.listener.BlockProtectionListener.PreCance
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.DENY;
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.IGNORE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 class BlockProtectionListenerTest {
@@ -24,6 +29,14 @@ class BlockProtectionListenerTest {
         assertEquals(
             DENY,
             BlockProtectionListener.resolvePreCancelledInteraction(true, true, false, false, false, true)
+        );
+    }
+
+    @Test
+    void preCancelledCakeAllowsBypassPlayers() {
+        assertEquals(
+            ALLOW_CAKE_CONSUMPTION,
+            BlockProtectionListener.resolvePreCancelledInteraction(true, true, false, true, false, false)
         );
     }
 
@@ -73,5 +86,26 @@ class BlockProtectionListenerTest {
             ALLOW_BLOCK_DRIVEN_TOOL_CHANGE,
             BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, true, true, false, false, false)
         );
+    }
+
+    @Test
+    void blockDrivenToolChangesUseCompatApplierInAllAllowedBranches() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/coreclaim/protection/listener/BlockProtectionListener.java"));
+
+        assertFalse(source.contains("allowVanillaBlockDrivenToolChange"));
+        assertTrue(occurrences(source, "ProtectionInteractionCompat.applyBlockDrivenToolChange(event)") >= 3);
+        assertTrue(source.contains("\"tool-change-block-use-allow\", \"permission=\" + toolChangePermission + \" applied=\" + applied"));
+        assertTrue(source.contains("\"bypass-block-tool\", \"applied=\" + applied"));
+        assertTrue(source.contains("\"pre-cancel-block-tool-allow\", \"tool=\" + formatDecision(toolChangeDecision) + \" applied=\" + applied"));
+    }
+
+    private static int occurrences(String source, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = source.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }

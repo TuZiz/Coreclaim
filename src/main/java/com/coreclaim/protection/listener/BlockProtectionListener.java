@@ -160,8 +160,8 @@ public final class BlockProtectionListener implements Listener {
                 event.setUseItemInHand(Event.Result.ALLOW);
             }
             if (blockDrivenToolChange) {
-                boolean allowed = allowVanillaBlockDrivenToolChange(event);
-                debugInteract(event, claim, "tool-change-block-use-allow", "permission=" + toolChangePermission + " vanilla=" + allowed);
+                boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
+                debugInteract(event, claim, "tool-change-block-use-allow", "permission=" + toolChangePermission + " applied=" + applied);
             }
             support.recordBlockInteraction(claim.get(), event.getPlayer(), toolChangePermission);
             return;
@@ -227,8 +227,8 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         if (support.isBlockDrivenToolChange(clickedType, event.getItem())) {
-            boolean allowed = allowVanillaBlockDrivenToolChange(event);
-            debugInteract(event, claim, "bypass-block-tool", "vanilla=" + allowed);
+            boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
+            debugInteract(event, claim, "bypass-block-tool", "applied=" + applied);
             return;
         }
         debugInteract(event, claim, "bypass-skip", null);
@@ -307,7 +307,7 @@ public final class BlockProtectionListener implements Listener {
                 debugInteract(event, claim, "pre-cancel-axe-strip-allow", "canAccess=" + canAccess);
             }
             case ALLOW_BLOCK_DRIVEN_TOOL_CHANGE -> {
-                boolean allowed = allowVanillaBlockDrivenToolChange(event);
+                boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
                 if (!bypassing) {
                     support.recordBlockInteraction(
                         claim.get(),
@@ -315,7 +315,7 @@ public final class BlockProtectionListener implements Listener {
                         toolChangePermission == null ? ClaimPermission.INTERACT : toolChangePermission
                     );
                 }
-                debugInteract(event, claim, "pre-cancel-block-tool-allow", "tool=" + formatDecision(toolChangeDecision) + " vanilla=" + allowed);
+                debugInteract(event, claim, "pre-cancel-block-tool-allow", "tool=" + formatDecision(toolChangeDecision) + " applied=" + applied);
             }
             case DENY -> {
                 event.setCancelled(true);
@@ -463,16 +463,6 @@ public final class BlockProtectionListener implements Listener {
 
     private static String formatDecision(AuthorizationDecision decision) {
         return decision.source() + "/" + decision.allowed();
-    }
-
-    private static boolean allowVanillaBlockDrivenToolChange(PlayerInteractEvent event) {
-        if (event.getClickedBlock() == null) {
-            return false;
-        }
-        event.setCancelled(false);
-        event.setUseInteractedBlock(Event.Result.DENY);
-        event.setUseItemInHand(Event.Result.ALLOW);
-        return true;
     }
 
     private boolean shouldLogProtectionDebug(

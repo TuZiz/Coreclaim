@@ -4,6 +4,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Orientable;
@@ -16,6 +17,9 @@ import org.bukkit.block.data.type.Stairs;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 
 final class ProtectionInteractionCompat {
 
@@ -34,24 +38,113 @@ final class ProtectionInteractionCompat {
             return false;
         }
         Player player = event.getPlayer();
-        if (player.getGameMode() == GameMode.SPECTATOR || player.getFoodLevel() >= 20) {
-            allowCakeConsumption(event);
+        return applyCakeConsumption(new CakeConsumptionAccess() {
+            @Override
+            public GameMode gameMode() {
+                return player.getGameMode();
+            }
+
+            @Override
+            public int foodLevel() {
+                return player.getFoodLevel();
+            }
+
+            @Override
+            public void foodLevel(int foodLevel) {
+                player.setFoodLevel(foodLevel);
+            }
+
+            @Override
+            public float saturation() {
+                return player.getSaturation();
+            }
+
+            @Override
+            public void saturation(float saturation) {
+                player.setSaturation(saturation);
+            }
+
+            @Override
+            public Cake cake() {
+                return cake;
+            }
+
+            @Override
+            public void updateCake(Cake cake) {
+                block.setBlockData(cake, true);
+            }
+
+            @Override
+            public void removeCake() {
+                block.setType(Material.AIR, true);
+            }
+
+            @Override
+            public void playEatSound() {
+                playSound(block, "ENTITY_GENERIC_EAT", "ENTITY_PLAYER_BURP");
+            }
+
+            @Override
+            public void allowVanilla() {
+                allowCakeConsumption(event);
+            }
+
+            @Override
+            public void finishApplied() {
+                event.setUseInteractedBlock(Event.Result.DENY);
+                event.setUseItemInHand(Event.Result.DENY);
+                event.setCancelled(true);
+            }
+        });
+    }
+
+    static boolean applyCakeConsumption(CakeConsumptionAccess access) {
+        Cake cake = access.cake();
+        if (cake == null) {
+            return false;
+        }
+        if (access.gameMode() == GameMode.SPECTATOR) {
+            access.allowVanilla();
             return false;
         }
 
-        player.setFoodLevel(Math.min(20, player.getFoodLevel() + 2));
-        player.setSaturation(Math.min(player.getFoodLevel(), player.getSaturation() + 0.4F));
+        if (access.gameMode() != GameMode.CREATIVE && access.foodLevel() < 20) {
+            access.foodLevel(Math.min(20, access.foodLevel() + 2));
+            access.saturation(Math.min(access.foodLevel(), access.saturation() + 0.4F));
+        }
         if (cake.getBites() >= cake.getMaximumBites()) {
-            block.setType(Material.AIR, true);
+            access.removeCake();
         } else {
             cake.setBites(cake.getBites() + 1);
-            block.setBlockData(cake, true);
+            access.updateCake(cake);
         }
-        playSound(block, "ENTITY_GENERIC_EAT", "ENTITY_PLAYER_BURP");
-        event.setUseInteractedBlock(Event.Result.DENY);
-        event.setUseItemInHand(Event.Result.DENY);
-        event.setCancelled(true);
+        access.playEatSound();
+        access.finishApplied();
         return true;
+    }
+
+    interface CakeConsumptionAccess {
+        GameMode gameMode();
+
+        int foodLevel();
+
+        void foodLevel(int foodLevel);
+
+        float saturation();
+
+        void saturation(float saturation);
+
+        Cake cake();
+
+        void updateCake(Cake cake);
+
+        void removeCake();
+
+        void playEatSound();
+
+        void allowVanilla();
+
+        void finishApplied();
     }
 
     static boolean applyAxeStripping(PlayerInteractEvent event, ProtectionRuleSupport support) {
@@ -115,12 +208,40 @@ final class ProtectionInteractionCompat {
             return false;
         }
         BlockData oldData = block.getBlockData();
+        ItemStack[] inventoryContents = snapshotInventoryContents(block.getState());
         BlockData newData = targetMaterial.createBlockData();
         copyCommonState(oldData, newData);
         block.setBlockData(newData, true);
+        restoreInventoryContents(block.getState(), inventoryContents);
         playSound(block, primarySound, fallbackSounds);
         finishAppliedToolChange(event);
         return true;
+    }
+
+    private static ItemStack[] snapshotInventoryContents(BlockState state) {
+        if (!(state instanceof InventoryHolder holder)) {
+            return null;
+        }
+        ItemStack[] contents = holder.getInventory().getContents();
+        ItemStack[] copy = new ItemStack[contents.length];
+        for (int i = 0; i < contents.length; i++) {
+            copy[i] = contents[i] == null ? null : contents[i].clone();
+        }
+        return copy;
+    }
+
+    private static void restoreInventoryContents(BlockState state, ItemStack[] contents) {
+        if (contents == null || !(state instanceof InventoryHolder holder)) {
+            return;
+        }
+        Inventory inventory = holder.getInventory();
+        ItemStack[] restored = inventory.getContents();
+        int limit = Math.min(restored.length, contents.length);
+        for (int i = 0; i < limit; i++) {
+            restored[i] = contents[i] == null ? null : contents[i].clone();
+        }
+        inventory.setContents(restored);
+        state.update(true, false);
     }
 
     private static void finishAppliedToolChange(PlayerInteractEvent event, String primarySound, String... fallbackSounds) {

@@ -56,6 +56,10 @@ class ProtectionRuleSupportTest {
         assertTrue(support.isBlockDrivenToolChange(oxidizedCopperChest, new ItemStack(Material.STONE_AXE)));
         assertFalse(support.isBlockDrivenToolChange(oxidizedCopperChest, new ItemStack(Material.STICK)));
         assertEquals(
+            ClaimPermission.BREAK,
+            support.requiredPermissionForBlockToolChange(oxidizedCopperChest, new ItemStack(Material.STONE_AXE))
+        );
+        assertEquals(
             Material.matchMaterial("WEATHERED_COPPER_CHEST"),
             ProtectionMaterialRules.scrapedCopperChestMaterial(oxidizedCopperChest)
         );

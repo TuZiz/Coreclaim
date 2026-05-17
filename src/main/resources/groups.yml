@@ -9,40 +9,74 @@
 default:
   # 显示名称，用于提示和信息展示。
   display-name: '&f默认'
+
   # 优先级。数值越高越优先。
   priority: 0
+
   # 进入该组需要的权限；空字符串表示无需权限。
   permission: ''
+
   # 使用领地核心创建时的初始水平距离。
+  # 8 = 初始 17x17，全高度保护。
+  # 作为玩家第一块基础领地，核心创建免费。
   initial-distance: 8
-  # 最大可扩展距离；0 表示不限制。
-  max-distance: 0
+
+  # 最大可扩展距离。
+  # 64 = 最大约 129x129 水平范围。
+  # 不建议默认玩家无限扩展，否则后期地图占用过大。
+  max-distance: 64
+
   # 玩家最多可拥有的普通领地数量。
   max-claims: 5
-  # 使用领地核心创建时，每个方块的价格。
-  core-create-price-per-block: 0.0
-  # 使用金锄头选区创建时，每个方块的价格。
-  selection-create-price-per-block: 0.16
-  # 扩建领地时，每个新增方块的价格。
-  expand-price-per-block: 16.0
 
-# VIP 示例组
+  # 使用领地核心创建时，每个方块的价格。
+  # 核心创建免费，主要通过后续扩建消耗金币。
+  core-create-price-per-block: 0.0
+
+  # 使用金锄头选区创建时，每个方块的价格。
+  # 100x50x100 = 500000 方块
+  # 500000 × 0.16 = 80000 金币
+  selection-create-price-per-block: 0.16
+
+  # 扩建领地时，每个新增方块的价格。
+  # 比锄头直接创建略贵，鼓励玩家提前规划。
+  # 从 10x10x10 扩到 100x50x100:
+  # 新增 499000 方块 × 0.20 = 99800 金币
+  expand-price-per-block: 0.20
+
+
+# VIP 玩家组
 vip:
   # VIP 显示名称。
   display-name: '&6VIP'
+
   # 比 default 高，所以有权限的玩家会优先使用 VIP 规则。
   priority: 100
+
   # 拥有该权限的玩家会进入 VIP 组。
   permission: 'coreclaim.group.vip'
+
   # VIP 使用核心创建时的初始水平距离。
+  # 12 = 初始 25x25，全高度保护。
   initial-distance: 12
-  # 0 表示不限制最大扩展距离。
-  max-distance: 0
+
+  # VIP 最大可扩展距离。
+  # 96 = 最大约 193x193 水平范围。
+  max-distance: 96
+
   # VIP 可拥有的普通领地数量。
   max-claims: 8
-  # VIP 核心创建价格。
+
+  # VIP 核心创建免费。
   core-create-price-per-block: 0.0
-  # VIP 选区创建价格。
+
+  # VIP 使用金锄头选区创建时，每个方块的价格。
+  # 100x50x100 = 500000 方块
+  # 500000 × 0.12 = 60000 金币
   selection-create-price-per-block: 0.12
+
   # VIP 扩建价格。
-  expand-price-per-block: 12.0
+  # 比 VIP 直接创建略贵，但低于默认玩家扩建价格。
+  # 从 10x10x10 扩到 100x50x100:
+  # 新增 499000 方块 × 0.16 = 79840 金币
+  expand-price-per-block: 0.16

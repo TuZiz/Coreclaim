@@ -7,9 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Cake;
+import org.bukkit.block.data.type.Chest;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 
 class ProtectionInteractionCompatTest {
@@ -75,6 +80,51 @@ class ProtectionInteractionCompatTest {
         assertTrue(access.removedCake);
         assertFalse(access.updatedCake);
         assertTrue(access.finishedApplied);
+    }
+
+    @Test
+    void containerContentsAreClonedTruncatedAndPaddedForSnapshotRestore() {
+        ItemStack diamond = new ItemStack(Material.DIAMOND, 3);
+        ItemStack emerald = new ItemStack(Material.EMERALD, 5);
+
+        ItemStack[] truncated = ProtectionInteractionCompat.cloneContentsForSize(
+            new ItemStack[] {diamond, emerald},
+            1
+        );
+        assertEquals(1, truncated.length);
+        assertEquals(Material.DIAMOND, truncated[0].getType());
+        assertFalse(diamond == truncated[0]);
+
+        diamond.setAmount(1);
+        assertEquals(3, truncated[0].getAmount());
+
+        ItemStack[] padded = ProtectionInteractionCompat.cloneContentsForSize(
+            new ItemStack[] {emerald},
+            3
+        );
+        assertEquals(3, padded.length);
+        assertEquals(Material.EMERALD, padded[0].getType());
+        assertEquals(null, padded[1]);
+        assertEquals(null, padded[2]);
+    }
+
+    @Test
+    void doubleChestPairDirectionFollowsBukkitChestRules() {
+        assertEquals(BlockFace.EAST, ProtectionInteractionCompat.pairedChestFace(Chest.Type.LEFT, BlockFace.NORTH));
+        assertEquals(BlockFace.WEST, ProtectionInteractionCompat.pairedChestFace(Chest.Type.RIGHT, BlockFace.NORTH));
+        assertEquals(BlockFace.SOUTH, ProtectionInteractionCompat.pairedChestFace(Chest.Type.LEFT, BlockFace.EAST));
+        assertEquals(null, ProtectionInteractionCompat.pairedChestFace(Chest.Type.SINGLE, BlockFace.NORTH));
+    }
+
+    @Test
+    void containerSnapshotsUseBukkitSnapshotInventoryApi() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/coreclaim/protection/listener/ProtectionInteractionCompat.java"));
+
+        assertTrue(source.contains("container.getSnapshotInventory()"));
+        assertTrue(source.contains("ContainerSnapshot.capture(block)"));
+        assertTrue(source.contains("setDoubleChestMaterialPreservingContainers(event, block, targetMaterial)"));
+        assertFalse(source.contains("InventoryHolder"));
+        assertFalse(source.contains("holder.getInventory()"));
     }
 
     private static final class CakeAccess implements ProtectionInteractionCompat.CakeConsumptionAccess {

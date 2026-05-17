@@ -66,6 +66,40 @@ class ProtectionRuleSupportTest {
     }
 
     @Test
+    void copperChestWeatheringAndWaxingMappingsPreserveContainerTargets() {
+        Material oxidizedCopperChest = Material.matchMaterial("OXIDIZED_COPPER_CHEST");
+        Material weatheredCopperChest = Material.matchMaterial("WEATHERED_COPPER_CHEST");
+        Material exposedCopperChest = Material.matchMaterial("EXPOSED_COPPER_CHEST");
+        Material copperChest = Material.matchMaterial("COPPER_CHEST");
+        Material waxedCopperChest = Material.matchMaterial("WAXED_COPPER_CHEST");
+        if (oxidizedCopperChest == null || weatheredCopperChest == null || exposedCopperChest == null
+            || copperChest == null || waxedCopperChest == null) {
+            return;
+        }
+
+        assertEquals(
+            weatheredCopperChest,
+            ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(oxidizedCopperChest, new ItemStack(Material.STONE_AXE))
+        );
+        assertEquals(
+            exposedCopperChest,
+            ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(weatheredCopperChest, new ItemStack(Material.STONE_AXE))
+        );
+        assertEquals(
+            copperChest,
+            ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(exposedCopperChest, new ItemStack(Material.STONE_AXE))
+        );
+        assertEquals(
+            waxedCopperChest,
+            ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(copperChest, new ItemStack(Material.HONEYCOMB))
+        );
+        assertEquals(
+            copperChest,
+            ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(waxedCopperChest, new ItemStack(Material.STONE_AXE))
+        );
+    }
+
+    @Test
     void copperWaxScrapeAndTerrainToolChangesAreBlockDriven() {
         assertTrue(support.isBlockDrivenToolChange(Material.EXPOSED_COPPER, new ItemStack(Material.STONE_AXE)));
         assertTrue(support.isBlockDrivenToolChange(Material.COPPER_BLOCK, new ItemStack(Material.HONEYCOMB)));

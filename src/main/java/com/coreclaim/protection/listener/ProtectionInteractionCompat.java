@@ -4,7 +4,9 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Orientable;
@@ -18,7 +20,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 final class ProtectionInteractionCompat {
@@ -207,41 +208,147 @@ final class ProtectionInteractionCompat {
         if (block == null || targetMaterial == null) {
             return false;
         }
-        BlockData oldData = block.getBlockData();
-        ItemStack[] inventoryContents = snapshotInventoryContents(block.getState());
-        BlockData newData = targetMaterial.createBlockData();
-        copyCommonState(oldData, newData);
-        block.setBlockData(newData, true);
-        restoreInventoryContents(block.getState(), inventoryContents);
+        if (setDoubleChestMaterialPreservingContainers(event, block, targetMaterial)) {
+            playSound(block, primarySound, fallbackSounds);
+            finishAppliedToolChange(event);
+            return true;
+        }
+        setSingleBlockMaterialPreservingContainer(block, targetMaterial);
         playSound(block, primarySound, fallbackSounds);
         finishAppliedToolChange(event);
         return true;
     }
 
-    private static ItemStack[] snapshotInventoryContents(BlockState state) {
-        if (!(state instanceof InventoryHolder holder)) {
-            return null;
+    private static void setSingleBlockMaterialPreservingContainer(Block block, Material targetMaterial) {
+        BlockData oldData = block.getBlockData();
+        ContainerSnapshot snapshot = ContainerSnapshot.capture(block);
+        BlockData newData = targetMaterial.createBlockData();
+        copyCommonState(oldData, newData);
+        block.setBlockData(newData, true);
+        if (snapshot != null) {
+            snapshot.restore(block);
         }
-        ItemStack[] contents = holder.getInventory().getContents();
-        ItemStack[] copy = new ItemStack[contents.length];
-        for (int i = 0; i < contents.length; i++) {
+    }
+
+    private static boolean setDoubleChestMaterialPreservingContainers(PlayerInteractEvent event, Block block, Material targetMaterial) {
+        BlockData oldData = block.getBlockData();
+        if (!(oldData instanceof Chest clickedChest) || clickedChest.getType() == Chest.Type.SINGLE) {
+            return false;
+        }
+        BlockFace pairFace = pairedChestFace(clickedChest.getType(), clickedChest.getFacing());
+        if (pairFace == null) {
+            return false;
+        }
+        Block pairedBlock = block.getRelative(pairFace);
+        BlockData pairedData = pairedBlock.getBlockData();
+        if (!(pairedData instanceof Chest pairedChest) || !isMatchingDoubleChestHalf(clickedChest, pairedChest)) {
+            return false;
+        }
+        Material pairedTarget = ProtectionMaterialRules.scrapedOrWaxedCopperMaterial(pairedBlock.getType(), event.getItem());
+        if (pairedTarget != targetMaterial) {
+            return false;
+        }
+
+        ContainerSnapshot clickedSnapshot = ContainerSnapshot.capture(block);
+        ContainerSnapshot pairedSnapshot = ContainerSnapshot.capture(pairedBlock);
+        BlockData newData = targetMaterial.createBlockData();
+        BlockData pairedNewData = targetMaterial.createBlockData();
+        copyCommonState(oldData, newData);
+        copyCommonState(pairedData, pairedNewData);
+        block.setBlockData(newData, true);
+        pairedBlock.setBlockData(pairedNewData, true);
+        if (clickedSnapshot != null) {
+            clickedSnapshot.restore(block);
+        }
+        if (pairedSnapshot != null) {
+            pairedSnapshot.restore(pairedBlock);
+        }
+        return true;
+    }
+
+    static BlockFace pairedChestFace(Chest.Type type, BlockFace facing) {
+        return switch (type) {
+            case LEFT -> rotateYClockwise(facing);
+            case RIGHT -> rotateYCounterClockwise(facing);
+            case SINGLE -> null;
+        };
+    }
+
+    private static boolean isMatchingDoubleChestHalf(Chest clickedChest, Chest pairedChest) {
+        if (clickedChest.getFacing() != pairedChest.getFacing()) {
+            return false;
+        }
+        return clickedChest.getType() == Chest.Type.LEFT && pairedChest.getType() == Chest.Type.RIGHT
+            || clickedChest.getType() == Chest.Type.RIGHT && pairedChest.getType() == Chest.Type.LEFT;
+    }
+
+    private static BlockFace rotateYClockwise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.EAST;
+            case EAST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.WEST;
+            case WEST -> BlockFace.NORTH;
+            default -> null;
+        };
+    }
+
+    private static BlockFace rotateYCounterClockwise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.WEST;
+            case WEST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.EAST;
+            case EAST -> BlockFace.NORTH;
+            default -> null;
+        };
+    }
+
+    static ItemStack[] cloneContentsForSize(ItemStack[] contents, int size) {
+        ItemStack[] copy = new ItemStack[Math.max(0, size)];
+        if (contents == null || copy.length == 0) {
+            return copy;
+        }
+        int limit = Math.min(copy.length, contents.length);
+        for (int i = 0; i < limit; i++) {
             copy[i] = contents[i] == null ? null : contents[i].clone();
         }
         return copy;
     }
 
-    private static void restoreInventoryContents(BlockState state, ItemStack[] contents) {
-        if (contents == null || !(state instanceof InventoryHolder holder)) {
-            return;
+    private static final class ContainerSnapshot {
+        private final ItemStack[] contents;
+        private final String customName;
+        private final String lock;
+
+        private ContainerSnapshot(ItemStack[] contents, String customName, String lock) {
+            this.contents = contents;
+            this.customName = customName;
+            this.lock = lock;
         }
-        Inventory inventory = holder.getInventory();
-        ItemStack[] restored = inventory.getContents();
-        int limit = Math.min(restored.length, contents.length);
-        for (int i = 0; i < limit; i++) {
-            restored[i] = contents[i] == null ? null : contents[i].clone();
+
+        private static ContainerSnapshot capture(Block block) {
+            BlockState state = block.getState();
+            if (!(state instanceof Container container)) {
+                return null;
+            }
+            Inventory inventory = container.getSnapshotInventory();
+            return new ContainerSnapshot(
+                cloneContentsForSize(inventory.getContents(), inventory.getSize()),
+                container.getCustomName(),
+                container.getLock()
+            );
         }
-        inventory.setContents(restored);
-        state.update(true, false);
+
+        private void restore(Block block) {
+            BlockState state = block.getState();
+            if (!(state instanceof Container container)) {
+                return;
+            }
+            Inventory inventory = container.getSnapshotInventory();
+            inventory.setContents(cloneContentsForSize(contents, inventory.getSize()));
+            container.setCustomName(customName);
+            container.setLock(lock);
+            container.update(true, false);
+        }
     }
 
     private static void finishAppliedToolChange(PlayerInteractEvent event, String primarySound, String... fallbackSounds) {

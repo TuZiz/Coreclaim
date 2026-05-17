@@ -127,6 +127,7 @@ public final class BlockProtectionListener implements Listener {
         }
         ClaimPermission toolChangePermission = support.requiredPermissionForBlockToolChange(clickedType, event.getItem());
         if (claim.isPresent() && toolChangePermission != null) {
+            boolean blockDrivenToolChange = support.isBlockDrivenToolChange(clickedType, event.getItem());
             if (support.isAxeStrippingWood(clickedType, event.getItem())) {
                 boolean canAccess = support.claimService().canAccess(claim.get(), event.getPlayer().getUniqueId());
                 if (!canAccess) {
@@ -154,13 +155,13 @@ public final class BlockProtectionListener implements Listener {
                 debugInteract(event, claim, "tool-change-deny", "permission=" + toolChangePermission);
                 return;
             }
-            if (containerInteraction && !support.isBlockDrivenToolChange(clickedType, event.getItem())) {
+            if (containerInteraction && !blockDrivenToolChange) {
                 event.setUseInteractedBlock(Event.Result.DENY);
                 event.setUseItemInHand(Event.Result.ALLOW);
             }
-            if (containerInteraction && support.isBlockDrivenToolChange(clickedType, event.getItem())) {
-                boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
-                debugInteract(event, claim, "tool-change-block-use-allow", "permission=" + toolChangePermission + " applied=" + applied);
+            if (blockDrivenToolChange) {
+                boolean allowed = allowVanillaBlockDrivenToolChange(event);
+                debugInteract(event, claim, "tool-change-block-use-allow", "permission=" + toolChangePermission + " vanilla=" + allowed);
             }
             support.recordBlockInteraction(claim.get(), event.getPlayer(), toolChangePermission);
             return;
@@ -226,8 +227,8 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         if (support.isBlockDrivenToolChange(clickedType, event.getItem())) {
-            boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
-            debugInteract(event, claim, "bypass-block-tool", "applied=" + applied);
+            boolean allowed = allowVanillaBlockDrivenToolChange(event);
+            debugInteract(event, claim, "bypass-block-tool", "vanilla=" + allowed);
             return;
         }
         debugInteract(event, claim, "bypass-skip", null);
@@ -240,7 +241,8 @@ public final class BlockProtectionListener implements Listener {
         }
         boolean cakeConsumption = support.isCakeConsumption(clickedType, event.getItem());
         boolean axeStrippingWood = support.isAxeStrippingWood(clickedType, event.getItem());
-        if (!cakeConsumption && !axeStrippingWood) {
+        boolean blockDrivenToolChange = support.isBlockDrivenToolChange(clickedType, event.getItem());
+        if (!cakeConsumption && !axeStrippingWood && !blockDrivenToolChange) {
             debugInteract(event, claim, "pre-cancel-unknown", "clicked=" + clickedType);
             return;
         }
@@ -255,12 +257,26 @@ public final class BlockProtectionListener implements Listener {
         boolean hasInteractPermission = interactDecision.allowed();
         boolean canAccess = bypassing
             || support.claimService().canAccess(claim.get(), event.getPlayer().getUniqueId());
+        ClaimPermission toolChangePermission = blockDrivenToolChange
+            ? support.requiredPermissionForBlockToolChange(clickedType, event.getItem())
+            : null;
+        AuthorizationDecision toolChangeDecision = toolChangePermission == null
+            ? interactDecision
+            : support.claimService().permissionDecision(
+                claim.get(),
+                event.getPlayer().getUniqueId(),
+                toolChangePermission,
+                bypassing
+            );
+        boolean hasToolChangePermission = toolChangeDecision.allowed();
         PreCancelledInteractionResolution resolution = resolvePreCancelledInteraction(
             true,
             cakeConsumption,
             axeStrippingWood,
+            blockDrivenToolChange,
             bypassing,
             hasInteractPermission,
+            hasToolChangePermission,
             canAccess
         );
         debugInteract(
@@ -269,7 +285,9 @@ public final class BlockProtectionListener implements Listener {
             "pre-cancel-resolve",
             "cake=" + cakeConsumption
                 + " axeStrip=" + axeStrippingWood
+                + " blockTool=" + blockDrivenToolChange
                 + " interact=" + formatDecision(interactDecision)
+                + " tool=" + formatDecision(toolChangeDecision)
                 + " canAccess=" + canAccess
                 + " resolution=" + resolution
         );
@@ -288,10 +306,28 @@ public final class BlockProtectionListener implements Listener {
                 }
                 debugInteract(event, claim, "pre-cancel-axe-strip-allow", "canAccess=" + canAccess);
             }
+            case ALLOW_BLOCK_DRIVEN_TOOL_CHANGE -> {
+                boolean allowed = allowVanillaBlockDrivenToolChange(event);
+                if (!bypassing) {
+                    support.recordBlockInteraction(
+                        claim.get(),
+                        event.getPlayer(),
+                        toolChangePermission == null ? ClaimPermission.INTERACT : toolChangePermission
+                    );
+                }
+                debugInteract(event, claim, "pre-cancel-block-tool-allow", "tool=" + formatDecision(toolChangeDecision) + " vanilla=" + allowed);
+            }
             case DENY -> {
                 event.setCancelled(true);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
-                debugInteract(event, claim, "pre-cancel-deny", "interact=" + formatDecision(interactDecision) + " canAccess=" + canAccess);
+                debugInteract(
+                    event,
+                    claim,
+                    "pre-cancel-deny",
+                    "interact=" + formatDecision(interactDecision)
+                        + " tool=" + formatDecision(toolChangeDecision)
+                        + " canAccess=" + canAccess
+                );
             }
             case IGNORE -> {
                 debugInteract(event, claim, "pre-cancel-ignore", null);
@@ -307,6 +343,28 @@ public final class BlockProtectionListener implements Listener {
         boolean hasInteractPermission,
         boolean canAccess
     ) {
+        return resolvePreCancelledInteraction(
+            claimPresent,
+            cakeConsumption,
+            axeStrippingWood,
+            false,
+            bypassing,
+            hasInteractPermission,
+            false,
+            canAccess
+        );
+    }
+
+    static PreCancelledInteractionResolution resolvePreCancelledInteraction(
+        boolean claimPresent,
+        boolean cakeConsumption,
+        boolean axeStrippingWood,
+        boolean blockDrivenToolChange,
+        boolean bypassing,
+        boolean hasInteractPermission,
+        boolean hasToolChangePermission,
+        boolean canAccess
+    ) {
         if (!claimPresent) {
             return PreCancelledInteractionResolution.IGNORE;
         }
@@ -320,6 +378,11 @@ public final class BlockProtectionListener implements Listener {
                 ? PreCancelledInteractionResolution.ALLOW_AXE_STRIPPING
                 : PreCancelledInteractionResolution.DENY;
         }
+        if (blockDrivenToolChange) {
+            return bypassing || hasToolChangePermission
+                ? PreCancelledInteractionResolution.ALLOW_BLOCK_DRIVEN_TOOL_CHANGE
+                : PreCancelledInteractionResolution.DENY;
+        }
         return PreCancelledInteractionResolution.IGNORE;
     }
 
@@ -327,7 +390,8 @@ public final class BlockProtectionListener implements Listener {
         IGNORE,
         DENY,
         ALLOW_CAKE_CONSUMPTION,
-        ALLOW_AXE_STRIPPING
+        ALLOW_AXE_STRIPPING,
+        ALLOW_BLOCK_DRIVEN_TOOL_CHANGE
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -399,6 +463,16 @@ public final class BlockProtectionListener implements Listener {
 
     private static String formatDecision(AuthorizationDecision decision) {
         return decision.source() + "/" + decision.allowed();
+    }
+
+    private static boolean allowVanillaBlockDrivenToolChange(PlayerInteractEvent event) {
+        if (event.getClickedBlock() == null) {
+            return false;
+        }
+        event.setCancelled(false);
+        event.setUseInteractedBlock(Event.Result.DENY);
+        event.setUseItemInHand(Event.Result.ALLOW);
+        return true;
     }
 
     private boolean shouldLogProtectionDebug(

@@ -100,7 +100,7 @@ final class DatabaseSchemaInitializer {
                 integerType(), integerType(), integerType(), integerType(), integerType(), booleanType(), integerType(),
                 integerType(), integerType(), integerType(), integerType(), messageType(), messageType(), booleanType(),
                 booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), booleanType(),
-                booleanType(), booleanType(), booleanType(), booleanType(), booleanType(), shortTextType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
+                booleanType(), booleanType(), booleanType(), booleanType(), creationTypeType(), booleanType(), doubleType(), doubleType(), doubleType(), doubleType(), doubleType(), longType(), longType(), tableOptions()
             ),
             statement -> {
             }
@@ -131,7 +131,7 @@ final class DatabaseSchemaInitializer {
         ensureColumn("claims", "allow_teleport", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "allow_flight", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "system_managed", booleanType() + " NOT NULL DEFAULT 0");
-        ensureColumn("claims", "creation_type", shortTextType() + " NOT NULL DEFAULT 'UNKNOWN_LEGACY'");
+        ensureColumn("claims", "creation_type", creationTypeType() + " NOT NULL DEFAULT 'UNKNOWN_LEGACY'");
         ensureColumn("claims", "deny_all", booleanType() + " NOT NULL DEFAULT 0");
         ensureColumn("claims", "tp_x", doubleType());
         ensureColumn("claims", "tp_y", doubleType());
@@ -493,6 +493,10 @@ final class DatabaseSchemaInitializer {
 
     private String doubleType() {
         return database.doubleType();
+    }
+
+    private String creationTypeType() {
+        return database.isMySql() ? "VARCHAR(32)" : shortTextType();
     }
 
     private String booleanType() {

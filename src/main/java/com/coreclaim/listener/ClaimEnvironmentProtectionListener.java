@@ -1,5 +1,6 @@
 package com.coreclaim.listener;
 
+import com.coreclaim.config.PluginConfig;
 import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimFlag;
 import com.coreclaim.model.ClaimFlagState;
@@ -8,8 +9,13 @@ import com.coreclaim.cleanup.ClaimCleanupService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.service.ExplosionAuthorizationService;
 import com.coreclaim.util.AdminAccess;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.WeakHashMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -52,18 +58,25 @@ import org.bukkit.inventory.InventoryHolder;
 
 public final class ClaimEnvironmentProtectionListener implements Listener {
 
+    private static final long BLOCK_INVENTORY_LOCATION_CACHE_NANOS = 100_000_000L;
+    private static final long ENTITY_INVENTORY_LOCATION_CACHE_NANOS = 50_000_000L;
+
     private final ClaimService claimService;
     private final ExplosionAuthorizationService explosionAuthorizationService;
     private final ClaimCleanupService claimCleanupService;
+    private final PluginConfig settings;
+    private final Map<Inventory, CachedInventoryLocation> inventoryLocationCache = Collections.synchronizedMap(new WeakHashMap<>());
 
     public ClaimEnvironmentProtectionListener(
         ClaimService claimService,
         ExplosionAuthorizationService explosionAuthorizationService,
-        ClaimCleanupService claimCleanupService
+        ClaimCleanupService claimCleanupService,
+        PluginConfig settings
     ) {
         this.claimService = claimService;
         this.explosionAuthorizationService = explosionAuthorizationService;
         this.claimCleanupService = claimCleanupService;
+        this.settings = settings;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -85,34 +98,39 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onFlow(BlockFromToEvent event) {
+        if (settings != null && !settings.liquidFlowCrossClaimCheck()) {
+            return;
+        }
+        Location from = event.getBlock().getLocation();
+        Location to = event.getToBlock().getLocation();
+        if (sameBlock(from, to)) {
+            return;
+        }
+        if (sameChunk(from, to) && !claimService.hasClaimCandidateAt(from)) {
+            return;
+        }
         if (isLiquidFlowMaterial(event.getBlock().getType())) {
-            if (shouldCancelLiquidFlow(event.getBlock().getLocation(), event.getToBlock().getLocation())) {
+            if (shouldCancelLiquidFlow(from, to)) {
                 event.setCancelled(true);
             }
             return;
         }
-        if (crossesClaimBoundary(event.getBlock().getLocation(), event.getToBlock().getLocation())) {
+        if (crossesClaimBoundary(from, to)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
-        for (Block block : event.getBlocks()) {
-            if (crossesClaimBoundary(block.getLocation(), block.getRelative(event.getDirection()).getLocation())) {
-                event.setCancelled(true);
-                return;
-            }
+        if (shouldCancelPistonMove(event.getBlocks(), event.getDirection())) {
+            event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
-        for (Block block : event.getBlocks()) {
-            if (crossesClaimBoundary(block.getLocation(), block.getRelative(event.getDirection()).getLocation())) {
-                event.setCancelled(true);
-                return;
-            }
+        if (shouldCancelPistonMove(event.getBlocks(), event.getDirection())) {
+            event.setCancelled(true);
         }
     }
 
@@ -200,19 +218,41 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onInventoryMove(InventoryMoveItemEvent event) {
-        Location source = inventoryLocation(event.getSource());
-        Location destination = inventoryLocation(event.getDestination());
+        if (settings != null && !settings.hopperCrossClaimCheck()) {
+            return;
+        }
+        Inventory sourceInventory = event.getSource();
+        Inventory destinationInventory = event.getDestination();
+        if (sourceInventory == null || destinationInventory == null) {
+            return;
+        }
+        Location source = cachedInventoryLocation(sourceInventory);
+        Location destination = cachedInventoryLocation(destinationInventory);
         if (source == null || destination == null) {
             return;
         }
-        if (crossesClaimBoundary(source, destination)) {
+        if (sameBlock(source, destination)) {
+            return;
+        }
+        if (sameChunk(source, destination) && !claimService.hasClaimCandidateAt(source)) {
+            return;
+        }
+        Optional<Claim> sourceClaim = findClaimIfCandidate(source);
+        Optional<Claim> destinationClaim = findClaimIfCandidate(destination);
+        if (!crossesClaimBoundary(source, destination, sourceClaim, destinationClaim)) {
+            return;
+        }
+        if (claimId(sourceClaim) != claimId(destinationClaim)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onInventoryPickup(InventoryPickupItemEvent event) {
-        Location inventoryLocation = inventoryLocation(event.getInventory());
+        if (settings != null && !settings.inventoryPickupCrossClaimCheck()) {
+            return;
+        }
+        Location inventoryLocation = cachedInventoryLocation(event.getInventory());
         Location itemLocation = event.getItem().getLocation();
         if (inventoryLocation == null) {
             return;
@@ -274,8 +314,25 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
     }
 
     private boolean crossesClaimBoundary(Location from, Location to) {
-        Optional<Claim> fromClaim = claimService.findClaim(from);
-        Optional<Claim> toClaim = claimService.findClaim(to);
+        if (sameBlock(from, to)) {
+            return false;
+        }
+        if (sameChunk(from, to) && !claimService.hasClaimCandidateAt(from)) {
+            return false;
+        }
+        Optional<Claim> fromClaim = findClaimIfCandidate(from);
+        Optional<Claim> toClaim = findClaimIfCandidate(to);
+        return crossesClaimBoundary(from, to, fromClaim, toClaim);
+    }
+
+    private boolean crossesClaimBoundary(Location from, Location to, Optional<Claim> fromClaim, Optional<Claim> toClaim) {
+        if (sameBlock(from, to)) {
+            return false;
+        }
+        return crossesClaimBoundary(fromClaim, toClaim);
+    }
+
+    static boolean crossesClaimBoundary(Optional<Claim> fromClaim, Optional<Claim> toClaim) {
         if (fromClaim.isEmpty() && toClaim.isEmpty()) {
             return false;
         }
@@ -283,12 +340,52 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
     }
 
     private boolean shouldCancelLiquidFlow(Location from, Location to) {
-        Optional<Claim> fromClaim = claimService.findClaim(from);
-        Optional<Claim> toClaim = claimService.findClaim(to);
+        if (sameBlock(from, to)) {
+            return false;
+        }
+        if (sameChunk(from, to) && !claimService.hasClaimCandidateAt(from)) {
+            return false;
+        }
+        Optional<Claim> fromClaim = findClaimIfCandidate(from);
+        Optional<Claim> toClaim = findClaimIfCandidate(to);
         if (toClaim.isEmpty() || claimId(fromClaim) == claimId(toClaim)) {
             return false;
         }
         return !isLiquidFlowAllowed(toClaim.get());
+    }
+
+    private boolean shouldCancelPistonMove(java.util.List<Block> blocks, BlockFace direction) {
+        if (settings != null && !settings.pistonCrossClaimCheck()) {
+            return false;
+        }
+        if (blocks == null || blocks.isEmpty() || direction == null) {
+            return false;
+        }
+        Set<BlockMoveKey> checkedPairs = new HashSet<>();
+        for (Block block : blocks) {
+            Location from = block.getLocation();
+            Location to = block.getRelative(direction).getLocation();
+            if (sameBlock(from, to)) {
+                continue;
+            }
+            if (sameChunk(from, to) && !claimService.hasClaimCandidateAt(from)) {
+                continue;
+            }
+            if (!checkedPairs.add(BlockMoveKey.of(from, to))) {
+                continue;
+            }
+            if (crossesClaimBoundary(from, to)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Optional<Claim> findClaimIfCandidate(Location location) {
+        if (!claimService.hasClaimCandidateAt(location)) {
+            return Optional.empty();
+        }
+        return claimService.findClaim(location);
     }
 
     private boolean isLiquidFlowAllowed(Claim claim) {
@@ -371,6 +468,23 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         return resolvedState == ClaimFlagState.ALLOW;
     }
 
+    static boolean sameBlock(Location from, Location to) {
+        if (from == null || to == null || from.getWorld() != to.getWorld()) {
+            return false;
+        }
+        return from.getBlockX() == to.getBlockX()
+            && from.getBlockY() == to.getBlockY()
+            && from.getBlockZ() == to.getBlockZ();
+    }
+
+    static boolean sameChunk(Location from, Location to) {
+        if (from == null || to == null || from.getWorld() != to.getWorld()) {
+            return false;
+        }
+        return (from.getBlockX() >> 4) == (to.getBlockX() >> 4)
+            && (from.getBlockZ() >> 4) == (to.getBlockZ() >> 4);
+    }
+
     static boolean canIgniteProtectedBlock(Claim claim, boolean playerPresent, ClaimPermission permission, boolean playerHasPermission) {
         if (claim == null) {
             return true;
@@ -396,7 +510,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         return authorizedOrigin || sourcePublicExplosion;
     }
 
-    private int claimId(Optional<Claim> claim) {
+    private static int claimId(Optional<Claim> claim) {
         return claim.map(Claim::id).orElse(-1);
     }
 
@@ -411,35 +525,91 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         return fallingBlock.getLocation();
     }
 
+    private Location cachedInventoryLocation(Inventory inventory) {
+        if (inventory == null) {
+            return null;
+        }
+        long now = System.nanoTime();
+        CachedInventoryLocation cached = inventoryLocationCache.get(inventory);
+        if (cached != null && now - cached.createdAtNanos() <= cached.ttlNanos()) {
+            return cloneLocation(cached.location());
+        }
+        ResolvedInventoryLocation resolved = resolveInventoryLocation(inventory);
+        if (resolved != null) {
+            inventoryLocationCache.put(inventory, new CachedInventoryLocation(cloneLocation(resolved.location()), now, resolved.ttlNanos()));
+            return resolved.location();
+        }
+        return null;
+    }
+
     private Location inventoryLocation(Inventory inventory) {
+        ResolvedInventoryLocation resolved = resolveInventoryLocation(inventory);
+        return resolved == null ? null : resolved.location();
+    }
+
+    private ResolvedInventoryLocation resolveInventoryLocation(Inventory inventory) {
         if (inventory == null) {
             return null;
         }
         try {
             Location location = inventory.getLocation();
             if (location != null) {
-                return location;
+                return new ResolvedInventoryLocation(location, BLOCK_INVENTORY_LOCATION_CACHE_NANOS);
             }
         } catch (Throwable ignored) {
         }
         InventoryHolder holder = inventory.getHolder();
         if (holder instanceof BlockState blockState) {
-            return blockState.getLocation();
+            return new ResolvedInventoryLocation(blockState.getLocation(), BLOCK_INVENTORY_LOCATION_CACHE_NANOS);
         }
         if (holder instanceof Entity entity) {
             if (entity instanceof Minecart) {
                 Location railLocation = entity.getLocation().getBlock().getLocation();
-                if (claimService.findClaim(railLocation).isPresent()) {
-                    return railLocation;
+                if (findClaimIfCandidate(railLocation).isPresent()) {
+                    return new ResolvedInventoryLocation(railLocation, ENTITY_INVENTORY_LOCATION_CACHE_NANOS);
                 }
                 Location belowRail = railLocation.clone().subtract(0D, 1D, 0D);
-                if (claimService.findClaim(belowRail).isPresent()) {
-                    return belowRail;
+                if (findClaimIfCandidate(belowRail).isPresent()) {
+                    return new ResolvedInventoryLocation(belowRail, ENTITY_INVENTORY_LOCATION_CACHE_NANOS);
                 }
-                return railLocation;
+                return new ResolvedInventoryLocation(railLocation, ENTITY_INVENTORY_LOCATION_CACHE_NANOS);
             }
-            return entity.getLocation();
+            return new ResolvedInventoryLocation(entity.getLocation(), ENTITY_INVENTORY_LOCATION_CACHE_NANOS);
         }
         return null;
+    }
+
+    private static Location cloneLocation(Location location) {
+        return location == null ? null : location.clone();
+    }
+
+    private record CachedInventoryLocation(Location location, long createdAtNanos, long ttlNanos) {
+    }
+
+    private record ResolvedInventoryLocation(Location location, long ttlNanos) {
+    }
+
+    private record BlockMoveKey(
+        String worldName,
+        int fromX,
+        int fromY,
+        int fromZ,
+        int toX,
+        int toY,
+        int toZ
+    ) {
+
+        static BlockMoveKey of(Location from, Location to) {
+            String worldName = from.getWorld() == null ? "" : from.getWorld().getName();
+            return new BlockMoveKey(
+                worldName,
+                from.getBlockX(),
+                from.getBlockY(),
+                from.getBlockZ(),
+                to.getBlockX(),
+                to.getBlockY(),
+                to.getBlockZ()
+            );
+        }
     }
 }

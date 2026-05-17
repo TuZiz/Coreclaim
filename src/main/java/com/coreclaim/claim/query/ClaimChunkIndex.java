@@ -61,6 +61,25 @@ final class ClaimChunkIndex {
         return candidates;
     }
 
+    static boolean hasCandidates(Map<String, Map<Long, List<Claim>>> index, Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        return hasCandidates(index, location.getWorld().getName(), location.getBlockX(), location.getBlockZ());
+    }
+
+    static boolean hasCandidates(Map<String, Map<Long, List<Claim>>> index, String worldName, int blockX, int blockZ) {
+        if (worldName == null || worldName.isBlank()) {
+            return false;
+        }
+        Map<Long, List<Claim>> worldIndex = index.get(worldName);
+        if (worldIndex == null || worldIndex.isEmpty()) {
+            return false;
+        }
+        List<Claim> candidates = worldIndex.get(chunkKey(blockX >> 4, blockZ >> 4));
+        return candidates != null && !candidates.isEmpty();
+    }
+
     private static long chunkKey(int chunkX, int chunkZ) {
         return (((long) chunkX) << 32) ^ (chunkZ & 0xffffffffL);
     }

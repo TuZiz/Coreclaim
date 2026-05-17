@@ -1,6 +1,8 @@
 package com.coreclaim.claim.query;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coreclaim.claim.ClaimRuntime;
 import com.coreclaim.model.Claim;
@@ -51,6 +53,19 @@ class ClaimLookupServiceTest {
         assertEquals("基地", lookupService.validateAvailableClaimName("基地", 1));
     }
 
+    @Test
+    void hasClaimCandidateAtUsesChunkIndexWithoutPreciseContainment() {
+        Map<Integer, Claim> claims = new HashMap<>();
+        claims.put(1, claim(1, "基地"));
+        ClaimRuntime runtime = new ClaimRuntime(null, null, null, claims, new Object());
+        runtime.setClaimChunkIndex(ClaimChunkIndex.rebuild(claims.values(), ignored -> true));
+        ClaimLookupService lookupService = new ClaimLookupService(runtime, null);
+
+        assertTrue(lookupService.hasClaimCandidateAt("world", 0, 0));
+        assertFalse(lookupService.hasClaimCandidateAt("world", 1000, 1000));
+        assertFalse(lookupService.hasClaimCandidateAt("other", 0, 0));
+    }
+
     private Claim claim(int id, String name) {
         return new Claim(
             id,
@@ -95,4 +110,5 @@ class ClaimLookupServiceTest {
             0L
         );
     }
+
 }

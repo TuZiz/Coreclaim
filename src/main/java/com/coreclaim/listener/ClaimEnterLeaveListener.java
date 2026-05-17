@@ -87,6 +87,9 @@ public final class ClaimEnterLeaveListener implements Listener {
         if (event.getTo() == null) {
             return;
         }
+        if (sameBlock(event.getFrom(), event.getTo())) {
+            return;
+        }
         if (handleLocationChange(event.getPlayer(), event.getFrom(), event.getTo(), "teleport")) {
             event.setCancelled(true);
         }
@@ -178,10 +181,6 @@ public final class ClaimEnterLeaveListener implements Listener {
         Claim toClaim = resolveTargetClaim(session, fromClaim, to);
         int fromId = fromClaim == null ? -1 : fromClaim.id();
         int toId = toClaim == null ? -1 : toClaim.id();
-        Claim fromNotifyClaim = resolveNotifyClaim(from);
-        Claim toNotifyClaim = resolveNotifyClaim(to);
-        int fromNotifyId = fromNotifyClaim == null ? -1 : fromNotifyClaim.id();
-        int toNotifyId = toNotifyClaim == null ? -1 : toNotifyClaim.id();
 
         if (fromId != toId && isBlockedEntry(player, toClaim)) {
             notifyBlockedEntry(player, playerId, toClaim);
@@ -193,6 +192,17 @@ public final class ClaimEnterLeaveListener implements Listener {
         session.currentClaimId = toClaim == null ? null : toClaim.id();
         updateFlightState(player, session, toClaim, reason + (fromId == toId ? "-same-claim" : "-claim-change"));
         updateClaimTime(player, session, toClaim);
+
+        int lastNotifyId = session.lastNotifyClaimId == null ? -1 : session.lastNotifyClaimId;
+        if (canSkipNotifyResolution(from, to, fromId, toId, lastNotifyId)) {
+            cleanupSession(playerId, session);
+            return false;
+        }
+        Claim fromNotifyClaim = lastNotifyId >= 0 ? claimService.findClaimById(lastNotifyId).orElse(null) : resolveNotifyClaim(from);
+        Claim toNotifyClaim = resolveNotifyClaim(to);
+        int fromNotifyId = fromNotifyClaim == null ? -1 : fromNotifyClaim.id();
+        int toNotifyId = toNotifyClaim == null ? -1 : toNotifyClaim.id();
+        session.lastNotifyClaimId = toNotifyId < 0 ? null : toNotifyId;
 
         if (fromNotifyId == toNotifyId) {
             cleanupSession(playerId, session);
@@ -226,6 +236,8 @@ public final class ClaimEnterLeaveListener implements Listener {
         session.currentClaimId = claim == null ? null : claim.id();
         updateFlightState(player, session, claim, reason);
         updateClaimTime(player, session, claim);
+        Claim notifyClaim = resolveNotifyClaim(player.getLocation());
+        session.lastNotifyClaimId = notifyClaim == null ? null : notifyClaim.id();
         cleanupSession(playerId, session);
     }
 
@@ -365,6 +377,8 @@ public final class ClaimEnterLeaveListener implements Listener {
 
         Claim claim = claimService.findPlayerPresenceClaim(player.getLocation()).orElse(null);
         session.currentClaimId = claim == null ? null : claim.id();
+        Claim notifyClaim = resolveNotifyClaim(player.getLocation());
+        session.lastNotifyClaimId = notifyClaim == null ? null : notifyClaim.id();
         if (canUseClaimFlight(player, claim)) {
             debugFlight(player, "grace-expired-but-still-allowed", claim, session);
             cleanupSession(playerId, session);
@@ -460,12 +474,24 @@ public final class ClaimEnterLeaveListener implements Listener {
     }
 
     private void cleanupSession(UUID playerId, PlayerFlightSession session) {
-        if (session.currentClaimId == null && !session.managingClaimFlight && !session.managingClaimTime && !session.graceActive) {
+        if (session.currentClaimId == null
+            && session.lastNotifyClaimId == null
+            && !session.managingClaimFlight
+            && !session.managingClaimTime
+            && !session.graceActive) {
             flightSessions.remove(playerId, session);
         }
     }
 
-    private boolean sameBlock(Location from, Location to) {
+    static boolean canSkipNotifyResolution(Location from, Location to, int fromId, int toId, int lastNotifyId) {
+        return from != null
+            && to != null
+            && from.getBlockY() == to.getBlockY()
+            && fromId == toId
+            && lastNotifyId == toId;
+    }
+
+    static boolean sameBlock(Location from, Location to) {
         return from.getWorld() == to.getWorld()
             && from.getBlockX() == to.getBlockX()
             && from.getBlockY() == to.getBlockY()

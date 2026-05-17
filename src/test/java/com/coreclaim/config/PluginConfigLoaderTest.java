@@ -84,6 +84,32 @@ class PluginConfigLoaderTest {
     }
 
     @Test
+    void highFrequencyProtectionChecksDefaultToEnabled() {
+        PluginConfig config = new PluginConfig(new YamlConfiguration(), new YamlConfiguration());
+
+        assertTrue(config.hopperCrossClaimCheck());
+        assertTrue(config.liquidFlowCrossClaimCheck());
+        assertTrue(config.pistonCrossClaimCheck());
+        assertTrue(config.inventoryPickupCrossClaimCheck());
+    }
+
+    @Test
+    void highFrequencyProtectionChecksCanBeDisabledIndividually() {
+        YamlConfiguration rawConfig = new YamlConfiguration();
+        rawConfig.set("protection.hopper-cross-claim-check", false);
+        rawConfig.set("protection.liquid-flow-cross-claim-check", false);
+        rawConfig.set("protection.piston-cross-claim-check", false);
+        rawConfig.set("protection.inventory-pickup-cross-claim-check", false);
+
+        PluginConfig config = new PluginConfig(rawConfig, new YamlConfiguration());
+
+        assertFalse(config.hopperCrossClaimCheck());
+        assertFalse(config.liquidFlowCrossClaimCheck());
+        assertFalse(config.pistonCrossClaimCheck());
+        assertFalse(config.inventoryPickupCrossClaimCheck());
+    }
+
+    @Test
     void explicitPositiveClaimSpacingStillLoads() {
         YamlConfiguration rawConfig = new YamlConfiguration();
         rawConfig.set("minimum-gap", 8);

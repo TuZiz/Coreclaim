@@ -5,6 +5,7 @@ import com.coreclaim.platform.PlatformScheduler;
 final class PlayerFlightSession {
 
     Integer currentClaimId;
+    Integer lastNotifyClaimId;
     boolean managingClaimFlight;
     boolean managingClaimTime;
     boolean baselineAllowFlight;

@@ -194,6 +194,11 @@ allow-interact: []
 protection:
   # 领地保护调试日志；只在排查蛋糕、斧头去皮、右键交互等问题时开启
   debug: false
+  # 高频环境保护开关；默认开启以保持旧行为，关闭后对应事件会直接跳过跨领地检查
+  hopper-cross-claim-check: true
+  liquid-flow-cross-claim-check: true
+  piston-cross-claim-check: true
+  inventory-pickup-cross-claim-check: true
   # 是否允许末影珍珠进入无权限领地
   allow-ender-pearl-entry: false
   # 是否允许紫颂果传送进入无权限领地

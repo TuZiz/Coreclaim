@@ -134,6 +134,10 @@ public final class ClaimService {
         return lookupService.findPlayerPresenceClaim(location);
     }
 
+    public boolean hasClaimCandidateAt(Location location) {
+        return lookupService.hasClaimCandidateAt(location);
+    }
+
     public Optional<Claim> findClaimById(int id) {
         return lookupService.findClaimById(id);
     }

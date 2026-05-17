@@ -49,7 +49,8 @@ public final class ListenerRegistrar {
             new ClaimEnvironmentProtectionListener(
                 bootstrap.claimService(),
                 bootstrap.explosionAuthorizationService(),
-                bootstrap.claimCleanupService()
+                bootstrap.claimCleanupService(),
+                plugin.settings()
             ),
             plugin
         );

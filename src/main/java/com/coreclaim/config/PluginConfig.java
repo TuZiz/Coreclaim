@@ -63,6 +63,10 @@ public final class PluginConfig {
     private final boolean allowFishingHookInteract;
     private final boolean allowVehicleCrossBorder;
     private final boolean protectionDebug;
+    private final boolean hopperCrossClaimCheck;
+    private final boolean liquidFlowCrossClaimCheck;
+    private final boolean pistonCrossClaimCheck;
+    private final boolean inventoryPickupCrossClaimCheck;
     private final boolean blockSpecialExplosiveUse;
     private final boolean strictRedstoneInteract;
     private final Set<Material> alwaysProtectedInteract;
@@ -143,6 +147,10 @@ public final class PluginConfig {
         this.allowFishingHookInteract = config.getBoolean("protection.allow-fishing-hook-interact", false);
         this.allowVehicleCrossBorder = config.getBoolean("protection.allow-vehicle-cross-border", false);
         this.protectionDebug = config.getBoolean("protection.debug", false);
+        this.hopperCrossClaimCheck = config.getBoolean("protection.hopper-cross-claim-check", true);
+        this.liquidFlowCrossClaimCheck = config.getBoolean("protection.liquid-flow-cross-claim-check", true);
+        this.pistonCrossClaimCheck = config.getBoolean("protection.piston-cross-claim-check", true);
+        this.inventoryPickupCrossClaimCheck = config.getBoolean("protection.inventory-pickup-cross-claim-check", true);
         this.blockSpecialExplosiveUse = config.getBoolean("protection.block-special-explosive-use", true);
         this.strictRedstoneInteract = config.getBoolean("protection.strict-redstone-interact", true);
         this.alwaysProtectedInteract = resolveMaterials(config.getStringList("protection.always-protected-interact"));
@@ -336,6 +344,22 @@ public final class PluginConfig {
 
     public boolean protectionDebug() {
         return protectionDebug;
+    }
+
+    public boolean hopperCrossClaimCheck() {
+        return hopperCrossClaimCheck;
+    }
+
+    public boolean liquidFlowCrossClaimCheck() {
+        return liquidFlowCrossClaimCheck;
+    }
+
+    public boolean pistonCrossClaimCheck() {
+        return pistonCrossClaimCheck;
+    }
+
+    public boolean inventoryPickupCrossClaimCheck() {
+        return inventoryPickupCrossClaimCheck;
     }
 
     public boolean blockSpecialExplosiveUse() {

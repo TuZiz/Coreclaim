@@ -84,6 +84,14 @@ public final class ClaimLookupService {
         return Optional.ofNullable(horizontalMatch);
     }
 
+    public boolean hasClaimCandidateAt(Location location) {
+        return ClaimChunkIndex.hasCandidates(runtime.claimChunkIndex(), location);
+    }
+
+    public boolean hasClaimCandidateAt(String worldName, int blockX, int blockZ) {
+        return ClaimChunkIndex.hasCandidates(runtime.claimChunkIndex(), worldName, blockX, blockZ);
+    }
+
     public Optional<Claim> findClaimById(int id) {
         return Optional.ofNullable(runtime.claims().get(id));
     }

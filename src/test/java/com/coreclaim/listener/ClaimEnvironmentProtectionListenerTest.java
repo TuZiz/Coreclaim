@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coreclaim.model.ClaimFlagState;
 import com.coreclaim.model.ClaimPermission;
+import java.util.Optional;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,41 @@ class ClaimEnvironmentProtectionListenerTest {
     }
 
     @Test
+    void sameBlockSkipsIdenticalInventoryMoveEndpoints() {
+        assertTrue(ClaimEnvironmentProtectionListener.sameBlock(
+            new Location(null, 5D, 64D, 5D),
+            new Location(null, 5.9D, 64D, 5.9D)
+        ));
+        assertFalse(ClaimEnvironmentProtectionListener.sameBlock(
+            new Location(null, 5D, 64D, 5D),
+            new Location(null, 6D, 64D, 5D)
+        ));
+    }
+
+    @Test
+    void sameChunkRecognizesChunkLocalMovement() {
+        assertTrue(ClaimEnvironmentProtectionListener.sameChunk(
+            new Location(null, 0D, 64D, 0D),
+            new Location(null, 15D, 70D, 15D)
+        ));
+        assertFalse(ClaimEnvironmentProtectionListener.sameChunk(
+            new Location(null, 0D, 64D, 0D),
+            new Location(null, 16D, 64D, 0D)
+        ));
+    }
+
+    @Test
+    void claimBoundaryComparisonAllowsSameClaimAndRejectsDifferentClaim() {
+        com.coreclaim.model.Claim source = claim(1, true);
+        com.coreclaim.model.Claim destination = claim(2, true);
+
+        assertFalse(ClaimEnvironmentProtectionListener.crossesClaimBoundary(Optional.of(source), Optional.of(source)));
+        assertTrue(ClaimEnvironmentProtectionListener.crossesClaimBoundary(Optional.of(source), Optional.of(destination)));
+        assertTrue(ClaimEnvironmentProtectionListener.crossesClaimBoundary(Optional.empty(), Optional.of(destination)));
+        assertFalse(ClaimEnvironmentProtectionListener.crossesClaimBoundary(Optional.empty(), Optional.empty()));
+    }
+
+    @Test
     void allowsNonPlayerTntIgnitionOnlyWhenExplosionDefaultIsAllowed() {
         assertTrue(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(true), false, ClaimPermission.EXPLOSION, false));
         assertFalse(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(false), false, ClaimPermission.EXPLOSION, false));
@@ -156,4 +193,5 @@ class ClaimEnvironmentProtectionListenerTest {
             0L
         );
     }
+
 }

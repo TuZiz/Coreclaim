@@ -183,6 +183,29 @@ class ProtectionRuleSupportTest {
     }
 
     @Test
+    void tntIgnitionUsesExplosionPermissionInsteadOfInteract() {
+        assertTrue(ProtectionMaterialRules.isTntIgnition(Material.TNT, new ItemStack(Material.FLINT_AND_STEEL)));
+        assertTrue(ProtectionMaterialRules.isTntIgnition(Material.TNT, new ItemStack(Material.FIRE_CHARGE)));
+        assertFalse(ProtectionMaterialRules.isTntIgnition(Material.TNT, null));
+        assertFalse(ProtectionMaterialRules.isTntIgnition(Material.TNT, new ItemStack(Material.AIR)));
+        assertFalse(ProtectionMaterialRules.isTntIgnition(Material.CHEST, new ItemStack(Material.FLINT_AND_STEEL)));
+
+        assertEquals(
+            ClaimPermission.EXPLOSION,
+            support.requiredPermissionForBlockInteract(Material.TNT, new ItemStack(Material.FLINT_AND_STEEL))
+        );
+        assertEquals(
+            ClaimPermission.EXPLOSION,
+            support.requiredPermissionForBlockInteract(Material.TNT, new ItemStack(Material.FIRE_CHARGE))
+        );
+        assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.TNT, null));
+        assertEquals(
+            ClaimPermission.INTERACT,
+            support.requiredPermissionForBlockInteract(Material.CHEST, new ItemStack(Material.FLINT_AND_STEEL))
+        );
+    }
+
+    @Test
     void mobEntityClassificationExcludesPlayersAndArmorStands() {
         assertTrue(ProtectionRuleSupport.isMobEntityType(true, false, false));
         assertFalse(ProtectionRuleSupport.isMobEntityType(true, true, false));

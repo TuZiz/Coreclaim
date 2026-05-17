@@ -14,9 +14,9 @@ class ProjectileProtectionListenerTest {
         Claim source = claim(1, true);
         Claim other = claim(2, true);
 
-        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, source, false, false, true));
-        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(source, other, false, false, true));
-        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(source, source, false, false, false));
+        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, source, false, false, true, false));
+        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(source, other, false, false, true, false));
+        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(source, source, false, false, false, false));
     }
 
     @Test
@@ -24,9 +24,19 @@ class ProjectileProtectionListenerTest {
         Claim source = claim(1, false);
         Claim target = claim(2, false);
 
-        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, target, false, true, false));
-        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, target, true, false, false));
-        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, null, false, false, false));
+        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, target, false, true, false, false));
+        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, target, true, false, false, false));
+        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, null, false, false, false, false));
+    }
+
+    @Test
+    void publicExplosionOnlyAllowsSameSourceClaimDamage() {
+        Claim source = claim(1, true);
+        Claim other = claim(2, true);
+
+        assertTrue(ProjectileProtectionListener.canExplosionAffectClaim(source, source, false, false, false, true));
+        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(source, other, false, false, false, true));
+        assertFalse(ProjectileProtectionListener.canExplosionAffectClaim(null, source, false, false, true, true));
     }
 
     private static Claim claim(int id, boolean allowExplosion) {

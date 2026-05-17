@@ -157,6 +157,9 @@ public final class ProtectionRuleSupport {
     }
 
     public ClaimPermission requiredPermissionForBlockInteract(Block block, Material material, ItemStack item) {
+        if (isTntIgnition(material, item)) {
+            return ClaimPermission.EXPLOSION;
+        }
         ClaimPermission toolChangePermission = requiredPermissionForBlockToolChange(material, item);
         if (toolChangePermission != null) {
             return toolChangePermission;
@@ -205,6 +208,10 @@ public final class ProtectionRuleSupport {
 
     public boolean isBlockDrivenToolChange(Material material, ItemStack item) {
         return ProtectionMaterialRules.isBlockDrivenToolChange(material, item);
+    }
+
+    public boolean isTntIgnition(Material material, ItemStack item) {
+        return ProtectionMaterialRules.isTntIgnition(material, item);
     }
 
     public Material strippedWoodMaterial(Material material) {

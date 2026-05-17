@@ -69,14 +69,15 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         Optional<Claim> sourceClaim = claimService.findClaim(event.getBlock().getLocation());
-        boolean authorized = explosionAuthorizationService.isAuthorized(event.getBlock().getLocation());
+        boolean authorized = explosionAuthorizationService.isAuthorizedNearby(event.getBlock().getLocation(), 1);
+        boolean sourcePublicExplosion = sourceClaim.isPresent() && sourceClaim.get().permission(ClaimPermission.EXPLOSION);
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
             Optional<Claim> targetClaim = claimService.findClaim(iterator.next().getLocation());
             if (targetClaim.isEmpty()) {
                 continue;
             }
-            if (!authorized || sourceClaim.isEmpty() || claimId(sourceClaim) != claimId(targetClaim)) {
+            if (!canBlockExplosionAffectClaim(sourceClaim.orElse(null), targetClaim.get(), authorized, sourcePublicExplosion)) {
                 iterator.remove();
             }
         }
@@ -378,6 +379,21 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
             return playerHasPermission;
         }
         return permission == ClaimPermission.EXPLOSION && claim.permission(ClaimPermission.EXPLOSION);
+    }
+
+    static boolean canBlockExplosionAffectClaim(
+        Claim sourceClaim,
+        Claim targetClaim,
+        boolean authorizedOrigin,
+        boolean sourcePublicExplosion
+    ) {
+        if (targetClaim == null) {
+            return true;
+        }
+        if (sourceClaim == null || sourceClaim.id() != targetClaim.id()) {
+            return false;
+        }
+        return authorizedOrigin || sourcePublicExplosion;
     }
 
     private int claimId(Optional<Claim> claim) {

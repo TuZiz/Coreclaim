@@ -167,6 +167,24 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         ClaimPermission requiredPermission = support.requiredPermissionForBlockInteract(event.getClickedBlock(), clickedType, event.getItem());
+        boolean tntIgnition = support.isTntIgnition(clickedType, event.getItem());
+        if (claim.isPresent() && tntIgnition) {
+            boolean hasExplosion = support.claimService().hasPermission(
+                claim.get(),
+                event.getPlayer().getUniqueId(),
+                ClaimPermission.EXPLOSION
+            );
+            if (!hasExplosion) {
+                event.setCancelled(true);
+                support.sendProtectionDeny(event.getPlayer(), claim.get());
+                debugInteract(event, claim, "tnt-ignite-deny", "permission=" + requiredPermission);
+                return;
+            }
+            support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
+            support.recordBlockInteraction(claim.get(), event.getPlayer(), ClaimPermission.EXPLOSION);
+            debugInteract(event, claim, "tnt-ignite-allow", "permission=" + requiredPermission);
+            return;
+        }
         boolean allowListed = support.plugin().settings().isAllowedInteract(clickedType)
             && !(support.plugin().settings().strictRedstoneInteract() && support.plugin().settings().isAlwaysProtectedInteract(clickedType));
         if (claim.isPresent() && allowListed) {
@@ -203,7 +221,8 @@ public final class BlockProtectionListener implements Listener {
         boolean cakeConsumption = support.isCakeConsumption(clickedType, event.getItem());
         boolean axeStrippingWood = support.isAxeStrippingWood(clickedType, event.getItem());
         boolean blockDrivenToolChange = support.isBlockDrivenToolChange(clickedType, event.getItem());
-        if (!cakeConsumption && !axeStrippingWood && !blockDrivenToolChange) {
+        boolean tntIgnition = support.isTntIgnition(clickedType, event.getItem());
+        if (!cakeConsumption && !axeStrippingWood && !blockDrivenToolChange && !tntIgnition) {
             return;
         }
         Optional<Claim> claim = support.claimService().findClaim(event.getClickedBlock().getLocation());
@@ -211,7 +230,7 @@ public final class BlockProtectionListener implements Listener {
             event,
             claim,
             event.isCancelled() || event.useInteractedBlock() == Event.Result.DENY ? "monitor-blocked" : "monitor-final",
-            "cake=" + cakeConsumption + " axeStrip=" + axeStrippingWood + " blockTool=" + blockDrivenToolChange
+            "cake=" + cakeConsumption + " axeStrip=" + axeStrippingWood + " blockTool=" + blockDrivenToolChange + " tntIgnition=" + tntIgnition
         );
     }
 
@@ -229,6 +248,11 @@ public final class BlockProtectionListener implements Listener {
         if (support.isBlockDrivenToolChange(clickedType, event.getItem())) {
             boolean applied = ProtectionInteractionCompat.applyBlockDrivenToolChange(event);
             debugInteract(event, claim, "bypass-block-tool", "applied=" + applied);
+            return;
+        }
+        if (support.isTntIgnition(clickedType, event.getItem())) {
+            support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
+            debugInteract(event, claim, "tnt-ignite-allow", "permission=" + ClaimPermission.EXPLOSION + " bypass=true");
             return;
         }
         debugInteract(event, claim, "bypass-skip", null);
@@ -477,6 +501,7 @@ public final class BlockProtectionListener implements Listener {
         }
         if (phase.startsWith("cake")
             || phase.startsWith("axe-strip")
+            || phase.startsWith("tnt-ignite")
             || phase.startsWith("bypass-")
             || phase.equals("tool-change-block-use-allow")) {
             return true;

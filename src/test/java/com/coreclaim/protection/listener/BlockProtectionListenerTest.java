@@ -99,6 +99,19 @@ class BlockProtectionListenerTest {
         assertTrue(source.contains("\"pre-cancel-block-tool-allow\", \"tool=\" + formatDecision(toolChangeDecision) + \" applied=\" + applied"));
     }
 
+    @Test
+    void tntIgnitionUsesExplosionPermissionBeforeGenericInteractAllowList() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/coreclaim/protection/listener/BlockProtectionListener.java"));
+
+        int tntBranch = source.indexOf("boolean tntIgnition = support.isTntIgnition(clickedType, event.getItem());");
+        int allowListed = source.indexOf("boolean allowListed = support.plugin().settings().isAllowedInteract(clickedType)");
+        assertTrue(tntBranch > 0);
+        assertTrue(allowListed > tntBranch);
+        assertTrue(source.contains("debugInteract(event, claim, \"tnt-ignite-allow\", \"permission=\" + requiredPermission);"));
+        assertTrue(source.contains("debugInteract(event, claim, \"tnt-ignite-deny\", \"permission=\" + requiredPermission);"));
+        assertTrue(source.contains("support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());"));
+    }
+
     private static int occurrences(String source, String needle) {
         int count = 0;
         int index = 0;

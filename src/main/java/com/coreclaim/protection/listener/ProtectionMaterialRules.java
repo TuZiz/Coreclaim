@@ -131,6 +131,13 @@ final class ProtectionMaterialRules {
         return null;
     }
 
+    static boolean isTntIgnition(Material material, ItemStack item) {
+        if (material != Material.TNT || item == null) {
+            return false;
+        }
+        return item.getType() == Material.FLINT_AND_STEEL || item.getType() == Material.FIRE_CHARGE;
+    }
+
     static boolean isComposterCompostInput(Material material, boolean composterFull, ItemStack item) {
         return material == Material.COMPOSTER
             && !composterFull

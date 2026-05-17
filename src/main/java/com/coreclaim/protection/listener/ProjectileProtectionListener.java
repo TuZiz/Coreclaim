@@ -147,15 +147,15 @@ public final class ProjectileProtectionListener implements Listener {
         Player sourcePlayer = support.resolvePlayer(event.getEntity());
         boolean bypassing = sourcePlayer != null && support.isBypassing(sourcePlayer);
         Claim sourceClaim = support.claimService().findClaim(event.getLocation()).orElse(null);
-        boolean authorizedOrigin = sourcePlayer == null
-            && support.explosionAuthorizationService().isAuthorized(event.getLocation());
+        boolean authorizedOrigin = support.explosionAuthorizationService().isAuthorizedNearby(event.getLocation(), 1);
+        boolean sourcePublicExplosion = sourceClaim != null && sourceClaim.permission(ClaimPermission.EXPLOSION);
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
             Claim targetClaim = support.claimService().findClaim(iterator.next().getLocation()).orElse(null);
             boolean sourceHasPermission = sourcePlayer != null
                 && targetClaim != null
                 && support.claimService().hasPermission(targetClaim, sourcePlayer.getUniqueId(), ClaimPermission.EXPLOSION);
-            if (!canExplosionAffectClaim(sourceClaim, targetClaim, bypassing, sourceHasPermission, authorizedOrigin)) {
+            if (!canExplosionAffectClaim(sourceClaim, targetClaim, bypassing, sourceHasPermission, authorizedOrigin, sourcePublicExplosion)) {
                 iterator.remove();
             }
         }
@@ -166,11 +166,15 @@ public final class ProjectileProtectionListener implements Listener {
         Claim targetClaim,
         boolean bypassing,
         boolean sourceHasPermission,
-        boolean authorizedOrigin
+        boolean authorizedOrigin,
+        boolean sourcePublicExplosion
     ) {
         if (targetClaim == null || bypassing || sourceHasPermission) {
             return true;
         }
-        return authorizedOrigin && sourceClaim != null && sourceClaim.id() == targetClaim.id();
+        if (sourceClaim == null || sourceClaim.id() != targetClaim.id()) {
+            return false;
+        }
+        return authorizedOrigin || sourcePublicExplosion;
     }
 }

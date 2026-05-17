@@ -95,9 +95,26 @@ class ClaimEnvironmentProtectionListenerTest {
         assertFalse(ClaimEnvironmentProtectionListener.canIgniteProtectedBlock(claim(true), true, ClaimPermission.EXPLOSION, false));
     }
 
+    @Test
+    void blockExplosionsOnlyAffectSameAuthorizedOrPublicExplosionClaim() {
+        com.coreclaim.model.Claim source = claim(1, true);
+        com.coreclaim.model.Claim other = claim(2, true);
+
+        assertTrue(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(source, source, true, false));
+        assertTrue(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(source, source, false, true));
+        assertTrue(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(source, null, false, false));
+        assertFalse(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(source, other, true, true));
+        assertFalse(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(null, source, true, true));
+        assertFalse(ClaimEnvironmentProtectionListener.canBlockExplosionAffectClaim(source, source, false, false));
+    }
+
     private static com.coreclaim.model.Claim claim(boolean allowExplosion) {
+        return claim(1, allowExplosion);
+    }
+
+    private static com.coreclaim.model.Claim claim(int id, boolean allowExplosion) {
         return new com.coreclaim.model.Claim(
-            1,
+            id,
             java.util.UUID.randomUUID(),
             "owner",
             "claim",

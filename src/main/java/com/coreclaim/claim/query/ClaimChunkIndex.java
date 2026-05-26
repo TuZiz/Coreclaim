@@ -80,6 +80,34 @@ final class ClaimChunkIndex {
         return candidates != null && !candidates.isEmpty();
     }
 
+    static boolean containsClaim(Map<String, Map<Long, List<Claim>>> index, Claim claim) {
+        if (claim == null) {
+            return false;
+        }
+        Map<Long, List<Claim>> worldIndex = index.get(claim.world());
+        if (worldIndex == null || worldIndex.isEmpty()) {
+            return false;
+        }
+        int minChunkX = claim.minX() >> 4;
+        int maxChunkX = claim.maxX() >> 4;
+        int minChunkZ = claim.minZ() >> 4;
+        int maxChunkZ = claim.maxZ() >> 4;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                List<Claim> candidates = worldIndex.get(chunkKey(chunkX, chunkZ));
+                if (candidates == null || candidates.isEmpty()) {
+                    continue;
+                }
+                for (Claim candidate : candidates) {
+                    if (candidate.id() == claim.id()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private static long chunkKey(int chunkX, int chunkZ) {
         return (((long) chunkX) << 32) ^ (chunkZ & 0xffffffffL);
     }

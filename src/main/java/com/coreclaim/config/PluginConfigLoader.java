@@ -78,6 +78,25 @@ final class PluginConfigLoader {
         return Collections.unmodifiableMap(mappings);
     }
 
+    static LegacyClaimServerIdRepairSettings loadLegacyClaimServerIdRepairSettings(FileConfiguration config) {
+        Map<String, String> mappings = new HashMap<>();
+        String path = "legacy-claim-server-id-repair.world-map";
+        if (config.getConfigurationSection(path) != null) {
+            for (String worldName : config.getConfigurationSection(path).getKeys(false)) {
+                String targetServer = sanitizeServerId(config.getString(path + "." + worldName, ""), "");
+                if (worldName == null || worldName.isBlank() || targetServer.isBlank()) {
+                    continue;
+                }
+                mappings.put(worldName.trim().toLowerCase(Locale.ROOT), targetServer);
+            }
+        }
+        return new LegacyClaimServerIdRepairSettings(
+            config.getBoolean("legacy-claim-server-id-repair.enabled", false),
+            sanitizeServerId(config.getString("legacy-claim-server-id-repair.default-server-id", ""), ""),
+            mappings
+        );
+    }
+
     static ClaimSyncSettings loadClaimSyncSettings(FileConfiguration config) {
         String transport = sanitizeServerId(config.getString("claim-sync.transport", "redis"), "redis").toLowerCase(Locale.ROOT);
         return new ClaimSyncSettings(

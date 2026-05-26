@@ -66,13 +66,75 @@ class ClaimLookupServiceTest {
         assertFalse(lookupService.hasClaimCandidateAt("other", 0, 0));
     }
 
+    @Test
+    void sqliteMissingServerIdFallsBackToCurrentServerAndIndexes() {
+        Claim claim = claim(1, "旧领地", "");
+        Map<Integer, Claim> claims = Map.of(1, claim);
+        Map<String, Map<Long, java.util.List<Claim>>> index = ClaimChunkIndex.rebuild(
+            claims.values(),
+            candidate -> "local".equals(ClaimLookupService.resolveEffectiveServerId(candidate.serverId(), false, "local"))
+        );
+
+        assertEquals("local", ClaimLookupService.resolveEffectiveServerId("", false, "local"));
+        assertTrue(ClaimChunkIndex.containsClaim(index, claim));
+    }
+
+    @Test
+    void mysqlMissingServerIdIsNotSilentlyLocalAndStaysOutOfIndex() {
+        Claim claim = claim(1, "旧领地", "");
+        Map<Integer, Claim> claims = Map.of(1, claim);
+        Map<String, Map<Long, java.util.List<Claim>>> index = ClaimChunkIndex.rebuild(
+            claims.values(),
+            candidate -> "local".equals(ClaimLookupService.resolveEffectiveServerId(candidate.serverId(), true, "local"))
+        );
+
+        assertEquals(null, ClaimLookupService.resolveEffectiveServerId("", true, "local"));
+        assertFalse(ClaimChunkIndex.containsClaim(index, claim));
+    }
+
+    @Test
+    void mysqlDefaultServerIdRepairTargetLetsLegacyClaimEnterIndex() {
+        com.coreclaim.config.LegacyClaimServerIdRepairSettings settings =
+            new com.coreclaim.config.LegacyClaimServerIdRepairSettings(true, "local", Map.of());
+        Claim repairedClaim = claim(1, "旧领地", settings.targetServerId("world"));
+        Map<String, Map<Long, java.util.List<Claim>>> index = ClaimChunkIndex.rebuild(
+            java.util.List.of(repairedClaim),
+            candidate -> "local".equals(ClaimLookupService.resolveEffectiveServerId(candidate.serverId(), true, "local"))
+        );
+
+        assertEquals("local", settings.targetServerId("world"));
+        assertTrue(ClaimChunkIndex.containsClaim(index, repairedClaim));
+    }
+
+    @Test
+    void worldMismatchDiagnosisSuggestsLoadedWorldProblem() {
+        Claim claim = claim(1, "旧领地", "local");
+
+        String suggestion = ClaimLookupService.indexRepairSuggestion(
+            claim,
+            "local",
+            true,
+            false,
+            false,
+            true,
+            "local"
+        );
+
+        assertTrue(suggestion.contains("world"));
+        assertTrue(suggestion.contains("not loaded"));
+    }
+
     private Claim claim(int id, String name) {
+        return claim(id, name, "local");
+    }
+
+    private Claim claim(int id, String name, String serverId) {
         return new Claim(
             id,
             UUID.randomUUID(),
             "owner",
             name,
-            "local",
+            serverId,
             "world",
             0,
             64,

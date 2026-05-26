@@ -5,6 +5,7 @@ import static com.coreclaim.config.PluginConfigLoader.defaultPermissionValue;
 import static com.coreclaim.config.PluginConfigLoader.loadClaimSyncSettings;
 import static com.coreclaim.config.PluginConfigLoader.loadClaimExpansionPricingSettings;
 import static com.coreclaim.config.PluginConfigLoader.loadFlagDefaults;
+import static com.coreclaim.config.PluginConfigLoader.loadLegacyClaimServerIdRepairSettings;
 import static com.coreclaim.config.PluginConfigLoader.loadLegacyWorldServerMap;
 import static com.coreclaim.config.PluginConfigLoader.loadNewClaimFlagDefaults;
 import static com.coreclaim.config.PluginConfigLoader.loadPermissionDefaults;
@@ -82,6 +83,7 @@ public final class PluginConfig {
     private final boolean crossServerTeleportEnabled;
     private final int crossServerTeleportPendingTimeoutSeconds;
     private final Map<String, String> legacyCrossServerWorldServerMap;
+    private final LegacyClaimServerIdRepairSettings legacyClaimServerIdRepairSettings;
     private final boolean inactiveClaimCleanupEnabled;
     private final int inactiveClaimCleanupDays;
     private final int inactiveClaimCleanupGraceDays;
@@ -166,6 +168,7 @@ public final class PluginConfig {
         this.crossServerTeleportEnabled = config.getBoolean("cross-server-teleport.enabled", false);
         this.crossServerTeleportPendingTimeoutSeconds = Math.max(10, config.getInt("cross-server-teleport.pending-timeout-seconds", 30));
         this.legacyCrossServerWorldServerMap = loadLegacyWorldServerMap(config);
+        this.legacyClaimServerIdRepairSettings = loadLegacyClaimServerIdRepairSettings(config);
         this.inactiveClaimCleanupEnabled = config.getBoolean("inactive-claim-cleanup.enabled", false);
         this.inactiveClaimCleanupDays = Math.max(1, config.getInt("inactive-claim-cleanup.inactive-days", 90));
         this.inactiveClaimCleanupGraceDays = Math.max(1, config.getInt("inactive-claim-cleanup.grace-days", 14));
@@ -506,6 +509,10 @@ public final class PluginConfig {
 
     public ClaimExpansionPricingSettings claimExpansionPricing() {
         return claimExpansionPricingSettings;
+    }
+
+    public LegacyClaimServerIdRepairSettings legacyClaimServerIdRepair() {
+        return legacyClaimServerIdRepairSettings;
     }
 
     public String resolveLegacyCrossServerTargetServer(String worldName) {

@@ -112,6 +112,15 @@ database:
     # 从哪个旧 SQLite 文件迁移数据
     source-sqlite-file: coreclaim.db
 
+legacy-claim-server-id-repair:
+  # MySQL 多服旧数据修复开关。默认关闭，只检测并输出警告，不会自动改库。
+  enabled: false
+  # world-map 未命中时使用的目标 server-id；留空表示未命中的旧领地保持未修复。
+  default-server-id: ""
+  # 按世界修复旧 claims.server_id 为空的数据，格式：世界名: 子服 server-id。
+  # enabled=true 时优先使用这里的映射，然后才使用 default-server-id。
+  world-map: {}
+
 cross-server-teleport:
   # 跨服传送开关；仅 MySQL 多服场景通常需要开启
   enabled: false

@@ -1,6 +1,7 @@
 package com.coreclaim.protection.listener;
 
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.ALLOW_AXE_STRIPPING;
+import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.ALLOW_COMPOSTER;
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.ALLOW_BLOCK_DRIVEN_TOOL_CHANGE;
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.ALLOW_CAKE_CONSUMPTION;
 import static com.coreclaim.protection.listener.BlockProtectionListener.PreCancelledInteractionResolution.DENY;
@@ -41,6 +42,22 @@ class BlockProtectionListenerTest {
     }
 
     @Test
+    void preCancelledComposterAllowsPlayersWithInteractPermission() {
+        assertEquals(
+            ALLOW_COMPOSTER,
+            BlockProtectionListener.resolvePreCancelledInteraction(true, false, true, false, false, false, true, false, false)
+        );
+    }
+
+    @Test
+    void preCancelledComposterDeniesPlayersWithoutInteractPermission() {
+        assertEquals(
+            DENY,
+            BlockProtectionListener.resolvePreCancelledInteraction(true, false, true, false, false, false, false, false, false)
+        );
+    }
+
+    @Test
     void preCancelledAxeStrippingAllowsPlayersWhoCanAccessClaim() {
         assertEquals(
             ALLOW_AXE_STRIPPING,
@@ -68,7 +85,7 @@ class BlockProtectionListenerTest {
     void preCancelledBlockDrivenToolChangesAllowPlayersWithToolPermission() {
         assertEquals(
             ALLOW_BLOCK_DRIVEN_TOOL_CHANGE,
-            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, true, false, false, true, false)
+            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, false, true, false, false, true, false)
         );
     }
 
@@ -76,7 +93,7 @@ class BlockProtectionListenerTest {
     void preCancelledBlockDrivenToolChangesDenyPlayersWithoutToolPermission() {
         assertEquals(
             DENY,
-            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, true, false, true, false, true)
+            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, false, true, false, true, false, true)
         );
     }
 
@@ -84,7 +101,7 @@ class BlockProtectionListenerTest {
     void preCancelledBlockDrivenToolChangesAllowBypassPlayers() {
         assertEquals(
             ALLOW_BLOCK_DRIVEN_TOOL_CHANGE,
-            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, true, true, false, false, false)
+            BlockProtectionListener.resolvePreCancelledInteraction(true, false, false, false, true, true, false, false, false)
         );
     }
 
@@ -94,9 +111,13 @@ class BlockProtectionListenerTest {
 
         assertFalse(source.contains("allowVanillaBlockDrivenToolChange"));
         assertTrue(occurrences(source, "ProtectionInteractionCompat.applyBlockDrivenToolChange(event)") >= 3);
+        assertTrue(source.contains("ProtectionInteractionCompat.applyComposterInteraction(event)"));
         assertTrue(source.contains("\"tool-change-block-use-allow\", \"permission=\" + toolChangePermission + \" applied=\" + applied"));
         assertTrue(source.contains("\"bypass-block-tool\", \"applied=\" + applied"));
         assertTrue(source.contains("\"pre-cancel-block-tool-allow\", \"tool=\" + formatDecision(toolChangeDecision) + \" applied=\" + applied"));
+        assertTrue(source.contains("\"composter-allow\", \"interact=\" + formatDecision(interactDecision) + \" applied=\" + applied"));
+        assertTrue(source.contains("\"pre-cancel-composter-allow\", \"interact=\" + formatDecision(interactDecision) + \" applied=\" + applied"));
+        assertTrue(source.contains("\"bypass-composter\", \"applied=\" + applied"));
     }
 
     @Test

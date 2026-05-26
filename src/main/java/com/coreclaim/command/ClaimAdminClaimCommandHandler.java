@@ -8,6 +8,7 @@ import com.coreclaim.selection.ClaimSelectionService;
 import com.coreclaim.service.ClaimService;
 import com.coreclaim.claim.auth.ClaimAuthorizationService.AuthorizationDecision;
 import com.coreclaim.service.RemovalConfirmationService;
+import com.coreclaim.claim.query.ClaimIndexExplanation;
 import com.coreclaim.util.AdminAccess;
 import java.util.List;
 import java.util.Set;
@@ -155,6 +156,8 @@ final class ClaimAdminClaimCommandHandler {
     }
 
     private void sendClaimDiagnostics(CommandSender sender, Claim claim, OfflinePlayer target) {
+        org.bukkit.Location senderLocation = sender instanceof Player player ? player.getLocation() : null;
+        ClaimIndexExplanation indexState = claimService.explainClaimIndexState(claim.id(), senderLocation);
         boolean localClaim = claimService.isLocalClaim(claim);
         boolean worldLoaded = localClaim && Bukkit.getWorld(claim.world()) != null;
         String route = localClaim
@@ -163,6 +166,22 @@ final class ClaimAdminClaimCommandHandler {
         sender.sendMessage(plugin.color("&6[Claim] &f诊断目标: &e" + (claim.systemManaged() ? "[SYSTEM] " : "") + claim.name() + " &7(#" + claim.id() + ")"));
         sender.sendMessage(plugin.color("&6[Claim] &fOwner: &b" + claim.ownerName() + " &8| &fServer ID: &e" + claimService.displayServerId(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f当前服 server-id: &e" + plugin.settings().serverId() + " &8| &f是否本服: " + (localClaim ? "&a是" : "&c否")));
+        sender.sendMessage(plugin.color("&6[Claim] &f索引字段: claimId=&e" + indexState.claimId()
+            + " &8| &fworld=&b" + indexState.world()
+            + " &8| &fcurrentServerId=&e" + indexState.currentServerId()
+            + " &8| &fisLocalClaim=" + (indexState.localClaim() ? "&a是" : "&c否")));
+        sender.sendMessage(plugin.color("&6[Claim] &f索引诊断: raw server_id=&e" + indexState.rawServerIdDisplay()
+            + " &8| &feffective=&b" + indexState.effectiveServerIdDisplay()
+            + " &8| &findexed=" + (indexState.indexed() ? "&a是" : "&c否")));
+        sender.sendMessage(plugin.color("&6[Claim] &f当前位置 findClaim: &e" + indexState.currentLocationHitDisplay()
+            + " &8| &fworldLoaded=" + (indexState.worldLoaded() ? "&a是" : "&c否")));
+        sender.sendMessage(plugin.color("&6[Claim] &f修复建议: &e" + indexState.repairSuggestion()));
+        if (!indexState.indexed()) {
+            sender.sendMessage(plugin.message("admin-diagnose-index-warning"));
+            if (indexState.mysql() && (indexState.rawServerId() == null || indexState.rawServerId().isBlank())) {
+                sender.sendMessage(plugin.message("legacy-server-id-repair-hint"));
+            }
+        }
         sender.sendMessage(plugin.color("&6[Claim] &f系统领地: " + (claim.systemManaged() ? "&6是&8| &f计入配额: &c否" : "&7否&8| &f计入配额: &a是")));
         sender.sendMessage(plugin.color("&6[Claim] &f权限来源: " + formatter.ruleSourceSummary(claim)));
         sender.sendMessage(plugin.color("&6[Claim] &f世界状态: " + (worldLoaded ? "&a已加载" : "&e未加载或不在本服")));

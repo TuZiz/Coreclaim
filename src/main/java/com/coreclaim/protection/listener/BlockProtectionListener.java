@@ -119,10 +119,22 @@ public final class BlockProtectionListener implements Listener {
             debugInteract(event, claim, "cake-allow", "interact=" + formatDecision(interactDecision) + " applied=" + applied);
             return;
         }
-        if (claim.isPresent() && support.isComposterCompostInput(event.getClickedBlock(), event.getItem())) {
-            if (!support.isBypassing(event.getPlayer())) {
-                support.claimCleanupService().recordInteractionActivity(claim.get(), event.getPlayer().getUniqueId());
+        if (claim.isPresent() && clickedType == Material.COMPOSTER) {
+            AuthorizationDecision interactDecision = support.claimService().permissionDecision(
+                claim.get(),
+                event.getPlayer().getUniqueId(),
+                ClaimPermission.INTERACT,
+                false
+            );
+            if (!interactDecision.allowed()) {
+                event.setCancelled(true);
+                support.sendProtectionDeny(event.getPlayer(), claim.get());
+                debugInteract(event, claim, "composter-deny", "interact=" + formatDecision(interactDecision));
+                return;
             }
+            boolean applied = ProtectionInteractionCompat.applyComposterInteraction(event);
+            support.recordBlockInteraction(claim.get(), event.getPlayer(), ClaimPermission.INTERACT);
+            debugInteract(event, claim, "composter-allow", "interact=" + formatDecision(interactDecision) + " applied=" + applied);
             return;
         }
         ClaimPermission toolChangePermission = support.requiredPermissionForBlockToolChange(clickedType, event.getItem());
@@ -240,6 +252,11 @@ public final class BlockProtectionListener implements Listener {
             debugInteract(event, claim, "bypass-cake", "applied=" + applied);
             return;
         }
+        if (clickedType == Material.COMPOSTER) {
+            boolean applied = ProtectionInteractionCompat.applyComposterInteraction(event);
+            debugInteract(event, claim, "bypass-composter", "applied=" + applied);
+            return;
+        }
         if (support.isAxeStrippingWood(clickedType, event.getItem())) {
             boolean applied = ProtectionInteractionCompat.applyAxeStripping(event, support);
             debugInteract(event, claim, "bypass-axe-strip", "applied=" + applied);
@@ -264,9 +281,10 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         boolean cakeConsumption = support.isCakeConsumption(clickedType, event.getItem());
+        boolean composterInteraction = clickedType == Material.COMPOSTER;
         boolean axeStrippingWood = support.isAxeStrippingWood(clickedType, event.getItem());
         boolean blockDrivenToolChange = support.isBlockDrivenToolChange(clickedType, event.getItem());
-        if (!cakeConsumption && !axeStrippingWood && !blockDrivenToolChange) {
+        if (!cakeConsumption && !composterInteraction && !axeStrippingWood && !blockDrivenToolChange) {
             debugInteract(event, claim, "pre-cancel-unknown", "clicked=" + clickedType);
             return;
         }
@@ -296,6 +314,7 @@ public final class BlockProtectionListener implements Listener {
         PreCancelledInteractionResolution resolution = resolvePreCancelledInteraction(
             true,
             cakeConsumption,
+            composterInteraction,
             axeStrippingWood,
             blockDrivenToolChange,
             bypassing,
@@ -322,6 +341,13 @@ public final class BlockProtectionListener implements Listener {
                     support.recordBlockInteraction(claim.get(), event.getPlayer(), ClaimPermission.INTERACT);
                 }
                 debugInteract(event, claim, "pre-cancel-cake-allow", "interact=" + formatDecision(interactDecision) + " applied=" + applied);
+            }
+            case ALLOW_COMPOSTER -> {
+                boolean applied = ProtectionInteractionCompat.applyComposterInteraction(event);
+                if (!bypassing) {
+                    support.recordBlockInteraction(claim.get(), event.getPlayer(), ClaimPermission.INTERACT);
+                }
+                debugInteract(event, claim, "pre-cancel-composter-allow", "interact=" + formatDecision(interactDecision) + " applied=" + applied);
             }
             case ALLOW_AXE_STRIPPING -> {
                 ProtectionInteractionCompat.applyAxeStripping(event, support);
@@ -370,6 +396,7 @@ public final class BlockProtectionListener implements Listener {
         return resolvePreCancelledInteraction(
             claimPresent,
             cakeConsumption,
+            false,
             axeStrippingWood,
             false,
             bypassing,
@@ -382,6 +409,7 @@ public final class BlockProtectionListener implements Listener {
     static PreCancelledInteractionResolution resolvePreCancelledInteraction(
         boolean claimPresent,
         boolean cakeConsumption,
+        boolean composterInteraction,
         boolean axeStrippingWood,
         boolean blockDrivenToolChange,
         boolean bypassing,
@@ -395,6 +423,11 @@ public final class BlockProtectionListener implements Listener {
         if (cakeConsumption) {
             return bypassing || hasInteractPermission
                 ? PreCancelledInteractionResolution.ALLOW_CAKE_CONSUMPTION
+                : PreCancelledInteractionResolution.DENY;
+        }
+        if (composterInteraction) {
+            return bypassing || hasInteractPermission
+                ? PreCancelledInteractionResolution.ALLOW_COMPOSTER
                 : PreCancelledInteractionResolution.DENY;
         }
         if (axeStrippingWood) {
@@ -414,6 +447,7 @@ public final class BlockProtectionListener implements Listener {
         IGNORE,
         DENY,
         ALLOW_CAKE_CONSUMPTION,
+        ALLOW_COMPOSTER,
         ALLOW_AXE_STRIPPING,
         ALLOW_BLOCK_DRIVEN_TOOL_CHANGE
     }

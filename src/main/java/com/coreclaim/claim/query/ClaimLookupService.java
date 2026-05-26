@@ -2,8 +2,10 @@ package com.coreclaim.claim.query;
 
 import com.coreclaim.model.Claim;
 import com.coreclaim.service.ClaimService;
+import com.coreclaim.claim.persistence.LegacyClaimServerIdRepairReport;
 import com.coreclaim.claim.persistence.ClaimPersistenceRepository;
 import com.coreclaim.claim.ClaimRuntime;
+import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import org.bukkit.Location;
+import org.bukkit.Bukkit;
 
 public final class ClaimLookupService {
 
@@ -44,6 +47,52 @@ public final class ClaimLookupService {
     public boolean isLocalClaim(Claim claim) {
         String effectiveServerId = effectiveServerId(claim);
         return effectiveServerId != null && runtime.plugin().settings().isCurrentServer(effectiveServerId);
+    }
+
+    public ClaimIndexExplanation explainClaimIndexState(int claimId) {
+        return explainClaimIndexState(claimId, null);
+    }
+
+    public ClaimIndexExplanation explainClaimIndexState(int claimId, Location currentLocation) {
+        Claim claim = runtime.claims().get(claimId);
+        if (claim == null) {
+            return new ClaimIndexExplanation(
+                claimId,
+                "",
+                "",
+                null,
+                currentServerId(),
+                runtime.databaseManager() != null && runtime.databaseManager().isMySql(),
+                false,
+                false,
+                false,
+                currentLocation != null,
+                false,
+                null,
+                "Claim is not loaded in memory. Use /claim reload, then check database rows for this id."
+            );
+        }
+        String effectiveServerId = effectiveServerId(claim);
+        boolean mysql = runtime.databaseManager() != null && runtime.databaseManager().isMySql();
+        boolean localClaim = isLocalClaim(claim);
+        boolean worldLoaded = Bukkit.getWorld(claim.world()) != null;
+        boolean indexed = ClaimChunkIndex.containsClaim(runtime.claimChunkIndex(), claim);
+        Optional<Claim> locationHit = currentLocation == null ? Optional.empty() : findClaim(currentLocation);
+        return new ClaimIndexExplanation(
+            claim.id(),
+            claim.world(),
+            claim.serverId(),
+            effectiveServerId,
+            currentServerId(),
+            mysql,
+            localClaim,
+            worldLoaded,
+            indexed,
+            currentLocation != null,
+            locationHit.map(hit -> hit.id() == claim.id()).orElse(false),
+            locationHit.map(Claim::id).orElse(null),
+            repairSuggestion(claim, effectiveServerId, localClaim, indexed, worldLoaded, mysql)
+        );
     }
 
     public boolean countsTowardQuota(Claim claim) {
@@ -295,6 +344,10 @@ public final class ClaimLookupService {
     public int reloadClaims() {
         synchronized (runtime.mutationLock()) {
             persistenceRepository.backfillMissingServerIds(currentServerId());
+            LegacyClaimServerIdRepairReport repairReport = persistenceRepository.inspectAndRepairMissingServerIds(
+                runtime.plugin().settings().legacyClaimServerIdRepair()
+            );
+            logLegacyServerIdRepairReport(repairReport);
             Map<Integer, Claim> loadedClaims = persistenceRepository.loadClaimsFromDatabase();
             renameDuplicateLoadedClaims(loadedClaims);
             runtime.claims().clear();
@@ -421,15 +474,91 @@ public final class ClaimLookupService {
         runtime.setClaimChunkIndex(ClaimChunkIndex.rebuild(runtime.claims().values(), this::isLocalClaim));
     }
 
-    private String effectiveServerId(String explicitServerId) {
+    static String resolveEffectiveServerId(String explicitServerId, boolean mysql, String currentServerId) {
         if (explicitServerId != null && !explicitServerId.isBlank()) {
             return explicitServerId.trim();
         }
-        return runtime.databaseManager().isMySql() ? null : currentServerId();
+        return mysql ? null : currentServerId;
+    }
+
+    private String effectiveServerId(String explicitServerId) {
+        return resolveEffectiveServerId(
+            explicitServerId,
+            runtime.databaseManager() != null && runtime.databaseManager().isMySql(),
+            currentServerId()
+        );
     }
 
     private List<Claim> claimCandidates(Location location) {
         return ClaimChunkIndex.candidates(runtime.claimChunkIndex(), location);
+    }
+
+    private void logLegacyServerIdRepairReport(LegacyClaimServerIdRepairReport report) {
+        if (report == null || !report.mysql() || !report.hasMissingRows() || runtime.plugin() == null) {
+            return;
+        }
+        Logger logger = runtime.plugin().getLogger();
+        String worlds = report.worlds().isEmpty() ? "<none>" : String.join(", ", report.worlds());
+        if (report.repairEnabled()) {
+            if (report.repairedCount() > 0) {
+                logger.warning("Legacy claims.server_id repair updated " + report.repairedCount()
+                    + " old MySQL claim(s); unrepaired=" + report.unrepairedCount()
+                    + "; worlds=[" + worlds + "]. Claim cache and chunk index are being rebuilt.");
+            }
+            if (report.unrepairedCount() > 0) {
+                logger.severe("Legacy claims.server_id repair left " + report.unrepairedCount()
+                    + " old MySQL claim(s) unrepaired because no world-map/default-server-id matched. These claims will not enter this server's protection index. Worlds=["
+                    + worlds + "]. Configure legacy-claim-server-id-repair.world-map or default-server-id, then run /claim reload.");
+                logLegacyServerIdSqlExamples(logger, worlds);
+            }
+            return;
+        }
+        logger.severe("Detected " + report.missingCount()
+            + " MySQL claim(s) with empty claims.server_id. They cannot be assigned to a backend server and will not enter this server's protection index. Worlds=["
+            + worlds + "].");
+        logger.warning("Enable legacy-claim-server-id-repair in config.yml or repair the database manually, then run /claim reload.");
+        logLegacyServerIdSqlExamples(logger, worlds);
+    }
+
+    private void logLegacyServerIdSqlExamples(Logger logger, String worlds) {
+        String current = currentServerId().replace("'", "''");
+        logger.warning("SQL example: UPDATE claims SET server_id = '" + current + "' WHERE server_id IS NULL OR TRIM(server_id) = '';");
+        logger.warning("World-specific SQL example: UPDATE claims SET server_id = '" + current + "' WHERE (server_id IS NULL OR TRIM(server_id) = '') AND world = '<world-name>'; Worlds detected: " + worlds);
+    }
+
+    private String repairSuggestion(Claim claim, String effectiveServerId, boolean localClaim, boolean indexed, boolean worldLoaded, boolean mysql) {
+        return indexRepairSuggestion(claim, effectiveServerId, localClaim, indexed, worldLoaded, mysql, currentServerId());
+    }
+
+    static String indexRepairSuggestion(
+        Claim claim,
+        String effectiveServerId,
+        boolean localClaim,
+        boolean indexed,
+        boolean worldLoaded,
+        boolean mysql,
+        String currentServerId
+    ) {
+        if (!mysql) {
+            return indexed ? "SQLite claim is indexed locally." : "Run /claim reload to rebuild the local chunk index.";
+        }
+        if (claim.serverId() == null || claim.serverId().isBlank()) {
+            return "server_id is empty in MySQL. Use /claim admin setserver " + claim.id() + " " + currentServerId
+                + " or enable legacy-claim-server-id-repair, then run /claim reload.";
+        }
+        if (effectiveServerId == null || effectiveServerId.isBlank()) {
+            return "No effective server id could be resolved. Check claims.server_id and server-id in config.yml.";
+        }
+        if (!localClaim) {
+            return "Claim belongs to server_id '" + effectiveServerId + "'. This server protects only '" + currentServerId + "'. Use /claim admin setserver if this is wrong.";
+        }
+        if (!worldLoaded) {
+            return "Claim server_id is local, but world '" + claim.world() + "' is not loaded on this server.";
+        }
+        if (!indexed) {
+            return "Claim is local but absent from chunk index. Run /claim reload; if it remains absent, inspect claim bounds/world.";
+        }
+        return "Claim is local and present in the protection chunk index.";
     }
 
     private Optional<ClaimService.ClaimListEntry> toClaimListEntry(Claim claim, UUID playerId, boolean includeSystem) {

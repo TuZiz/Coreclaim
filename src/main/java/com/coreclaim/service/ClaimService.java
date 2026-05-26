@@ -18,6 +18,7 @@ import com.coreclaim.claim.mutation.ClaimCreationOptions;
 import com.coreclaim.claim.mutation.ClaimCreationRequest;
 import com.coreclaim.claim.mutation.ClaimCreationResult;
 import com.coreclaim.claim.persistence.ClaimPersistenceRepository;
+import com.coreclaim.claim.query.ClaimIndexExplanation;
 import com.coreclaim.claim.query.ClaimLookupService;
 import com.coreclaim.storage.DatabaseManager;
 import java.util.List;
@@ -69,6 +70,14 @@ public final class ClaimService {
 
     public boolean isLocalClaim(Claim claim) {
         return lookupService.isLocalClaim(claim);
+    }
+
+    public ClaimIndexExplanation explainClaimIndexState(int claimId) {
+        return lookupService.explainClaimIndexState(claimId);
+    }
+
+    public ClaimIndexExplanation explainClaimIndexState(int claimId, Location currentLocation) {
+        return lookupService.explainClaimIndexState(claimId, currentLocation);
     }
 
     public String displayServerId(Claim claim) {

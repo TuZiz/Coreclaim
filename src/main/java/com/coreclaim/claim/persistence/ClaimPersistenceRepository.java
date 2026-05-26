@@ -7,10 +7,15 @@ import com.coreclaim.model.ClaimMemberSettings;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.claim.ClaimRuntime;
 import com.coreclaim.claim.query.ClaimNameNormalizer;
+import com.coreclaim.config.LegacyClaimServerIdRepairSettings;
+import com.coreclaim.claim.persistence.LegacyClaimServerIdRepairReport.LegacyClaimServerIdRepairRow;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class ClaimPersistenceRepository {
@@ -32,6 +37,78 @@ public final class ClaimPersistenceRepository {
         runtime.databaseManager().update(
             "UPDATE claims SET server_id = ? WHERE " + MISSING_SERVER_ID_CONDITION,
             statement -> statement.setString(1, currentServerId)
+        );
+    }
+
+    public LegacyClaimServerIdRepairReport inspectAndRepairMissingServerIds(LegacyClaimServerIdRepairSettings settings) {
+        boolean mysql = runtime.databaseManager().isMySql();
+        boolean repairEnabled = settings != null && settings.enabled();
+        if (!mysql) {
+            return LegacyClaimServerIdRepairReport.none(false, repairEnabled);
+        }
+
+        List<LegacyClaimServerIdRepairRow> missingRows = missingServerIdRows();
+        if (missingRows.isEmpty()) {
+            return LegacyClaimServerIdRepairReport.none(true, repairEnabled);
+        }
+
+        Set<String> worlds = new LinkedHashSet<>();
+        for (LegacyClaimServerIdRepairRow row : missingRows) {
+            worlds.add(row.world() == null || row.world().isBlank() ? "<empty>" : row.world());
+        }
+
+        if (!repairEnabled || settings == null || !settings.hasAnyRepairTarget()) {
+            return new LegacyClaimServerIdRepairReport(true, repairEnabled, missingRows.size(), 0, missingRows.size(), Set.copyOf(worlds), List.copyOf(missingRows));
+        }
+
+        int repaired = 0;
+        List<LegacyClaimServerIdRepairRow> unrepairedRows = new ArrayList<>();
+        for (LegacyClaimServerIdRepairRow row : missingRows) {
+            String targetServerId = settings.targetServerId(row.world());
+            if (targetServerId == null || targetServerId.isBlank()) {
+                unrepairedRows.add(row);
+                continue;
+            }
+            int updated = runtime.databaseManager().update(
+                "UPDATE claims SET server_id = ? WHERE id = ? AND " + MISSING_SERVER_ID_CONDITION,
+                statement -> {
+                    statement.setString(1, targetServerId.trim());
+                    statement.setInt(2, row.claimId());
+                }
+            );
+            if (updated > 0) {
+                repaired += updated;
+            } else {
+                unrepairedRows.add(row);
+            }
+        }
+        return new LegacyClaimServerIdRepairReport(
+            true,
+            true,
+            missingRows.size(),
+            repaired,
+            unrepairedRows.size(),
+            Set.copyOf(worlds),
+            List.copyOf(unrepairedRows)
+        );
+    }
+
+    private List<LegacyClaimServerIdRepairRow> missingServerIdRows() {
+        return runtime.databaseManager().query(
+            "SELECT id, name, world FROM claims WHERE " + MISSING_SERVER_ID_CONDITION + " ORDER BY id",
+            statement -> {
+            },
+            resultSet -> {
+                List<LegacyClaimServerIdRepairRow> rows = new ArrayList<>();
+                while (resultSet.next()) {
+                    rows.add(new LegacyClaimServerIdRepairRow(
+                        resultSet.getInt("id"),
+                        resultSet.getString("name"),
+                        resultSet.getString("world")
+                    ));
+                }
+                return rows;
+            }
         );
     }
 

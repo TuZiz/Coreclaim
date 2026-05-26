@@ -110,6 +110,29 @@ class PluginConfigLoaderTest {
     }
 
     @Test
+    void legacyClaimServerIdRepairDefaultsToDisabled() {
+        PluginConfig config = new PluginConfig(new YamlConfiguration(), new YamlConfiguration());
+
+        assertFalse(config.legacyClaimServerIdRepair().enabled());
+        assertEquals("", config.legacyClaimServerIdRepair().defaultServerId());
+        assertFalse(config.legacyClaimServerIdRepair().hasAnyRepairTarget());
+    }
+
+    @Test
+    void legacyClaimServerIdRepairWorldMapOverridesDefaultServer() {
+        YamlConfiguration rawConfig = new YamlConfiguration();
+        rawConfig.set("legacy-claim-server-id-repair.enabled", true);
+        rawConfig.set("legacy-claim-server-id-repair.default-server-id", "fallback");
+        rawConfig.set("legacy-claim-server-id-repair.world-map.world_nether", "nether-server");
+
+        PluginConfig config = new PluginConfig(rawConfig, new YamlConfiguration());
+
+        assertTrue(config.legacyClaimServerIdRepair().enabled());
+        assertEquals("nether-server", config.legacyClaimServerIdRepair().targetServerId("WORLD_NETHER"));
+        assertEquals("fallback", config.legacyClaimServerIdRepair().targetServerId("world"));
+    }
+
+    @Test
     void explicitPositiveClaimSpacingStillLoads() {
         YamlConfiguration rawConfig = new YamlConfiguration();
         rawConfig.set("minimum-gap", 8);

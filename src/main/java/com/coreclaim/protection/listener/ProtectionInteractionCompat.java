@@ -9,6 +9,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.block.data.Orientable;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.Cake;
@@ -97,6 +98,20 @@ final class ProtectionInteractionCompat {
                 event.setCancelled(true);
             }
         });
+    }
+
+    static boolean applyComposterInteraction(PlayerInteractEvent event) {
+        Block block = event.getClickedBlock();
+        if (block == null || block.getType() != Material.COMPOSTER) {
+            return false;
+        }
+        if (!(block.getBlockData() instanceof Levelled)) {
+            return false;
+        }
+        event.setCancelled(false);
+        event.setUseInteractedBlock(Event.Result.ALLOW);
+        event.setUseItemInHand(Event.Result.DEFAULT);
+        return true;
     }
 
     static boolean applyCakeConsumption(CakeConsumptionAccess access) {

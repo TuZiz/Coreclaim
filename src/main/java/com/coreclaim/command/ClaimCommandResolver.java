@@ -127,6 +127,7 @@ final class ClaimCommandResolver {
             case "place" -> ClaimPermission.PLACE;
             case "break" -> ClaimPermission.BREAK;
             case "interact" -> ClaimPermission.INTERACT;
+            case "utility-interact", "utility", "workstation", "workstation-interact", "functional-interact" -> ClaimPermission.UTILITY_INTERACT;
             case "mob-interact", "mob", "entity", "entity-interact", "mob-damage", "entity-damage" -> ClaimPermission.MOB_INTERACT;
             case "animal-spawn", "animal", "animals", "passive-spawn", "passive-mob-spawn" -> ClaimPermission.ANIMAL_SPAWN;
             case "monster-spawn", "monster", "monsters", "hostile-spawn", "hostile-mob-spawn" -> ClaimPermission.MONSTER_SPAWN;

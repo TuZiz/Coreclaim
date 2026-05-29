@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.junit.jupiter.api.Test;
 
 class BlockProtectionListenerTest {
@@ -131,6 +133,15 @@ class BlockProtectionListenerTest {
         assertTrue(source.contains("debugInteract(event, claim, \"tnt-ignite-allow\", \"permission=\" + requiredPermission);"));
         assertTrue(source.contains("debugInteract(event, claim, \"tnt-ignite-deny\", \"permission=\" + requiredPermission);"));
         assertTrue(source.contains("support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());"));
+    }
+
+    @Test
+    void iceBreakWaterRestoreOnlyTriggersForNormalIceWithoutSilkTouchInSurvival() {
+        assertTrue(BlockProtectionListener.isWaterRestoringIce(Material.ICE, GameMode.SURVIVAL, false));
+        assertTrue(BlockProtectionListener.isWaterRestoringIce(Material.FROSTED_ICE, GameMode.SURVIVAL, false));
+        assertFalse(BlockProtectionListener.isWaterRestoringIce(Material.ICE, GameMode.SURVIVAL, true));
+        assertFalse(BlockProtectionListener.isWaterRestoringIce(Material.PACKED_ICE, GameMode.SURVIVAL, false));
+        assertFalse(BlockProtectionListener.isWaterRestoringIce(Material.ICE, GameMode.CREATIVE, false));
     }
 
     private static int occurrences(String source, String needle) {

@@ -167,6 +167,9 @@ public final class ProtectionRuleSupport {
         if (isSpecialExplosiveUse(block, material)) {
             return ClaimPermission.EXPLOSION;
         }
+        if (isUtilityInteractBlock(material)) {
+            return ClaimPermission.UTILITY_INTERACT;
+        }
         if (isRedstoneControl(material)) {
             return ClaimPermission.REDSTONE;
         }
@@ -196,6 +199,10 @@ public final class ProtectionRuleSupport {
 
     public boolean isCompostableMaterial(Material material) {
         return ProtectionMaterialRules.isCompostableMaterial(material);
+    }
+
+    public boolean isUtilityInteractBlock(Material material) {
+        return ProtectionMaterialRules.isUtilityInteractBlock(material);
     }
 
     public boolean isCakeConsumption(Material material, ItemStack item) {

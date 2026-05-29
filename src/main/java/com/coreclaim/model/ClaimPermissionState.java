@@ -5,6 +5,7 @@ final class ClaimPermissionState {
     private boolean allowPlace;
     private boolean allowBreak;
     private boolean allowInteract;
+    private boolean allowUtilityInteract;
     private boolean allowMobInteract;
     private boolean allowAnimalSpawn;
     private boolean allowMonsterSpawn;
@@ -18,7 +19,7 @@ final class ClaimPermissionState {
         boolean allowPlace,
         boolean allowBreak,
         boolean allowInteract,
-        boolean allowContainer,
+        boolean allowUtilityInteract,
         boolean allowMobInteract,
         boolean allowAnimalSpawn,
         boolean allowMonsterSpawn,
@@ -30,7 +31,8 @@ final class ClaimPermissionState {
     ) {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
-        this.allowInteract = allowInteract && allowContainer;
+        this.allowInteract = allowInteract;
+        this.allowUtilityInteract = allowUtilityInteract;
         this.allowMobInteract = allowMobInteract;
         this.allowAnimalSpawn = allowAnimalSpawn;
         this.allowMonsterSpawn = allowMonsterSpawn;
@@ -49,6 +51,7 @@ final class ClaimPermissionState {
             case PLACE -> allowPlace;
             case BREAK -> allowBreak;
             case INTERACT -> allowInteract;
+            case UTILITY_INTERACT -> allowUtilityInteract;
             case MOB_INTERACT -> allowMobInteract;
             case ANIMAL_SPAWN -> allowAnimalSpawn;
             case MONSTER_SPAWN -> allowMonsterSpawn;
@@ -69,6 +72,7 @@ final class ClaimPermissionState {
             case PLACE -> allowPlace = allowed;
             case BREAK -> allowBreak = allowed;
             case INTERACT -> allowInteract = allowed;
+            case UTILITY_INTERACT -> allowUtilityInteract = allowed;
             case MOB_INTERACT -> allowMobInteract = allowed;
             case ANIMAL_SPAWN -> allowAnimalSpawn = allowed;
             case MONSTER_SPAWN -> allowMonsterSpawn = allowed;

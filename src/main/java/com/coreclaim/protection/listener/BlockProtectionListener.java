@@ -4,8 +4,10 @@ import com.coreclaim.model.Claim;
 import com.coreclaim.model.ClaimPermission;
 import com.coreclaim.claim.auth.ClaimAuthorizationService.AuthorizationDecision;
 import java.util.Optional;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -16,6 +18,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.block.Block;
@@ -53,6 +56,41 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         support.claimCleanupService().recordBuildActivity(claim.get(), event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onIceBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        ItemStack heldItem = event.getPlayer().getInventory().getItemInMainHand();
+        if (!isWaterRestoringIce(block.getType(), event.getPlayer().getGameMode(), hasSilkTouch(heldItem))) {
+            return;
+        }
+        if (block.getWorld().getEnvironment() == World.Environment.NETHER) {
+            return;
+        }
+
+        Optional<Claim> claim = support.claimService().findClaim(block.getLocation());
+        if (claim.isEmpty()) {
+            return;
+        }
+        if (support.isCoreBlock(block, claim.get())) {
+            return;
+        }
+        if (!support.isBypassing(event.getPlayer())
+            && !support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.BREAK)) {
+            return;
+        }
+
+        Location location = block.getLocation();
+        support.plugin().platformScheduler().runLocationLater(location, () -> {
+            if (location.getWorld() == null) {
+                return;
+            }
+            Block currentBlock = location.getBlock();
+            if (currentBlock.getType().isAir()) {
+                currentBlock.setType(Material.WATER, true);
+            }
+        }, 1L);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -547,6 +585,23 @@ public final class BlockProtectionListener implements Listener {
             && (support.isCakeConsumption(block.getType(), item)
             || support.isAxeStrippingWood(block.getType(), item)
             || support.isBlockDrivenToolChange(block.getType(), item));
+    }
+
+    static boolean isWaterRestoringIce(Material material, GameMode gameMode, boolean silkTouch) {
+        if (material == null || gameMode == null) {
+            return false;
+        }
+        if (gameMode == GameMode.CREATIVE) {
+            return false;
+        }
+        if (silkTouch) {
+            return false;
+        }
+        return material == Material.ICE || material == Material.FROSTED_ICE;
+    }
+
+    private static boolean hasSilkTouch(ItemStack item) {
+        return item != null && item.containsEnchantment(Enchantment.SILK_TOUCH);
     }
 
     @EventHandler(ignoreCancelled = true)

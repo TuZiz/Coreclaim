@@ -68,6 +68,7 @@ final class ClaimCommandFormatter {
             "{place}", stateText(claim.permission(ClaimPermission.PLACE)),
             "{break}", stateText(claim.permission(ClaimPermission.BREAK)),
             "{interact}", stateText(claim.permission(ClaimPermission.INTERACT)),
+            "{utility_interact}", stateText(claim.permission(ClaimPermission.UTILITY_INTERACT)),
             "{redstone}", stateText(claim.permission(ClaimPermission.REDSTONE))
         );
         sendDetail(

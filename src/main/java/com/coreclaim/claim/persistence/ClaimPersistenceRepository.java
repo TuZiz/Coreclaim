@@ -303,7 +303,7 @@ public final class ClaimPersistenceRepository {
                     statement.setInt(22, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
                     statement.setInt(23, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                     statement.setInt(24, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                    statement.setInt(25, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                    statement.setInt(25, claim.permission(ClaimPermission.UTILITY_INTERACT) ? 1 : 0);
                     statement.setInt(26, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
                     statement.setInt(27, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
                     statement.setInt(28, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
@@ -401,7 +401,7 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(1, claim.permission(ClaimPermission.PLACE) ? 1 : 0);
                 statement.setInt(2, claim.permission(ClaimPermission.BREAK) ? 1 : 0);
                 statement.setInt(3, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                statement.setInt(4, claim.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                statement.setInt(4, claim.permission(ClaimPermission.UTILITY_INTERACT) ? 1 : 0);
                 statement.setInt(5, claim.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
                 statement.setInt(6, claim.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
                 statement.setInt(7, claim.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);
@@ -425,7 +425,7 @@ public final class ClaimPersistenceRepository {
                 statement.setInt(3, settings.permission(ClaimPermission.PLACE) ? 1 : 0);
                 statement.setInt(4, settings.permission(ClaimPermission.BREAK) ? 1 : 0);
                 statement.setInt(5, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
-                statement.setInt(6, settings.permission(ClaimPermission.INTERACT) ? 1 : 0);
+                statement.setInt(6, settings.permission(ClaimPermission.UTILITY_INTERACT) ? 1 : 0);
                 statement.setInt(7, settings.permission(ClaimPermission.MOB_INTERACT) ? 1 : 0);
                 statement.setInt(8, settings.permission(ClaimPermission.ANIMAL_SPAWN) ? 1 : 0);
                 statement.setInt(9, settings.permission(ClaimPermission.MONSTER_SPAWN) ? 1 : 0);

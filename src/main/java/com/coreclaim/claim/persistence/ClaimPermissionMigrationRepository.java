@@ -31,7 +31,7 @@ final class ClaimPermissionMigrationRepository {
 
     private void normalizeClaimPermissionRows() {
         Map<Integer, PermissionRow> rows = runtime.databaseManager().query(
-            "SELECT id, allow_interact, allow_container, allow_redstone FROM claims",
+            "SELECT id, allow_interact, allow_redstone FROM claims",
             statement -> {
             },
             resultSet -> {
@@ -39,7 +39,6 @@ final class ClaimPermissionMigrationRepository {
                 while (resultSet.next()) {
                     values.put(resultSet.getInt("id"), new PermissionRow(
                         resultSet.getInt("allow_interact") != 0,
-                        resultSet.getInt("allow_container") != 0,
                         resultSet.getInt("allow_redstone") != 0
                     ));
                 }
@@ -52,38 +51,30 @@ final class ClaimPermissionMigrationRepository {
             PermissionRow row = entry.getValue();
             EnumMap<LegacyPermissionGroup, List<ClaimFlagState>> states = legacyStates.get(claimId);
             boolean interact = PermissionMergeSupport.mergeLegacyFlagStates(
-                PermissionMergeSupport.mergeInteractAndContainer(row.allowInteract(), row.allowContainer()),
+                row.allowInteract(),
                 states == null ? List.of() : states.getOrDefault(LegacyPermissionGroup.INTERACT, List.of())
             );
             boolean redstone = PermissionMergeSupport.mergeLegacyFlagStates(
                 row.allowRedstone(),
                 states == null ? List.of() : states.getOrDefault(LegacyPermissionGroup.REDSTONE, List.of())
             );
-            if (interact == row.allowInteract() && interact == row.allowContainer() && redstone == row.allowRedstone()) {
+            if (interact == row.allowInteract() && redstone == row.allowRedstone()) {
                 continue;
             }
             runtime.databaseManager().update(
-                "UPDATE claims SET allow_interact = ?, allow_container = ?, allow_redstone = ? WHERE id = ?",
+                "UPDATE claims SET allow_interact = ?, allow_redstone = ? WHERE id = ?",
                 statement -> {
                     statement.setInt(1, interact ? 1 : 0);
-                    statement.setInt(2, interact ? 1 : 0);
-                    statement.setInt(3, redstone ? 1 : 0);
-                    statement.setInt(4, claimId);
+                    statement.setInt(2, redstone ? 1 : 0);
+                    statement.setInt(3, claimId);
                 }
             );
         }
     }
 
     private void normalizeMemberPermissionRows() {
-        runtime.databaseManager().update(
-            """
-            UPDATE claim_member_permissions
-            SET allow_interact = CASE WHEN allow_interact <> 0 AND allow_container <> 0 THEN 1 ELSE 0 END,
-                allow_container = CASE WHEN allow_interact <> 0 AND allow_container <> 0 THEN 1 ELSE 0 END
-            """,
-            statement -> {
-            }
-        );
+        // allow_container is now reused as the independent utility-interact permission.
+        // Do not mirror it into allow_interact during startup or the split cannot persist.
     }
 
     private void deleteOrphanMemberPermissionRows() {
@@ -158,6 +149,6 @@ final class ClaimPermissionMigrationRepository {
         REDSTONE
     }
 
-    private record PermissionRow(boolean allowInteract, boolean allowContainer, boolean allowRedstone) {
+    private record PermissionRow(boolean allowInteract, boolean allowRedstone) {
     }
 }

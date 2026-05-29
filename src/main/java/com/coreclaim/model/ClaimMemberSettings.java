@@ -5,6 +5,7 @@ public final class ClaimMemberSettings {
     private boolean allowPlace;
     private boolean allowBreak;
     private boolean allowInteract;
+    private boolean allowUtilityInteract;
     private boolean allowMobInteract;
     private boolean allowAnimalSpawn;
     private boolean allowMonsterSpawn;
@@ -18,7 +19,7 @@ public final class ClaimMemberSettings {
         boolean allowPlace,
         boolean allowBreak,
         boolean allowInteract,
-        boolean allowContainer,
+        boolean allowUtilityInteract,
         boolean allowMobInteract,
         boolean allowAnimalSpawn,
         boolean allowMonsterSpawn,
@@ -30,7 +31,8 @@ public final class ClaimMemberSettings {
     ) {
         this.allowPlace = allowPlace;
         this.allowBreak = allowBreak;
-        this.allowInteract = allowInteract && allowContainer;
+        this.allowInteract = allowInteract;
+        this.allowUtilityInteract = allowUtilityInteract;
         this.allowMobInteract = allowMobInteract;
         this.allowAnimalSpawn = allowAnimalSpawn;
         this.allowMonsterSpawn = allowMonsterSpawn;
@@ -50,6 +52,9 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.INTERACT) {
             return allowInteract;
+        }
+        if (permission == ClaimPermission.UTILITY_INTERACT) {
+            return allowUtilityInteract;
         }
         if (permission == ClaimPermission.MOB_INTERACT) {
             return allowMobInteract;
@@ -86,6 +91,10 @@ public final class ClaimMemberSettings {
         }
         if (permission == ClaimPermission.INTERACT) {
             allowInteract = allowed;
+            return;
+        }
+        if (permission == ClaimPermission.UTILITY_INTERACT) {
+            allowUtilityInteract = allowed;
             return;
         }
         if (permission == ClaimPermission.MOB_INTERACT) {

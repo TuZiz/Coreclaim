@@ -12,6 +12,7 @@
 | 铲子路径化 | `PlayerInteractEvent` 右键方块 | `BREAK` | 无权限时取消事件 | 成功时记录建造活跃 |
 | 蜂巢、蛋糕、蜡烛、堆肥桶、炼药锅等右键状态变化 | `PlayerInteractEvent` 右键方块 | `INTERACT` | 无权限时取消事件 | 成功时记录交互活跃 |
 | 容器、门、活板门、栅栏门、床普通使用 | `PlayerInteractEvent` / 实体交互 | `INTERACT` | `setCancelled(true)`；容器上的工具动作可仅拒绝物品或方块使用 | 成功时记录交互活跃 |
+| 附魔台、切石机、砂轮、讲台读书、制图台、锻造台、织布机、铁砧等功能方块 | `PlayerInteractEvent` 右键方块 | `UTILITY_INTERACT` / 配置键 `utility-interact` | `setCancelled(true)` | 成功时记录交互活跃 |
 | 红石开关和特殊红石交互 | `PlayerInteractEvent` / `ProjectileHitEvent` | `REDSTONE`；按钮、拉杆、压力板固定归类为红石权限 | `setCancelled(true)`，投掷物会移除实体 | 成功时记录交互活跃 |
 | 床、重生锚等特殊爆炸触发 | `PlayerInteractEvent` | 只在会爆炸的维度检查 `EXPLOSION`，普通睡觉仍为 `INTERACT` | 无权限时取消事件；有权限时登记爆炸授权位置 | 成功时记录交互活跃 |
 | 生物攻击和右键互动 | `EntityDamageByEntityEvent` / `PlayerInteractEntityEvent` / `PlayerInteractAtEntityEvent` | 非玩家、非盔甲架的 `LivingEntity` 需要 `MOB_INTERACT` | `setCancelled(true)` | 成功时记录交互活跃 |
@@ -32,3 +33,4 @@
 - `coreclaim.admin.view` 只允许查看，不允许写入领地数据。
 - GUI、命令和聊天输入的写入入口必须在提交时再次检查对应写权限。
 - 容器打开和工具右键要分开处理，避免为了允许铜块除锈或铲子路径化而误放开交互权限。
+- 功能方块不要回退到 `INTERACT`；新增工作站类方块时优先补 `UTILITY_INTERACT` 分类和测试。

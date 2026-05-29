@@ -85,6 +85,7 @@
 - **主线程安全优先**：不要在异步线程直接访问世界/区块/实体/背包/GUI 会话等 Bukkit 主线程 API。
 - **GUI 以配置为主**：新增/调整界面优先改 `src/main/resources/gui/*.yml`，代码只负责解析与行为。
 - **保护规则严禁放宽兜底**：遇到破坏、右键蛋糕、斧头去皮等问题，先同时追踪事件分类与 `ClaimAuthorizationService`，不要通过放开 `INTERACT/BREAK` 兜底解决。
+- **功能方块独立权限**：附魔台、切石机、砂轮、讲台读书、制图台、锻造台、织布机、铁砧等使用 `UTILITY_INTERACT` / `utility-interact`，不要混回通用 `INTERACT`。
 - **全局信任已废弃**：不要新增 `GLOBAL_TRUSTED` 授权来源；`unadd` 和 GUI 移除成员必须同时清理 `claim_members`、`claim_member_permissions` 和旧 `profile_global_members` 残留。
 - **旧授权残留优先查诊断**：怀疑旧成员仍有权限时，先用 `/claim admin diagnose <领地> --player <玩家>` 区分 `OWNER / TRUSTED / PUBLIC_PERMISSION / DENIED / BYPASS`，再改代码。
 - **编码/中文排查**：在 Windows PowerShell 读文件建议显式 `-Encoding UTF8`，不要把“显示乱码”误判成“文件损坏”。

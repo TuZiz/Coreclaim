@@ -164,6 +164,25 @@ final class ProtectionMaterialRules {
             || name.endsWith("_MUSHROOM_BLOCK");
     }
 
+    static boolean isUtilityInteractBlock(Material material) {
+        if (material == null) {
+            return false;
+        }
+        return switch (material) {
+            case ENCHANTING_TABLE,
+                STONECUTTER,
+                GRINDSTONE,
+                LECTERN,
+                CARTOGRAPHY_TABLE,
+                SMITHING_TABLE,
+                LOOM,
+                ANVIL,
+                CHIPPED_ANVIL,
+                DAMAGED_ANVIL -> true;
+            default -> false;
+        };
+    }
+
     static boolean isCakeConsumption(Material material, ItemStack item) {
         if (!isCakeBlock(material)) {
             return false;

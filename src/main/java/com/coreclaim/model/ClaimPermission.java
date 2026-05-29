@@ -6,6 +6,7 @@ public enum ClaimPermission {
     PLACE,
     BREAK,
     INTERACT,
+    UTILITY_INTERACT,
     MOB_INTERACT,
     ANIMAL_SPAWN,
     MONSTER_SPAWN,

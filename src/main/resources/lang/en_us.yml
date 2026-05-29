@@ -299,7 +299,7 @@ claim-detail-teleport-custom: '&#CBD5E1Teleport Point: &#55FFAACustom &#94A3B8({
 claim-detail-teleport-core: '&#CBD5E1Teleport Point: &#FACC15Core'
 claim-detail-deny: '&#CBD5E1Deny Status: &#FF6B6B{denied} &#CBD5E1players &#475569| &#CBD5E1deny *: {deny_all}'
 claim-detail-rules: '&#CBD5E1Permission Source: {source}'
-claim-detail-permissions: '&#CBD5E1Permissions: &#94A3B8Place {place} &#475569| &#94A3B8Break {break} &#475569| &#94A3B8Interact {interact} &#475569| &#94A3B8Redstone {redstone}'
+claim-detail-permissions: '&#CBD5E1Permissions: &#94A3B8Place {place} &#475569| &#94A3B8Break {break} &#475569| &#94A3B8Interact {interact} &#475569| &#94A3B8Utility {utility_interact} &#475569| &#94A3B8Redstone {redstone}'
 claim-detail-permissions-extra: '             &#94A3B8Mobs {mob_interact} &#475569| &#94A3B8Explosion {explosion} &#475569| &#94A3B8Bucket {bucket} &#475569| &#94A3B8Teleport {teleport} &#475569| &#94A3B8Flight {flight}'
 claim-detail-permissions-spawn: '             &#94A3B8Animal Spawn {animal_spawn} &#475569| &#94A3B8Monster Spawn {monster_spawn}'
 claim-detail-flags: '&#CBD5E1Extra Permissions: {flags}'

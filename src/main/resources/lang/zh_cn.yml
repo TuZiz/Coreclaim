@@ -301,7 +301,7 @@ claim-detail-teleport-custom: '&#CBD5E1传送点: &#55FFAA自定义 &#94A3B8({po
 claim-detail-teleport-core: '&#CBD5E1传送点: &#FACC15核心'
 claim-detail-deny: '&#CBD5E1禁足状态: &#FF6B6B{denied} &#CBD5E1人 &#475569| &#CBD5E1全员禁足: {deny_all}'
 claim-detail-rules: '&#CBD5E1权限来源: {source}'
-claim-detail-permissions: '&#CBD5E1权限: &#94A3B8放置 {place} &#475569| &#94A3B8破坏 {break} &#475569| &#94A3B8交互 {interact} &#475569| &#94A3B8红石 {redstone}'
+claim-detail-permissions: '&#CBD5E1权限: &#94A3B8放置 {place} &#475569| &#94A3B8破坏 {break} &#475569| &#94A3B8交互 {interact} &#475569| &#94A3B8功能 {utility_interact} &#475569| &#94A3B8红石 {redstone}'
 claim-detail-permissions-extra: '        &#94A3B8生物 {mob_interact} &#475569| &#94A3B8爆炸 {explosion} &#475569| &#94A3B8桶 {bucket} &#475569| &#94A3B8传送 {teleport} &#475569| &#94A3B8飞行 {flight}'
 claim-detail-permissions-spawn: '        &#94A3B8动物生成 {animal_spawn} &#475569| &#94A3B8怪物生成 {monster_spawn}'
 claim-detail-flags: '&#CBD5E1扩展权限: {flags}'

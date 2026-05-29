@@ -4,6 +4,7 @@ new-claim-defaults:
     place: false
     break: false
     interact: false
+    utility-interact: false
     mob-interact: false
     animal-spawn: true
     monster-spawn: true
@@ -21,6 +22,7 @@ system-claim-defaults:
     place: false
     break: false
     interact: false
+    utility-interact: false
     mob-interact: false
     animal-spawn: true
     monster-spawn: true

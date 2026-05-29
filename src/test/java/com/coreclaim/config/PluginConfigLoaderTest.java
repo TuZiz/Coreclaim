@@ -46,6 +46,7 @@ class PluginConfigLoaderTest {
     @Test
     void permissionKeysUseConfigFriendlyNames() {
         assertEquals("mob-interact", ClaimPermission.MOB_INTERACT.key());
+        assertEquals("utility-interact", ClaimPermission.UTILITY_INTERACT.key());
         assertEquals("animal-spawn", ClaimPermission.ANIMAL_SPAWN.key());
         assertEquals("monster-spawn", ClaimPermission.MONSTER_SPAWN.key());
     }

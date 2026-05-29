@@ -171,12 +171,20 @@ class ProtectionRuleSupportTest {
     }
 
     @Test
-    void mergedInteractionPermissionsClassifyCommonBlocks() {
+    void splitInteractionPermissionsClassifyCommonBlocks() {
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.CHEST, null));
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_DOOR, null));
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_TRAPDOOR, null));
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.OAK_FENCE_GATE, null));
         assertEquals(ClaimPermission.INTERACT, support.requiredPermissionForBlockInteract(Material.RED_BED, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.ENCHANTING_TABLE, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.STONECUTTER, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.GRINDSTONE, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.LECTERN, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.CARTOGRAPHY_TABLE, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.SMITHING_TABLE, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.LOOM, null));
+        assertEquals(ClaimPermission.UTILITY_INTERACT, support.requiredPermissionForBlockInteract(Material.ANVIL, null));
         assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.STONE_BUTTON, null));
         assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.LEVER, null));
         assertEquals(ClaimPermission.REDSTONE, support.requiredPermissionForBlockInteract(Material.OAK_PRESSURE_PLATE, null));

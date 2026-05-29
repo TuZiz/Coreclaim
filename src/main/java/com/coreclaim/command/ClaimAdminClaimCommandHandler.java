@@ -188,7 +188,8 @@ final class ClaimAdminClaimCommandHandler {
         sender.sendMessage(plugin.color("&6[Claim] &fTP 路由: &b" + route));
         sender.sendMessage(plugin.color("&6[Claim] &fdeny *: " + (claim.denyAll() ? "&c开启" : "&a关闭") + " &8| &fDenied: &c" + claim.deniedMembers().size() + " &8| &fTrusted: &a" + claim.trustedCount()));
         sender.sendMessage(plugin.color("&6[Claim] &f公开权限: &cBREAK " + formatter.stateText(claim.permission(ClaimPermission.BREAK))
-            + " &8| &bINTERACT " + formatter.stateText(claim.permission(ClaimPermission.INTERACT))));
+            + " &8| &bINTERACT " + formatter.stateText(claim.permission(ClaimPermission.INTERACT))
+            + " &8| &dUTILITY " + formatter.stateText(claim.permission(ClaimPermission.UTILITY_INTERACT))));
         sender.sendMessage(plugin.color("&6[Claim] &f成员列表: " + formatMembers(claim.trustedMembers())));
         sender.sendMessage(plugin.color("&6[Claim] &f扩展权限: " + formatter.summarizeFlags(claim)));
         if (target != null) {
@@ -201,9 +202,11 @@ final class ClaimAdminClaimCommandHandler {
         boolean bypassing = target instanceof Player player && AdminAccess.hasForceBypass(player);
         AuthorizationDecision breakDecision = claimService.permissionDecision(claim, playerId, ClaimPermission.BREAK, bypassing);
         AuthorizationDecision interactDecision = claimService.permissionDecision(claim, playerId, ClaimPermission.INTERACT, bypassing);
+        AuthorizationDecision utilityDecision = claimService.permissionDecision(claim, playerId, ClaimPermission.UTILITY_INTERACT, bypassing);
         sender.sendMessage(plugin.color("&6[Claim] &f目标玩家: &e" + resolver.displayName(target) + " &7(" + playerId + ")"));
         sender.sendMessage(plugin.color("&6[Claim] &f授权来源: &cBREAK " + formatDecision(breakDecision)
-            + " &8| &bINTERACT " + formatDecision(interactDecision)));
+            + " &8| &bINTERACT " + formatDecision(interactDecision)
+            + " &8| &dUTILITY " + formatDecision(utilityDecision)));
     }
 
     private String formatDecision(AuthorizationDecision decision) {

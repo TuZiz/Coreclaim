@@ -330,15 +330,22 @@ public final class ProtectionRuleSupport {
         if (plugin == null || !plugin.settings().blockSpecialExplosiveUse() || material == null) {
             return false;
         }
-        if (block == null || block.getWorld() == null) {
-            return material == Material.RESPAWN_ANCHOR;
-        }
-        String name = material.name();
-        if (name.endsWith("_BED")) {
-            return block.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL;
+        return isSpecialExplosiveUse(
+            true,
+            block == null || block.getWorld() == null ? null : block.getWorld().getEnvironment(),
+            material
+        );
+    }
+
+    static boolean isSpecialExplosiveUse(boolean enabled, org.bukkit.World.Environment environment, Material material) {
+        if (!enabled || material == null) {
+            return false;
         }
         if (material == Material.RESPAWN_ANCHOR) {
-            return block.getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER;
+            return environment != org.bukkit.World.Environment.NETHER;
+        }
+        if (material.name().endsWith("_BED")) {
+            return environment != null && environment != org.bukkit.World.Environment.NORMAL;
         }
         return false;
     }

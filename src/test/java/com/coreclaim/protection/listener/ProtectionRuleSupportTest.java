@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coreclaim.model.ClaimPermission;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 
@@ -211,6 +212,11 @@ class ProtectionRuleSupportTest {
             ClaimPermission.INTERACT,
             support.requiredPermissionForBlockInteract(Material.CHEST, new ItemStack(Material.FLINT_AND_STEEL))
         );
+        assertTrue(ProtectionRuleSupport.isSpecialExplosiveUse(true, World.Environment.NORMAL, Material.RESPAWN_ANCHOR));
+        assertFalse(ProtectionRuleSupport.isSpecialExplosiveUse(true, World.Environment.NETHER, Material.RESPAWN_ANCHOR));
+        assertTrue(ProtectionRuleSupport.isSpecialExplosiveUse(true, World.Environment.NETHER, Material.RED_BED));
+        assertFalse(ProtectionRuleSupport.isSpecialExplosiveUse(true, World.Environment.NORMAL, Material.RED_BED));
+        assertFalse(ProtectionRuleSupport.isSpecialExplosiveUse(false, World.Environment.NORMAL, Material.RESPAWN_ANCHOR));
     }
 
     @Test

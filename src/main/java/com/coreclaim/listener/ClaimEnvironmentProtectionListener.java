@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -81,19 +82,52 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
-        Optional<Claim> sourceClaim = claimService.findClaim(event.getBlock().getLocation());
-        boolean authorized = explosionAuthorizationService.isAuthorizedNearby(event.getBlock().getLocation(), 1);
-        boolean sourcePublicExplosion = sourceClaim.isPresent() && sourceClaim.get().permission(ClaimPermission.EXPLOSION);
+        Location origin = explodedBlockOrigin(event);
+        boolean authorized = explosionAuthorizationService != null && explosionAuthorizationService.isAuthorizedNearby(origin, 1);
+        applyBlockExplosionProtection(event, origin, claimService::findClaim, authorized);
+    }
+
+    static void applyBlockExplosionProtection(
+        BlockExplodeEvent event,
+        Location origin,
+        Function<Location, Optional<Claim>> claimFinder,
+        boolean authorized
+    ) {
+        Optional<Claim> sourceClaim = claimFinder.apply(origin);
+        boolean sourcePublicExplosion = sourceClaim.isPresent()
+            && sourceClaim.get().permission(ClaimPermission.EXPLOSION);
+        if (sourceClaim.isPresent() && !authorized && !sourcePublicExplosion) {
+            event.blockList().clear();
+            event.setYield(0F);
+            event.setCancelled(true);
+            return;
+        }
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
-            Optional<Claim> targetClaim = claimService.findClaim(iterator.next().getLocation());
-            if (targetClaim.isEmpty()) {
+            Block block = iterator.next();
+            Optional<Claim> targetClaim = claimFinder.apply(block.getLocation());
+            if (sourceClaim.isPresent()) {
+                if (targetClaim.isEmpty() || targetClaim.get().id() != sourceClaim.get().id()) {
+                    iterator.remove();
+                }
                 continue;
             }
-            if (!canBlockExplosionAffectClaim(sourceClaim.orElse(null), targetClaim.get(), authorized, sourcePublicExplosion)) {
+
+            if (targetClaim.isPresent()) {
                 iterator.remove();
             }
         }
+    }
+
+    static Location explodedBlockOrigin(BlockExplodeEvent event) {
+        try {
+            Object state = event.getClass().getMethod("getExplodedBlockState").invoke(event);
+            if (state instanceof BlockState blockState) {
+                return blockState.getLocation();
+            }
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+        }
+        return event.getBlock().getLocation();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -502,7 +536,7 @@ public final class ClaimEnvironmentProtectionListener implements Listener {
         boolean sourcePublicExplosion
     ) {
         if (targetClaim == null) {
-            return true;
+            return false;
         }
         if (sourceClaim == null || sourceClaim.id() != targetClaim.id()) {
             return false;

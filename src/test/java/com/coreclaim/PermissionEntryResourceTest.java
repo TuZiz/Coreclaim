@@ -77,6 +77,16 @@ class PermissionEntryResourceTest {
         assertTrue(rules.contains("utility-interact: false"));
         assertTrue(rules.contains("animal-spawn: true"));
         assertTrue(rules.contains("monster-spawn: true"));
+        assertTrue(rules.contains("explosion: false"));
+    }
+
+    @Test
+    void configKeepsSpecialExplosiveProtectionDefaults() throws Exception {
+        String config = resourceText("/config.yml");
+
+        assertTrue(config.contains("block-special-explosive-use: true"));
+        assertTrue(config.contains("always-protected-interact:"));
+        assertTrue(config.contains("- \"RESPAWN_ANCHOR\""));
     }
 
     private String resourceText(String path) throws Exception {

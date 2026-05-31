@@ -130,7 +130,19 @@ public final class BlockProtectionListener implements Listener {
         }
         Material clickedType = event.getClickedBlock().getType();
         boolean containerInteraction = support.isContainerMaterial(clickedType);
+        boolean tntIgnition = support.isTntIgnition(clickedType, event.getItem());
         debugInteract(event, claim, "start", null);
+        ClaimPermission earlyRequiredPermission = support.requiredPermissionForBlockInteract(event.getClickedBlock(), clickedType, event.getItem());
+        if (claim.isPresent()
+            && !tntIgnition
+            && earlyRequiredPermission == ClaimPermission.EXPLOSION
+            && !support.isBypassing(event.getPlayer())
+            && !support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), ClaimPermission.EXPLOSION)) {
+            denyRightClickInteraction(event);
+            support.sendProtectionDeny(event.getPlayer(), claim.get());
+            debugInteract(event, claim, "special-explosion-deny", "permission=" + earlyRequiredPermission);
+            return;
+        }
         if (claim.isPresent() && support.isBypassing(event.getPlayer())) {
             handleBypassKnownInteraction(event, claim, clickedType);
             return;
@@ -147,7 +159,7 @@ public final class BlockProtectionListener implements Listener {
                 false
             );
             if (!interactDecision.allowed()) {
-                event.setCancelled(true);
+                denyRightClickInteraction(event);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 debugInteract(event, claim, "cake-deny", "interact=" + formatDecision(interactDecision));
                 return;
@@ -165,7 +177,7 @@ public final class BlockProtectionListener implements Listener {
                 false
             );
             if (!interactDecision.allowed()) {
-                event.setCancelled(true);
+                denyRightClickInteraction(event);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 debugInteract(event, claim, "composter-deny", "interact=" + formatDecision(interactDecision));
                 return;
@@ -181,7 +193,7 @@ public final class BlockProtectionListener implements Listener {
             if (support.isAxeStrippingWood(clickedType, event.getItem())) {
                 boolean canAccess = support.claimService().canAccess(claim.get(), event.getPlayer().getUniqueId());
                 if (!canAccess) {
-                    event.setCancelled(true);
+                    denyRightClickInteraction(event);
                     support.sendProtectionDeny(event.getPlayer(), claim.get());
                     debugInteract(event, claim, "axe-strip-deny", "canAccess=" + canAccess);
                     return;
@@ -200,7 +212,7 @@ public final class BlockProtectionListener implements Listener {
                     debugInteract(event, claim, "tool-change-container-interact", "permission=" + toolChangePermission);
                     return;
                 }
-                event.setCancelled(true);
+                denyRightClickInteraction(event);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 debugInteract(event, claim, "tool-change-deny", "permission=" + toolChangePermission);
                 return;
@@ -217,7 +229,6 @@ public final class BlockProtectionListener implements Listener {
             return;
         }
         ClaimPermission requiredPermission = support.requiredPermissionForBlockInteract(event.getClickedBlock(), clickedType, event.getItem());
-        boolean tntIgnition = support.isTntIgnition(clickedType, event.getItem());
         if (claim.isPresent() && tntIgnition) {
             boolean hasExplosion = support.claimService().hasPermission(
                 claim.get(),
@@ -225,7 +236,7 @@ public final class BlockProtectionListener implements Listener {
                 ClaimPermission.EXPLOSION
             );
             if (!hasExplosion) {
-                event.setCancelled(true);
+                denyRightClickInteraction(event);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 debugInteract(event, claim, "tnt-ignite-deny", "permission=" + requiredPermission);
                 return;
@@ -248,7 +259,7 @@ public final class BlockProtectionListener implements Listener {
             support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
         }
         if (claim.isPresent() && !support.isBypassing(event.getPlayer()) && !support.claimService().hasPermission(claim.get(), event.getPlayer().getUniqueId(), requiredPermission)) {
-            event.setCancelled(true);
+            denyRightClickInteraction(event);
             support.sendProtectionDeny(event.getPlayer(), claim.get());
             debugInteract(event, claim, "generic-deny", "permission=" + requiredPermission);
             return;
@@ -308,6 +319,11 @@ public final class BlockProtectionListener implements Listener {
         if (support.isTntIgnition(clickedType, event.getItem())) {
             support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
             debugInteract(event, claim, "tnt-ignite-allow", "permission=" + ClaimPermission.EXPLOSION + " bypass=true");
+            return;
+        }
+        if (support.requiredPermissionForBlockInteract(event.getClickedBlock(), clickedType, event.getItem()) == ClaimPermission.EXPLOSION) {
+            support.explosionAuthorizationService().authorize(event.getClickedBlock().getLocation());
+            debugInteract(event, claim, "special-explosion-allow", "permission=" + ClaimPermission.EXPLOSION + " bypass=true");
             return;
         }
         debugInteract(event, claim, "bypass-skip", null);
@@ -406,7 +422,7 @@ public final class BlockProtectionListener implements Listener {
                 debugInteract(event, claim, "pre-cancel-block-tool-allow", "tool=" + formatDecision(toolChangeDecision) + " applied=" + applied);
             }
             case DENY -> {
-                event.setCancelled(true);
+                denyRightClickInteraction(event);
                 support.sendProtectionDeny(event.getPlayer(), claim.get());
                 debugInteract(
                     event,
@@ -598,6 +614,12 @@ public final class BlockProtectionListener implements Listener {
             return false;
         }
         return material == Material.ICE || material == Material.FROSTED_ICE;
+    }
+
+    static void denyRightClickInteraction(PlayerInteractEvent event) {
+        event.setCancelled(true);
+        event.setUseInteractedBlock(Event.Result.DENY);
+        event.setUseItemInHand(Event.Result.DENY);
     }
 
     private static boolean hasSilkTouch(ItemStack item) {
